@@ -46,7 +46,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tools button{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
 .tools button[aria-pressed="true"]{background:var(--indigo);color:var(--card);border-color:var(--indigo)}
 .tools button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.hint{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 12px}
+.hint{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 12px;max-width:calc(100% - 28px);line-height:1.5}
 .tour-dialog{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:2000000;width:min(88%,380px);box-sizing:border-box;text-align:center;
   background:var(--card);color:var(--fg);border:3px solid var(--sun);border-radius:26px;padding:20px 20px 18px;box-shadow:0 8px 0 rgba(42,63,99,.16),0 0 0 100vmax rgba(30,50,90,.32)}
 .tour-dialog p{margin:0 0 14px;font:700 18px/1.55 var(--f-display);text-wrap:balance}
@@ -135,7 +135,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <div class="tour-btns"><button id="tourGo" type="button">好，出發！</button><button id="tourNo" type="button">我自己逛</button></div>
     </div>
     <div class="tour-cap" id="tourCap" role="status" aria-live="polite" hidden></div>
-    <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元・拖水壩、抓螃蟹丟進河裡</div>
+    <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元・仙平老師說：「不可以抓螃蟹丟進河裡喔」</div>
   </div>
 
   <aside id="panel">
