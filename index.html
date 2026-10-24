@@ -1074,7 +1074,14 @@ labelEls.hub = makeLabel('<b>仙平先生个教室</b>', 'tag hub', hub.userData
 for(const u of UNITS){
   const g = placeIsland(u, DECOR[u.decor]);
   lantern(g, u.r*0.55, -u.r*0.5);
-  labelEls[u.id] = makeLabel(`<span class="w">${u.w}</span><b>${u.no} ${u.title}</b>`, 'tag'+(u.adv?' adv':''), g.userData.top + 4.4, g, ()=>select(u.id));
+  labelEls[u.id] = makeLabel(`<span class="w">${u.w}</span><b>${u.no} ${u.title}</b>`, 'tag'+(u.adv?' adv':''), g.userData.top + 4.4 + (u.id==='u6' ? 2.8 : 0), g, ()=>select(u.id));
+  if(u.id==='u6'){
+    /* 名牌被抬高以後，用一條白色細線連回它的島，避免看起來飄在稻田上 */
+    const y0 = g.userData.top + 0.5, y1 = g.userData.top + 4.4 + 2.8;
+    const lm = new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.95, depthTest:false});
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,y1-y0,6), lm); stem.position.y = (y0+y1)/2; stem.renderOrder = 25; g.add(stem);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.22,12,10), lm); dot.position.y = y0; dot.renderOrder = 26; g.add(dot);
+  }
 }
 
 /* 課文旗子：三 課文賞析 */
