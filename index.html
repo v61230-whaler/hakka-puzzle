@@ -45,6 +45,15 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tools button[aria-pressed="true"]{background:var(--indigo);color:var(--card);border-color:var(--indigo)}
 .tools button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .hint{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 12px}
+.tour-dialog{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:2000000;width:min(88%,380px);box-sizing:border-box;text-align:center;
+  background:var(--card);color:var(--fg);border:3px solid var(--sun);border-radius:26px;padding:20px 20px 18px;box-shadow:0 8px 0 rgba(42,63,99,.16),0 0 0 100vmax rgba(30,50,90,.32)}
+.tour-dialog p{margin:0 0 14px;font:700 18px/1.55 var(--f-display);text-wrap:balance}
+.tour-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.tour-btns button{font:700 15px/1 var(--f-body);border-radius:999px;padding:11px 18px;cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--fg)}
+.tour-btns #tourGo{background:var(--persimmon);border-color:var(--persimmon);color:#fff}
+.tour-btns button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.tour-cap{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);z-index:2000000;max-width:min(90%,420px);box-sizing:border-box;text-align:center;
+  background:var(--card);color:var(--fg);border:2px solid var(--persimmon);border-radius:20px;padding:10px 16px;font:700 16px/1.5 var(--f-display);box-shadow:0 5px 0 rgba(42,63,99,.14)}
 .fallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 
 #panel{border-left:1px solid var(--line);background:var(--card);overflow-y:auto;min-width:0;
@@ -116,9 +125,15 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
   <div id="stage" aria-label="課程拼圖 3D 地圖：中間是教室主地塊，周圍七個單元地塊；完整內容請用右側清單">
     <div class="tools">
       <button id="btnLinks" type="button" aria-pressed="false">關聯線</button>
-      <button id="btnReset" type="button">回到全景</button>
+      <button id="btnReset" type="button" aria-pressed="true">回到全景</button>
+      <button id="btnTour" type="button" aria-pressed="false">探險隊</button>
     </div>
-    <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元</div>
+    <div class="tour-dialog" id="tourDialog" role="dialog" aria-modal="true" aria-labelledby="tourMsg" hidden>
+      <p id="tourMsg">歡迎上車！開始15秒看兩個行程囉！</p>
+      <div class="tour-btns"><button id="tourGo" type="button">好，出發！</button><button id="tourNo" type="button">我自己逛</button></div>
+    </div>
+    <div class="tour-cap" id="tourCap" role="status" aria-live="polite" hidden></div>
+    <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元・拖水壩、抓螃蟹丟進河裡</div>
   </div>
 
   <aside id="panel">
@@ -376,6 +391,8 @@ stage.insertBefore(labelR.domElement, stage.querySelector('.tools'));
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
 const HOME = { pos:new THREE.Vector3(2.5, 24, 41), target:new THREE.Vector3(2.5, 3, -4) };
+/* 看關聯線用的視角：從較高處往下看，讓線和箭頭一目了然 */
+const LINKVIEW = { pos:new THREE.Vector3(2.5, 50, 12), target:new THREE.Vector3(2.5, 0, 0) };
 camera.position.copy(HOME.pos);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.copy(HOME.target);
@@ -465,7 +482,7 @@ const bankMat = new THREE.MeshStandardMaterial({color:0xFFF0CC, roughness:0.95, 
 ribbon(riverCurve, 7.2, 0.02, bankMat);
 ribbon(riverCurve, 5.6, 0.05, riverMat);
 const riverPoint = (t, off=0)=>{ const p = riverCurve.getPointAt(t), tg = riverCurve.getTangentAt(t); return p.clone().add(new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(off)); };
-const critters = [];
+const critters = [], crabPickables = [];
 const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.position.set(x,y,z); me.scale.set(sx,sy,sz); me.castShadow = false; return me; };
 const whiteM = new THREE.MeshStandardMaterial({color:0xFFFFFF, flatShading:true}), blackM = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
 function makeFish(col){
@@ -476,15 +493,15 @@ function makeFish(col){
   for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
   f.scale.setScalar(1.7); return f;
 }
-function makeCrab(){
-  const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:0xFF7B6B, flatShading:true, roughness:0.6});
+function makeCrab(col=0xFF7B6B, sc=1.5){
+  const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
   c.add(S(new THREE.SphereGeometry(0.5,12,8),0,0.3,0,1.3,0.6,0.95,red));
   for(const sx of [-1,1]){
     c.add(S(new THREE.SphereGeometry(0.12,8,6),sx*0.28,0.68,0.35,1,1,1,whiteM)); c.add(S(new THREE.SphereGeometry(0.06,6,5),sx*0.28,0.7,0.44,1,1,1,blackM));
     c.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.85,0.42,0.45,1.1,0.8,1,red)); c.add(S(new THREE.BoxGeometry(0.28,0.1,0.1),sx*0.55,0.36,0.3,1,1,1,red));
     for(let i=0;i<3;i++) c.add(S(new THREE.CylinderGeometry(0.04,0.04,0.5,5).rotateZ(Math.PI/2),sx*0.75,0.12,-0.3+i*0.22,1,1,1,red));
   }
-  c.scale.setScalar(1.5); return c;
+  c.scale.setScalar(sc); return c;
 }
 function makeShrimp(){
   const g = new THREE.Group(), pk = new THREE.MeshStandardMaterial({color:0xFFB08A, flatShading:true, roughness:0.6});
@@ -501,17 +518,47 @@ function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeomet
   for(const [t,off,r,hex] of rocks){ const p = riverPoint(t,off), m = makeRock(r,hex); m.position.set(p.x, 0.1+r*0.25, p.z); scene.add(m); }
   const cols = [0xFF9F43,0xFF7FA8,0xFFD24D,0x74C0FF];
   [0.36,0.43,0.55,0.63].forEach((t,i)=>{ const f = makeFish(cols[i%4]); scene.add(f); critters.push({kind:'fish', g:f, t, dir:i%2?1:-1, speed:0.006+i*0.0015, off:(i%2?0.8:-0.8), ph:i*1.7}); });
-  [0.4,0.58].forEach((t,i)=>{ const c = makeCrab(); scene.add(c); critters.push({kind:'crab', g:c, t, off:i?3.3:-3.3, ph:i*2.1}); });
+  [0.4,0.58].forEach((t,i)=>{ const g = makeCrab(); scene.add(g);
+    const c = {kind:'crab', g, t, off:i?3.3:-3.3, ph:i*2.1, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:i?1:-1, rip:0};
+    critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); });
+  /* 第三隻：小一點、紫色、動作更快 */
+  { const g = makeCrab(0xB388FF, 1.0); scene.add(g);
+    const c = {kind:'crab', g, t:0.5, off:-3.4, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
+    critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); }
   [0.38,0.5,0.62].forEach((t,i)=>{ const s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.1, ph:i*1.3}); });
 }
 function updateCritters(dt, tm){
   for(const c of critters){
-    if(c.kind==='fish'){ c.t += dt*c.speed*c.dir; if(c.t>0.69){ c.t=0.69; c.dir=-1; } if(c.t<0.31){ c.t=0.31; c.dir=1; }
-      const p = riverPoint(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.6), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
+    if(c.kind==='fish'){ c.t += dt*c.speed*(1-0.5*nearDam(c.t))*c.dir; if(c.t>0.69){ c.t=0.69; c.dir=-1; } if(c.t<0.31){ c.t=0.31; c.dir=1; }
+      const p = riverPoint(c.t, dodgeOff(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.6)), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
       c.g.position.set(p.x, 0.06+Math.abs(Math.sin(tm*2+c.ph))*0.12, p.z); c.g.rotation.y = Math.atan2(tg.x,tg.z); c.g.rotation.z = Math.sin(tm*6+c.ph)*0.08; }
-    else if(c.kind==='crab'){ const t = c.t + Math.sin(tm*0.4+c.ph)*0.025, p = riverPoint(t, c.off);
-      c.g.position.set(p.x, 0.12, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.position.y += Math.abs(Math.sin(tm*5+c.ph))*0.05; }
-    else { const t = c.t + Math.sin(tm*0.5+c.ph)*0.02, p = riverPoint(t, c.off); const hop = Math.max(0, Math.sin(tm*2.2+c.ph));
+    else if(c.kind==='crab'){
+      if(c.mode==='drag'){                         // 被抓起來：在半空中亂揮
+        c.g.position.set(c.pos.x, 1.2+Math.sin(tm*14)*0.07, c.pos.z); c.g.rotation.z = Math.sin(tm*13)*0.3; c.g.rotation.x = Math.sin(tm*11)*0.15;
+      } else if(c.mode==='return'){                // 放開後：掉下去，再自己划水／跑回岸邊
+        c.g.rotation.x = 0; c.g.rotation.z = 0;
+        if(c.vy!==0 || c.pos.y>0.13){
+          c.vy -= 30*dt; c.pos.y += c.vy*dt;
+          if(c.pos.y<=0.12){ c.pos.y = 0.12; c.vy = 0; if(nearestRiver(c.pos.x,c.pos.z).dist<2.9) addRipple(c.pos.x,c.pos.z,1.7); }
+          c.g.position.copy(c.pos);
+        } else {
+          const dx = c.target.x-c.pos.x, dz = c.target.z-c.pos.z, d = Math.hypot(dx,dz);
+          if(d<0.25){ const nr = nearestRiver(c.pos.x,c.pos.z); c.t = Math.min(0.69, Math.max(0.31, nr.u)); c.off = c.side*3.3; c.mode = 'bank'; }
+          else {
+            const sp = (c.run||2.6)*dt; c.pos.x += dx/d*sp; c.pos.z += dz/d*sp;
+            const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<2.8;
+            c.pos.y = 0.12 + (inRiver ? Math.sin(tm*9)*0.05 : Math.abs(Math.sin(tm*12))*0.06);
+            if(inRiver){ c.rip += dt; if(c.rip>0.35){ c.rip = 0; addRipple(c.pos.x,c.pos.z,1.0); } }
+            c.g.position.copy(c.pos); c.g.rotation.y = Math.atan2(dx,dz)+Math.PI/2;
+          }
+        }
+      } else {
+        const t = c.t + Math.sin(tm*(c.wf||0.4)+c.ph)*(c.wa||0.025), p = riverPoint(t, dodgeBank(t, c.off));
+        c.g.rotation.x = 0; c.g.rotation.z = 0;
+        c.g.position.set(p.x, 0.12, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.position.y += Math.abs(Math.sin(tm*(c.hf||5)+c.ph))*0.05;
+      }
+    }
+    else { const t = c.t + Math.sin(tm*0.5+c.ph)*0.02, p = riverPoint(t, dodgeOff(t, c.off)); const hop = Math.max(0, Math.sin(tm*2.2+c.ph));
       c.g.position.set(p.x, 0.06+hop*0.35, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.rotation.x = -hop*0.4; }
   }
 }
@@ -539,7 +586,93 @@ function grove(cx, cz, n, radius){
   }
 }
 [[-30,-20,7,4.5],[-18,-26,8,5],[-5,-22,5,3.5],[8,-27,8,5],[22,-21,6,4],[34,-18,7,4.5],[-40,-6,5,4],[-37,8,4,3.5],[38,-3,5,4],[36,10,4,3.5],[0,-34,7,5],[-26,-33,6,4.5],[24,-33,6,4.5]].forEach(([x,z,n,r])=>grove(x,z,n,r));
-[[0.30,5.0],[0.34,-5.2],[0.39,5.4],[0.45,-5.0],[0.52,5.2],[0.56,-5.3],[0.62,5.0],[0.67,-5.2]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
+[[0.30,5.0],[0.34,-5.2],[0.39,5.4],[0.52,5.2],[0.62,5.0],[0.67,-5.2]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
+
+
+/* 攔水壩：擋住約一半河面，水從另一半流過並冒出白色水花；可以用滑鼠或手指左右拖動，改變位置 */
+const dams = [], damPickables = [];
+const damSamples = []; for(let t=0.27; t<=0.73; t+=0.002) damSamples.push({t, p:riverCurve.getPointAt(t)});
+function makeDam(t, side){
+  const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({color:0xB9825A, flatShading:true, roughness:0.9}), cap = new THREE.MeshStandardMaterial({color:0xE6C792, flatShading:true});
+  const log = (x,y)=>{ const l = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,2.8,10).rotateZ(Math.PI/2), wood); l.position.set(0,y,x); g.add(l); damPickables.push(l);
+    for(const sx of [-1.4,1.4]){ const e = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.06,10).rotateZ(Math.PI/2), cap); e.position.set(sx,y,x); g.add(e); } };
+  log(-0.28,0.3); log(0.28,0.3); log(0,0.85);
+  /* 水花與水流：從壩旁的缺口流過 */
+  const foamM = new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.85});
+  const foams = [];
+  for(let i=0;i<9;i++){ const f = new THREE.Mesh(new THREE.BoxGeometry(0.8+rnd()*0.5,0.07,0.2), foamM); g.add(f); foams.push({m:f, x:(rnd()-0.5)*2.4, z:rnd()*3, sp:1.2+rnd()*0.9}); }
+  const splash = []; for(let i=0;i<4;i++){ const sp = new THREE.Mesh(new THREE.SphereGeometry(0.2+rnd()*0.1,8,6), foamM); g.add(sp); splash.push({m:sp, x:(i-1.5)*0.6, ph:i*1.3}); }
+  /* 左右箭頭：提示可以前後拖動 */
+  const arM = new THREE.MeshBasicMaterial({color:0xFF3D81}), arrows = [];
+  for(const dir of [1,-1]){ const a = new THREE.Mesh(new THREE.ConeGeometry(0.5,1.2,4).rotateX(dir*Math.PI/2), arM); a.position.set(0,2.5,dir*1.5); g.add(a); arrows.push({m:a, dir}); }
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.16,0.16,2.0), arM); bar.position.set(0,2.5,0); g.add(bar);
+  scene.add(g);
+  const d = {g, t, side, foams, splash, arrows};
+  placeDam(d); dams.push(d); return d;
+}
+function placeDam(d){
+  const p = riverPoint(d.t, d.side*1.4), tg = riverCurve.getTangentAt(d.t);
+  d.g.position.set(p.x, 0.04, p.z); d.g.rotation.y = Math.atan2(tg.x, tg.z);
+}
+function updateDams(tm){
+  for(const d of dams){
+    const gapX = 2.8*d.side;
+    for(const f of d.foams){ const z = ((f.z + tm*f.sp) % 3.4) - 0.5; f.m.position.set(gapX + f.x*0.55, 0.12, z); f.m.scale.x = 0.7+0.3*Math.sin(tm*4+f.z*3); }
+    for(const s of d.splash){ s.m.position.set(s.x, 0.6+Math.abs(Math.sin(tm*5+s.ph))*0.35, 0.7); }
+    d.arrows.forEach(a=>{ a.m.position.z = a.dir*(1.5+Math.sin(tm*3)*0.18); });
+  }
+}
+makeDam(0.44, 1); makeDam(0.58, -1);
+/* 水壩讓水裡的生物閃躲：接近水壩時，魚和蝦會改走缺口那一側，放慢速度；螃蟹會往岸外繞開 */
+const riverLen = riverCurve.getLength();
+const riverU = []; for(let u=0; u<=1.0001; u+=0.002) riverU.push({u, p:riverCurve.getPointAt(Math.min(u,1))});
+function nearestRiver(x, z){ let best = riverU[0], bd = 1e9; for(const r of riverU){ const d = (r.p.x-x)**2 + (r.p.z-z)**2; if(d<bd){ bd = d; best = r; } } return {u:best.u, p:best.p, dist:Math.sqrt(bd)}; }
+/* 水花圈：螃蟹入水或在水裡划動時，往外擴散的白色圈圈 */
+const ripples = [];
+function addRipple(x, z, size){
+  const m = new THREE.Mesh(new THREE.RingGeometry(0.35,0.5,24).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.8, depthWrite:false}));
+  m.position.set(x, 0.09, z); scene.add(m); ripples.push({m, age:0, size});
+}
+function updateRipples(dt){
+  for(let i=ripples.length-1;i>=0;i--){ const r = ripples[i]; r.age += dt; const k = r.age/0.9;
+    if(k>=1){ scene.remove(r.m); r.m.geometry.dispose(); r.m.material.dispose(); ripples.splice(i,1); continue; }
+    r.m.scale.setScalar(0.6 + k*r.size*2.4); r.m.material.opacity = 0.8*(1-k); }
+}
+function nearDam(t){ let w = 0; for(const d of dams){ const dist = Math.abs(t - d.t)*riverLen; w = Math.max(w, Math.min(1, Math.max(0, (4.8 - dist)/3.4))); } return w; }
+function dodgeOff(t, off){
+  for(const d of dams){ const dist = Math.abs(t - d.t)*riverLen, w = Math.min(1, Math.max(0, (4.8 - dist)/3.4));
+    if(w > 0){ const gap = -d.side*1.5; off = off*(1-w) + gap*w; } }
+  return off;
+}
+function dodgeBank(t, off){
+  for(const d of dams){ const dist = Math.abs(t - d.t)*riverLen, w = Math.min(1, Math.max(0, (4.8 - dist)/3.4));
+    if(w > 0 && Math.sign(off) === d.side) off += d.side*1.1*w; }
+  return off;
+}
+
+
+/* 河邊告示牌：紅底白字「請勿抓螃蟹！」 */
+(function(){
+  const cv = document.createElement('canvas'); cv.width = 768; cv.height = 384;
+  const x = cv.getContext('2d');
+  const draw = ()=>{
+    x.fillStyle = '#D7263D'; x.fillRect(0,0,768,384);
+    x.strokeStyle = '#FFFFFF'; x.lineWidth = 14; x.strokeRect(22,22,724,340);
+    x.fillStyle = '#FFFFFF'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = 'bold 168px Huninn, "Noto Sans TC", sans-serif';
+    /* 上行「請勿」、下行「抓螃蟹」，字距拉開、平均散布整塊牌子：預設畫面只看得到「請」和「抓螃」，「勿」和「蟹」藏在右邊畫面外，轉動視角才看到完整的「請勿抓螃蟹」 */
+    x.fillText('請', 250, 122); x.fillText('勿', 516, 122);
+    x.fillText('抓', 120, 270); x.fillText('螃', 384, 270); x.fillText('蟹', 648, 270);
+  };
+  draw();
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ draw(); tex.needsUpdate = true; });
+  const g = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:0xD7263D, flatShading:true, roughness:0.7});
+  const board = new THREE.Mesh(new THREE.BoxGeometry(3.4,1.9,0.14), red); board.position.y = 2.1; g.add(board);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(3.28,1.78), new THREE.MeshBasicMaterial({map:tex})); face.position.set(0,2.1,0.08); g.add(face);
+  for(const sx of [-1.2,1.2]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,2.2,6), mat(C.wood)); post.position.set(sx,1.1,-0.02); g.add(post); }
+  const p = riverPoint(0.58, -3.7); g.position.set(p.x, 0.02, p.z); g.rotation.order = 'YXZ'; g.rotation.y = -0.1; g.rotation.x = -0.5; g.scale.setScalar(1.35); scene.add(g);
+})();
 
 function add(parent, geo, m, x=0, y=0, z=0){ const me = new THREE.Mesh(geo, m); me.position.set(x,y,z); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
 function prism(w, h, len){ const s = new THREE.Shape(); s.moveTo(-w/2,0); s.lineTo(w/2,0); s.lineTo(0,h); s.closePath(); const g = new THREE.ExtrudeGeometry(s,{depth:len,bevelEnabled:false}); g.translate(0,0,-len/2); return g; }
@@ -886,7 +1019,7 @@ const flagMeshes = {};
 
 /* 關聯線：粗粗的粉紅虛線拱在島上空，有小圓點沿著線流動；點選單元時，只突顯和它相關的線 */
 const linkGroup = new THREE.Group(); scene.add(linkGroup);
-const linkBeads = []; let linksOn = false;
+const linkArrows = []; let linksOn = false;
 function arc(a, b, lift){
   const A = groups[a].position.clone().setY(groups[a].userData.top*ISC+3.4);
   const B = groups[b].position.clone().setY(groups[b].userData.top*ISC+3.4);
@@ -896,24 +1029,27 @@ function arc(a, b, lift){
 for(const [a,b] of LINKS){
   const c = arc(a,b, 5.5);
   const grp = new THREE.Group(); grp.userData.ends = [a,b]; grp.visible = false;
-  const m = new THREE.MeshBasicMaterial({color:0xFF3D81, transparent:true, opacity:0.95, depthTest:false}); grp.userData.mat = m;
-  const N = 14;
-  for(let i=0;i<N;i++){
-    const t0 = i/N+0.012, t1 = (i+0.62)/N, pts = [];
-    for(let k=0;k<=6;k++) pts.push(c.getPoint(t0+(t1-t0)*k/6));
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.42, 6, false), m); tube.renderOrder = 20; grp.add(tube);
+  const m = new THREE.MeshBasicMaterial({color:0xFF3D81, transparent:true, opacity:0.75, depthTest:false}); grp.userData.mat = m;
+  /* 細細的底線，加上兩端落在島上的粉紅圓球 */
+  const rail = new THREE.Mesh(new THREE.TubeGeometry(c, 48, 0.05, 6, false), m); rail.renderOrder = 20; grp.add(rail);
+  for(const t of [0,1]){ const sp = new THREE.Mesh(new THREE.SphereGeometry(0.3,12,10), m); sp.position.copy(c.getPoint(t)); sp.renderOrder = 21; grp.add(sp); }
+  /* 粉紅色的箭頭塊，沿著線從這個單元流向相關單元 */
+  for(let i=0;i<5;i++){
+    const ar = new THREE.Mesh(new THREE.ConeGeometry(0.26,0.7,4).rotateX(Math.PI/2), m); ar.renderOrder = 22; grp.add(ar);
+    linkArrows.push({m:ar, c, o:i/5});
   }
-  for(const t of [0,1]){ const sp = new THREE.Mesh(new THREE.SphereGeometry(1.0,12,10), m); sp.position.copy(c.getPoint(t)); sp.renderOrder = 21; grp.add(sp); }
-  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.8,12,10), new THREE.MeshBasicMaterial({color:0xFFFFFF, depthTest:false})); bead.renderOrder = 22; grp.add(bead);
-  linkBeads.push({bead, c, t:Math.random()});
   linkGroup.add(grp);
+}
+function updateLinkArrows(tm){
+  for(const la of linkArrows){ const u = (la.o + tm*0.14) % 1, p = la.c.getPoint(u), tg = la.c.getTangent(u);
+    la.m.position.copy(p); la.m.lookAt(p.clone().add(tg)); }
 }
 function refreshLinks(){
   const hasUnit = selected && selected!=='hub';
   linkGroup.children.forEach(g=>{
     const rel = hasUnit && g.userData.ends.includes(selected);
-    g.visible = linksOn || rel;
-    g.userData.mat.opacity = (!hasUnit || rel) ? 0.95 : 0.2;
+    g.visible = linksOn;
+    g.userData.mat.opacity = (!hasUnit || rel) ? 0.75 : 0.12;
   });
 }
 
@@ -1038,6 +1174,7 @@ function resize(){
   /* 直式螢幕：鏡頭更高、更接近俯視，讓各島在畫面上分得開 */
   HOME.pos.set(2.5, portrait ? 46 : 24, portrait ? 42 : 41);
   HOME.target.set(2.5, portrait ? 2 : 3, portrait ? -2 : -4);
+  LINKVIEW.pos.set(2.5, portrait ? 64 : 50, portrait ? 20 : 12);
   if(!tween && !selected) controls.target.copy(HOME.target);
   if(!tween && !selected) camera.position.copy(HOME.pos);
 }
@@ -1053,14 +1190,14 @@ onSelect3D = (id, lessonId) => {
   selected = id;
   flagLabels.forEach(o=>o.visible = id==='u3');
   refreshLinks();
-  if(!id){ flyTo(HOME.pos.clone(), HOME.target.clone()); return; }
+  if(!id){ const v = linksOn ? LINKVIEW : HOME; flyTo(v.pos.clone(), v.target.clone()); return; }
   labelEls[id]?.classList.add('on');
   const g = groups[id];
   const t = g.position.clone().setY(g.userData.top*ISC);
   const off = new THREE.Vector3(0, 13, 15).multiplyScalar(ISC);
   if(id==='u3') off.set(4, 10, 12).multiplyScalar(ISC);
-  if(id!=='hub' && !lessonId){
-    /* 把這個單元和所有相關單元一起框進畫面，讓關聯線連到哪裡看得清楚 */
+  if(id!=='hub' && !lessonId && linksOn){
+    /* 按下「關聯線」時，把這個單元和所有相關單元一起框進畫面，讓關聯線連到哪裡看得清楚 */
     const ids = [id, ...LINKS.filter(l=>l[0]===id||l[1]===id).map(l=>l[0]===id?l[1]:l[0])];
     const ctr = new THREE.Vector3(); ids.forEach(i=>ctr.add(groups[i].position)); ctr.multiplyScalar(1/ids.length);
     const R = Math.max(...ids.map(i=>groups[i].position.distanceTo(ctr)));
@@ -1095,6 +1232,49 @@ renderer.domElement.addEventListener('pointermove', e=>{
   ray.setFromCamera(ptr, camera);
   renderer.domElement.style.cursor = ray.intersectObjects(pickables, false).length ? 'pointer' : 'grab';
 });
+
+/* 拖動水壩：按住水壩左右拖，沿著小河移動 */
+{
+  const el = renderer.domElement, plane = new THREE.Plane(new THREE.Vector3(0,1,0), -0.1), hitP = new THREE.Vector3();
+  let drag = null, cdrag = null;
+  const plane2 = new THREE.Plane(new THREE.Vector3(0,1,0), -0.12);
+  const aim = e=>{ const r = el.getBoundingClientRect(); ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ptr, camera); };
+  el.addEventListener('pointerdown', e=>{
+    aim(e);
+    const hit = ray.intersectObjects([...damPickables, ...crabPickables], false)[0];
+    if(!hit) return;
+    const cr = hit.object.userData.crab;
+    if(cr){ cdrag = cr; cr.mode = 'drag'; cr.pos.copy(cr.g.position); controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; return; }
+    drag = dams.find(d=>{ let o = hit.object; while(o){ if(o===d.g) return true; o = o.parent; } return false; });
+    if(drag){ controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'ew-resize'; down = null; }
+  }, true);
+  el.addEventListener('pointermove', e=>{
+    aim(e);
+    if(cdrag){ if(ray.ray.intersectPlane(plane2, hitP)){ cdrag.pos.x = hitP.x; cdrag.pos.z = hitP.z; } el.style.cursor = 'grabbing'; return; }
+    if(drag){
+      if(ray.ray.intersectPlane(plane, hitP)){
+        let best = null, bd = 1e9;
+        for(const sm of damSamples){ const dd = (sm.p.x-hitP.x)**2 + (sm.p.z-hitP.z)**2; if(dd < bd){ bd = dd; best = sm; } }
+        const other = dams.find(d=>d!==drag);
+        if(best && Math.abs(best.t - other.t) > 0.055){ drag.t = best.t; placeDam(drag); }
+      }
+      el.style.cursor = 'ew-resize'; return;
+    }
+    if(ray.intersectObjects(crabPickables, false).length) el.style.cursor = 'grab';
+    else if(ray.intersectObjects(damPickables, false).length) el.style.cursor = 'ew-resize';
+  });
+  const end = ()=>{
+    if(cdrag){
+      /* 放開螃蟹：找出離牠最近的河岸，讓牠自己跑（或游）上岸 */
+      const nr = nearestRiver(cdrag.pos.x, cdrag.pos.z), tg = riverCurve.getTangentAt(nr.u), n = new THREE.Vector3(-tg.z,0,tg.x);
+      const side = Math.sign(new THREE.Vector3(cdrag.pos.x-nr.p.x,0,cdrag.pos.z-nr.p.z).dot(n)) || cdrag.side;
+      cdrag.side = side; cdrag.target.set(nr.p.x+n.x*side*3.3, 0.12, nr.p.z+n.z*side*3.3);
+      cdrag.pos.y = 1.2; cdrag.vy = 0; cdrag.mode = 'return'; cdrag = null; controls.enabled = true;
+    }
+    if(drag){ drag = null; controls.enabled = true; }
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
 renderer.domElement.addEventListener('keydown', e=>{
   const step = 0.08;
   if(e.key==='ArrowLeft'){ rotate(step); } else if(e.key==='ArrowRight'){ rotate(-step); }
@@ -1102,10 +1282,93 @@ renderer.domElement.addEventListener('keydown', e=>{
 function rotate(a){ const v = camera.position.clone().sub(controls.target); v.applyAxisAngle(new THREE.Vector3(0,1,0), a); camera.position.copy(controls.target).add(v); }
 
 /* 工具列 */
-const toggle = (btn, fn) => btn.addEventListener('click', ()=>{ const on = btn.getAttribute('aria-pressed')!=='true'; btn.setAttribute('aria-pressed', String(on)); fn(on); });
-toggle($('#btnLinks'), on=>{ linksOn = on; refreshLinks(); });
-$('#btnReset').addEventListener('click', ()=>{ setTab('units'); onSelect3D(null); });
-controls.addEventListener('start', ()=>{ tween = null; $('#hint').hidden = true; });
+
+/* 探險隊：學生按下按鈕、同意後，一輛小車載著探險隊，約 15 秒帶他看兩個景點，結束後把操控還給學生 */
+const tourCar = makeCar(C.pink); tourCar.scale.setScalar(2.1); tourCar.visible = false;
+{ add(tourCar, new THREE.CylinderGeometry(0.03,0.03,1.3,5), mat(C.wood), -0.18, 1.2, -0.38);
+  add(tourCar, new THREE.BoxGeometry(0.5,0.3,0.03), mat(C.yellow), 0.05, 1.65, -0.38);
+  for(const x of [-0.12,0.14]){ add(tourCar, new THREE.SphereGeometry(0.15,10,8), mat(0xFFDDBB), x, 0.78, 0.0); add(tourCar, new THREE.SphereGeometry(0.16,10,6,0,Math.PI*2,0,Math.PI*0.5), mat(x<0?0x3A2A22:0x8A5A3A), x, 0.82, 0.0); } }
+scene.add(tourCar);
+const TOUR_ROUTES = [['u2','u4'],['u3','u5'],['u1','u7'],['u6','u2'],['u4','u7'],['u3','u1'],['u5','u6']];
+let tour = null, lastRoute = -1;
+const $tourDlg = $('#tourDialog'), $tourCap = $('#tourCap');
+const tourY = 0.6*ISC + 0.06;
+function tourSay(txt){ $tourCap.textContent = txt; $tourCap.hidden = !txt; }
+function tourPaths(ids){
+  const P = id=>{ const g = groups[id]; return new THREE.Vector3(g.position.x, tourY, g.position.z); };
+  const unit = id=>{ const v = P(id); return v.clone().setY(0); };
+  const ringPt = (id, rad)=>{ const v = unit(id).normalize().multiplyScalar(rad); v.y = tourY; return v; };
+  const stopPt = id=>{ const v = P(id).multiplyScalar(0.8); v.y = tourY; return v; };
+  const A = ids[0], B = ids[1];
+  const path1 = new THREE.CurvePath(); path1.add(new THREE.LineCurve3(ringPt(A,3.6), stopPt(A)));
+  const aa = Math.atan2(unit(A).z, unit(A).x); let ab = Math.atan2(unit(B).z, unit(B).x), d = ab-aa; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI;
+  const pts = [stopPt(A), ringPt(A,4.6)]; for(let i=1;i<=5;i++){ const an = aa + d*i/6; pts.push(new THREE.Vector3(Math.cos(an)*4.6, tourY, Math.sin(an)*4.6)); }
+  pts.push(ringPt(B,4.6), stopPt(B));
+  const path2 = new THREE.CurvePath(); for(let i=0;i<pts.length-1;i++) path2.add(new THREE.LineCurve3(pts[i], pts[i+1]));
+  return [path1, path2];
+}
+function uName(id){ const u = unitById(id); return `${u.no} ${u.title}`; }
+function tourStart(){
+  let k; do{ k = Math.floor(Math.random()*TOUR_ROUTES.length); }while(k===lastRoute && TOUR_ROUTES.length>1); lastRoute = k;
+  const ids = TOUR_ROUTES[k], paths = tourPaths(ids);
+  setMode('tour');
+  $tourDlg.hidden = true;
+  const tl = [
+    {kind:'drive', id:ids[0], path:paths[0], dur:3.0, say:`出發囉！先去「${uName(ids[0])}」`},
+    {kind:'stay',  id:ids[0], dur:3.4, say:`「${uName(ids[0])}」${unitById(ids[0]).q}`},
+    {kind:'drive', id:ids[1], path:paths[1], dur:3.4, say:`接著去「${uName(ids[1])}」`},
+    {kind:'stay',  id:ids[1], dur:3.4, say:`「${uName(ids[1])}」${unitById(ids[1]).q}`},
+    {kind:'end',   dur:2.2, say:'想多看一點？點地塊自己逛逛吧！'},
+  ];
+  tour = {tl, i:-1, t:0};
+  tourCar.visible = true;
+  const s0 = paths[0].getPointAt(0); tourCar.position.copy(s0);
+}
+function tourStop(){
+  if(!tour && !tourCar.visible) return;
+  tour = null; tourCar.visible = false; tourSay('');
+}
+function updateTour(dt){
+  if(!tour) return;
+  const st = tour.tl[tour.i];
+  if(!st || tour.t >= st.dur){
+    tour.i++; tour.t = 0;
+    if(tour.i >= tour.tl.length){ tourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); return; }
+    const n = tour.tl[tour.i]; tourSay(n.say);
+    if(n.kind==='drive'){ renderUnit(n.id); onSelect3D(n.id); }
+    return;
+  }
+  tour.t += dt;
+  if(st.kind==='drive'){
+    const u = Math.min(1, tour.t/st.dur), e = u<0.5 ? 2*u*u : 1-Math.pow(-2*u+2,2)/2;
+    const p = st.path.getPointAt(e), tg = st.path.getTangentAt(Math.min(0.999,e));
+    tourCar.position.copy(p); tourCar.position.y += Math.abs(Math.sin(tour.t*14))*0.04; tourCar.rotation.y = Math.atan2(tg.x, tg.z);
+  } else if(st.kind==='stay'){ tourCar.position.y = tourY + Math.abs(Math.sin(tour.t*5))*0.1; }
+}
+$('#btnTour').addEventListener('click', ()=>{
+  if(tour){ tourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); return; }
+  $tourDlg.hidden = false; $('#tourGo').focus();
+});
+$('#tourGo').addEventListener('click', tourStart);
+$('#tourNo').addEventListener('click', ()=>{ $tourDlg.hidden = true; });
+
+/* 「回到全景」和「關聯線」二選一：全景沒有線，關聯線才有線；預設是全景 */
+function setMode(m){
+  if(m!=='tour') tourStop();
+  $tourDlg.hidden = true;
+  linksOn = (m==='links');
+  $('#btnLinks').setAttribute('aria-pressed', String(linksOn));
+  $('#btnReset').setAttribute('aria-pressed', String(m==='panorama'));
+  $('#btnTour').setAttribute('aria-pressed', String(m==='tour'));
+  refreshLinks();
+}
+$('#btnLinks').addEventListener('click', ()=>{
+  if(linksOn) return;
+  setMode('links');
+  if(selected && selected!=='hub') onSelect3D(selected); else flyTo(LINKVIEW.pos.clone(), LINKVIEW.target.clone());
+});
+$('#btnReset').addEventListener('click', ()=>{ setMode('panorama'); setTab('units'); onSelect3D(null); });
+controls.addEventListener('start', ()=>{ tween = null; $('#hint').hidden = true; if(tour){ tourStop(); setMode('panorama'); } });
 
 if(UNITS.some(u=>u.id===initial)) onSelect3D(initial);
 
@@ -1124,13 +1387,18 @@ renderer.setAnimationLoop(()=>{
         for(const s of spinners) s.rotation.y += dt*0.9;
     cloudGroup.rotation.y += dt*0.006;
     updateCritters(dt, t);
+    updateDams(t);
+    updateRipples(dt);
     for(const c of cars){ c.t += dt*c.speed*c.dir; if(c.t>1){ c.t=1; c.dir=-1; } if(c.t<0){ c.t=0; c.dir=1; } placeCar(c); }
-    for(const lb of linkBeads){ lb.t = (lb.t + dt*0.22) % 1; lb.bead.position.copy(lb.c.getPoint(lb.t)); }
+    updateLinkArrows(t);
     for(const w of walkers){ w.t += dt*w.speed*w.dir; if(w.t>1){ w.t=1; w.dir=-1; } if(w.t<0){ w.t=0; w.dir=1; } placeWalker(w, t); }
   } else {
     for(const c of cars) placeCar(c);
+    updateLinkArrows(0);
+    updateDams(0);
     for(const w of walkers) placeWalker(w, 0);
   }
+  updateTour(dt);
   controls.update();
   renderer.render(scene, camera);
   labelR.render(scene, camera);
