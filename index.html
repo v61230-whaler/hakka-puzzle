@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tag.adv .w{background:var(--tea)}
 .tag.hub{padding:6px 14px;border-color:var(--persimmon)}
 .tag.hub b{font-size:17px}
-.tag.bridge{pointer-events:none;background:#2F7CC4;color:#fff;border-color:#fff;padding:3px 14px}
+.tag.bridge{pointer-events:auto;text-decoration:none;cursor:pointer;background:#2F7CC4;color:#fff;border-color:#fff;padding:3px 14px}
 .tag.bridge b{font-size:15px}
 .tag.on{border-color:var(--persimmon);box-shadow:0 0 0 2px var(--persimmon)}
 .pin{pointer-events:auto;font:500 12px/1.2 var(--f-body);background:var(--persimmon);color:#fff;border:0;border-radius:999px;padding:3px 7px;cursor:pointer;white-space:nowrap}
@@ -705,7 +705,7 @@ function dodgeBank(t, off){
   /* 橋墩前的小石塊（河床邊緣） */
   for(const [x,z] of [[-3,1.4],[0,-1.4],[3,1.4]]){ const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35,0), hillMat(0xB9B6C8)); r.position.set(x,0.2,z); g.add(r); }
   /* 名牌：浮在橋上方的藍色名牌「東安橋」，永遠朝向螢幕、正著讀，不必轉視角 */
-  { const el = document.createElement('div'); el.className = 'tag bridge'; el.innerHTML = '<b>東安橋</b>';
+  { const el = document.createElement('a'); el.className = 'tag bridge'; el.href = 'https://www.google.com/search?q=%E6%9D%B1%E5%AE%89%E6%A9%8B'; el.target = '_blank'; el.rel = 'noopener'; el.title = '在 Google 地圖上看東安橋'; el.innerHTML = '<b>東安橋</b><span aria-hidden="true" style="font-size:12px">↗</span>';
     const lab = new CSS2DObject(el); lab.position.set(0, 4.2, 0); g.add(lab); }
   const p = riverPoint(BRIDGE_T, 0), tg = riverCurve.getTangentAt(BRIDGE_T);
   g.position.set(p.x, 0.02, p.z); g.rotation.y = Math.atan2(tg.x, tg.z); g.scale.setScalar(0.9); scene.add(g);
