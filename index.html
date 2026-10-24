@@ -116,7 +116,6 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
   <div id="stage" aria-label="課程拼圖 3D 地圖：中間是教室主地塊，周圍七個單元地塊；完整內容請用右側清單">
     <div class="tools">
       <button id="btnLinks" type="button" aria-pressed="false">關聯線</button>
-      <button id="btnCars" type="button" aria-pressed="true">電動車</button>
       <button id="btnReset" type="button">回到全景</button>
     </div>
     <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元</div>
@@ -885,21 +884,37 @@ const flagMeshes = {};
   });
 })();
 
-/* 連線：拱橋般的虛線 */
-const linkGroup = new THREE.Group(); linkGroup.visible = false; scene.add(linkGroup);
-const curves = {};
+/* 關聯線：粗粗的粉紅虛線拱在島上空，有小圓點沿著線流動；點選單元時，只突顯和它相關的線 */
+const linkGroup = new THREE.Group(); scene.add(linkGroup);
+const linkBeads = []; let linksOn = false;
 function arc(a, b, lift){
-  const A = groups[a].position.clone().setY(groups[a].userData.top+0.4);
-  const B = groups[b].position.clone().setY(groups[b].userData.top+0.4);
+  const A = groups[a].position.clone().setY(groups[a].userData.top*ISC+3.4);
+  const B = groups[b].position.clone().setY(groups[b].userData.top*ISC+3.4);
   const mid = A.clone().add(B).multiplyScalar(0.5); mid.y += lift;
   return new THREE.QuadraticBezierCurve3(A, mid, B);
 }
 for(const [a,b] of LINKS){
-  const c = arc(a,b, 4.5);
-  const geo = new THREE.BufferGeometry().setFromPoints(c.getPoints(48));
-  const line = new THREE.Line(geo, new THREE.LineDashedMaterial({color:C.persimmon, dashSize:0.6, gapSize:0.35, transparent:true, opacity:0.9}));
-  line.computeLineDistances(); line.userData.ends=[a,b];
-  linkGroup.add(line);
+  const c = arc(a,b, 5.5);
+  const grp = new THREE.Group(); grp.userData.ends = [a,b]; grp.visible = false;
+  const m = new THREE.MeshBasicMaterial({color:0xFF3D81, transparent:true, opacity:0.95, depthTest:false}); grp.userData.mat = m;
+  const N = 14;
+  for(let i=0;i<N;i++){
+    const t0 = i/N+0.012, t1 = (i+0.62)/N, pts = [];
+    for(let k=0;k<=6;k++) pts.push(c.getPoint(t0+(t1-t0)*k/6));
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.22, 6, false), m); tube.renderOrder = 20; grp.add(tube);
+  }
+  for(const t of [0,1]){ const sp = new THREE.Mesh(new THREE.SphereGeometry(0.6,12,10), m); sp.position.copy(c.getPoint(t)); sp.renderOrder = 21; grp.add(sp); }
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.5,12,10), new THREE.MeshBasicMaterial({color:0xFFFFFF, depthTest:false})); bead.renderOrder = 22; grp.add(bead);
+  linkBeads.push({bead, c, t:Math.random()});
+  linkGroup.add(grp);
+}
+function refreshLinks(){
+  const hasUnit = selected && selected!=='hub';
+  linkGroup.children.forEach(g=>{
+    const rel = hasUnit && g.userData.ends.includes(selected);
+    g.visible = linksOn || rel;
+    g.userData.mat.opacity = (!hasUnit || rel) ? 0.95 : 0.2;
+  });
 }
 
 /* 道路：島與島只隔一小段水，用短短的路連起來。主島連各島，相鄰的島也互相連 */
@@ -1037,7 +1052,7 @@ onSelect3D = (id, lessonId) => {
   if(selected && labelEls[selected]) labelEls[selected].classList.remove('on');
   selected = id;
   flagLabels.forEach(o=>o.visible = id==='u3');
-  linkGroup.children.forEach(l=>{ l.material.opacity = !id || id==='hub' || l.userData.ends.includes(id) ? 0.9 : 0.15; });
+  refreshLinks();
   if(!id){ flyTo(HOME.pos.clone(), HOME.target.clone()); return; }
   labelEls[id]?.classList.add('on');
   const g = groups[id];
@@ -1080,8 +1095,7 @@ function rotate(a){ const v = camera.position.clone().sub(controls.target); v.ap
 
 /* 工具列 */
 const toggle = (btn, fn) => btn.addEventListener('click', ()=>{ const on = btn.getAttribute('aria-pressed')!=='true'; btn.setAttribute('aria-pressed', String(on)); fn(on); });
-toggle($('#btnLinks'), on=>linkGroup.visible = on);
-toggle($('#btnCars'), on=>carGroup.visible = on);
+toggle($('#btnLinks'), on=>{ linksOn = on; refreshLinks(); });
 $('#btnReset').addEventListener('click', ()=>{ setTab('units'); onSelect3D(null); });
 controls.addEventListener('start', ()=>{ tween = null; $('#hint').hidden = true; });
 
@@ -1103,7 +1117,7 @@ renderer.setAnimationLoop(()=>{
     cloudGroup.rotation.y += dt*0.006;
     updateCritters(dt, t);
     for(const c of cars){ c.t += dt*c.speed*c.dir; if(c.t>1){ c.t=1; c.dir=-1; } if(c.t<0){ c.t=0; c.dir=1; } placeCar(c); }
-    linkGroup.children.forEach(l=>{ l.material.dashOffset = -t*0.8; });
+    for(const lb of linkBeads){ lb.t = (lb.t + dt*0.22) % 1; lb.bead.position.copy(lb.c.getPoint(lb.t)); }
     for(const w of walkers){ w.t += dt*w.speed*w.dir; if(w.t>1){ w.t=1; w.dir=-1; } if(w.t<0){ w.t=0; w.dir=1; } placeWalker(w, t); }
   } else {
     for(const c of cars) placeCar(c);
