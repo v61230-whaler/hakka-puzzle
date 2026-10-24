@@ -176,10 +176,15 @@ const UNITS = [
     links:[{t:'3-2 客家專題',u:page('3-客家摎你/3-2-客家專題')},{t:'非同步線上課',u:page('3-客家摎你/3-2-客家專題/非同步線上課')}] },
   { id:'u6', no:'六', w:'When', title:'客語認證', adv:true, pos:[5.1,-8.9], r:3.9, tiers:2, decor:'podium',
     q:'什麼時候去考認證？',
-    desc:'進階單元：準備客語能力認證。內容待補。', links:[] },
+    desc:'進階單元：準備客語能力認證。哈客網路學院有拼音、詞彙學習和題庫、模擬測驗可以練習；報名和簡章請到客委會的客語能力認證網站。',
+    links:[{t:'4 教室・客語能力認證',s:'老師的教學網頁',u:page('4-教室')},
+           {t:'哈客網路學院',s:'客家委員會・客語拼音與詞彙學習、題庫與模擬測驗',u:'https://elearning.hakka.gov.tw/'},
+           {t:'客語能力認證',s:'客家委員會・報名、簡章下載、題型介紹、線上試考',u:'https://hakkaexam.hakka.gov.tw/'}] },
   { id:'u7', no:'七', w:'When', title:'客語文競賽', adv:true, pos:[15.4,-8.9], r:3.9, tiers:2, decor:'trophy',
     q:'什麼時候上台比賽？',
-    desc:'進階單元：鼓勵參加各種本土語活動與比賽。內容待補。', links:[] },
+    desc:'進階單元：客語文競賽主要是各校的客語朗讀，以及市賽。想看賽事公告、報名和成績，可以到下面的網站。',
+    links:[{t:'桃園市語文競賽',s:'最新消息、線上報名、出場順序與成績查詢',u:'https://lang.twnpo.com/index.aspx'},
+           {t:'中華民國115年全國語文競賽',s:'教育部主辦・大會公告、競賽內容、線上報名',u:'https://language115.eduweb.tw/Module/Home/Index.php'}] },
 ];
 
 const LESSONS = [
@@ -444,6 +449,98 @@ for(let i=0;i<7;i++){
   for(let j=0;j<4;j++){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(2.2 - Math.abs(j-1.5)*0.45, 1), cloudMat); b.position.set(j*2.2-3.3, (j%2)*0.5, 0); b.scale.y = 0.7; c.add(b); }
   c.position.set(Math.cos(a)*d, 24 + rnd()*10, Math.sin(a)*d); c.rotation.y = -a; cloudGroup.add(c);
 }
+
+
+/* 小河：從畫面前方的草地蜿蜒流過，河裡有大石頭、小魚、小蝦、小蟹 */
+const riverCurve = new THREE.CatmullRomCurve3([[-70,18.5],[-52,16.5],[-36,20.5],[-20,17.5],[-4,21],[12,18],[28,21.5],[44,18],[60,21],[74,18]].map(([x,z])=>new THREE.Vector3(x,0.03,z)));
+const riverMat = new THREE.MeshStandardMaterial({color:0x6EC6E8, roughness:0.35, metalness:0.05, flatShading:true});
+function ribbon(curve, width, y, material, n=240){
+  const pts = curve.getSpacedPoints(n), pos = [], idx = [];
+  pts.forEach((p,i)=>{ const t = curve.getTangent(i/n); const nx = -t.z, nz = t.x; const l = Math.hypot(nx,nz)||1;
+    pos.push(p.x+nx/l*width/2, y, p.z+nz/l*width/2, p.x-nx/l*width/2, y, p.z-nz/l*width/2);
+    if(i<n){ const a=i*2; idx.push(a,a+2,a+1, a+1,a+2,a+3); } });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, material); m.receiveShadow = true; scene.add(m); return m;
+}
+const bankMat = new THREE.MeshStandardMaterial({color:0xFFF0CC, roughness:0.95, flatShading:true});
+ribbon(riverCurve, 7.2, 0.02, bankMat);
+ribbon(riverCurve, 5.6, 0.05, riverMat);
+const riverPoint = (t, off=0)=>{ const p = riverCurve.getPointAt(t), tg = riverCurve.getTangentAt(t); return p.clone().add(new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(off)); };
+const critters = [];
+const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.position.set(x,y,z); me.scale.set(sx,sy,sz); me.castShadow = false; return me; };
+const whiteM = new THREE.MeshStandardMaterial({color:0xFFFFFF, flatShading:true}), blackM = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
+function makeFish(col){
+  const f = new THREE.Group(), body = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
+  f.add(S(new THREE.SphereGeometry(0.5,12,8),0,0.35,0,1.35,0.85,0.7,body));
+  f.add(S(new THREE.ConeGeometry(0.4,0.7,4).rotateX(Math.PI/2).rotateZ(Math.PI/2),0,0.35,-0.85,0.25,1.2,1,body));
+  f.add(S(new THREE.ConeGeometry(0.2,0.4,4),0,0.85,-0.05,0.4,1,1,body));
+  for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
+  f.scale.setScalar(1.7); return f;
+}
+function makeCrab(){
+  const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:0xFF7B6B, flatShading:true, roughness:0.6});
+  c.add(S(new THREE.SphereGeometry(0.5,12,8),0,0.3,0,1.3,0.6,0.95,red));
+  for(const sx of [-1,1]){
+    c.add(S(new THREE.SphereGeometry(0.12,8,6),sx*0.28,0.68,0.35,1,1,1,whiteM)); c.add(S(new THREE.SphereGeometry(0.06,6,5),sx*0.28,0.7,0.44,1,1,1,blackM));
+    c.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.85,0.42,0.45,1.1,0.8,1,red)); c.add(S(new THREE.BoxGeometry(0.28,0.1,0.1),sx*0.55,0.36,0.3,1,1,1,red));
+    for(let i=0;i<3;i++) c.add(S(new THREE.CylinderGeometry(0.04,0.04,0.5,5).rotateZ(Math.PI/2),sx*0.75,0.12,-0.3+i*0.22,1,1,1,red));
+  }
+  c.scale.setScalar(1.5); return c;
+}
+function makeShrimp(){
+  const g = new THREE.Group(), pk = new THREE.MeshStandardMaterial({color:0xFFB08A, flatShading:true, roughness:0.6});
+  [[0,0.5,0.45,0.32],[0,0.6,0.1,0.3],[0,0.55,-0.22,0.26],[0,0.38,-0.48,0.2],[0,0.2,-0.62,0.15]].forEach(([x,y,z,r])=>g.add(S(new THREE.SphereGeometry(r,10,8),x,y,z,1,1,1,pk)));
+  g.add(S(new THREE.ConeGeometry(0.16,0.3,4).rotateX(-Math.PI/2),0,0.15,-0.82,1.4,1,1,pk));
+  for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.14,0.62,0.7,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.04,6,5),sx*0.14,0.63,0.77,1,1,1,blackM));
+    g.add(S(new THREE.CylinderGeometry(0.015,0.015,0.9,4).rotateX(Math.PI/2.4),sx*0.15,0.72,1.0,1,1,1,pk)); }
+  g.scale.setScalar(1.7); return g;
+}
+function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r,0), new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.95}));
+  m.scale.set(1+rnd()*0.3,0.7+rnd()*0.2,1+rnd()*0.3); m.rotation.y = rnd()*6; m.castShadow = false; return m; }
+{
+  const rocks = [[0.31,-3.2,1.3,0xB9B6C8],[0.33,2.9,1.1,0xA9B6CC],[0.37,-3.4,1.6,0xC8C2D6],[0.4,3.1,1.0,0xB0BCCB],[0.44,-3.3,1.4,0xBFBBD0],[0.47,3.2,1.2,0xAAB7C9],[0.5,-3.1,1.5,0xC3BED4],[0.54,3.1,1.0,0xB4B9CB],[0.57,-3.4,1.3,0xB9B6C8],[0.61,3.2,1.5,0xA9B6CC],[0.65,-3.2,1.2,0xC8C2D6],[0.68,3.0,1.0,0xAAB7C9],[0.42,-1.0,0.8,0xBFBBD0],[0.59,1.1,0.9,0xB9B6C8]];
+  for(const [t,off,r,hex] of rocks){ const p = riverPoint(t,off), m = makeRock(r,hex); m.position.set(p.x, 0.1+r*0.25, p.z); scene.add(m); }
+  const cols = [0xFF9F43,0xFF7FA8,0xFFD24D,0x74C0FF];
+  [0.36,0.43,0.55,0.63].forEach((t,i)=>{ const f = makeFish(cols[i%4]); scene.add(f); critters.push({kind:'fish', g:f, t, dir:i%2?1:-1, speed:0.006+i*0.0015, off:(i%2?0.8:-0.8), ph:i*1.7}); });
+  [0.4,0.58].forEach((t,i)=>{ const c = makeCrab(); scene.add(c); critters.push({kind:'crab', g:c, t, off:i?3.3:-3.3, ph:i*2.1}); });
+  [0.38,0.5,0.62].forEach((t,i)=>{ const s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.1, ph:i*1.3}); });
+}
+function updateCritters(dt, tm){
+  for(const c of critters){
+    if(c.kind==='fish'){ c.t += dt*c.speed*c.dir; if(c.t>0.69){ c.t=0.69; c.dir=-1; } if(c.t<0.31){ c.t=0.31; c.dir=1; }
+      const p = riverPoint(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.6), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
+      c.g.position.set(p.x, 0.06+Math.abs(Math.sin(tm*2+c.ph))*0.12, p.z); c.g.rotation.y = Math.atan2(tg.x,tg.z); c.g.rotation.z = Math.sin(tm*6+c.ph)*0.08; }
+    else if(c.kind==='crab'){ const t = c.t + Math.sin(tm*0.4+c.ph)*0.025, p = riverPoint(t, c.off);
+      c.g.position.set(p.x, 0.12, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.position.y += Math.abs(Math.sin(tm*5+c.ph))*0.05; }
+    else { const t = c.t + Math.sin(tm*0.5+c.ph)*0.02, p = riverPoint(t, c.off); const hop = Math.max(0, Math.sin(tm*2.2+c.ph));
+      c.g.position.set(p.x, 0.06+hop*0.35, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.rotation.x = -hop*0.4; }
+  }
+}
+
+
+/* 草地上的小樹林：島的後方與兩側成群的樹，河岸邊也有幾棵 */
+function groundTree(x, z, sc){
+  const g = new THREE.Group(), pick = rnd();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,1.0,6), mat(C.wood)); trunk.position.y = 0.5; g.add(trunk);
+  if(pick < 0.38){                                    // 杉樹
+    for(let i=0;i<3;i++){ const c = new THREE.Mesh(new THREE.ConeGeometry(0.95-i*0.22, 1.2, 7), hillMat(i%2?0x58BC85:0x4FB07A)); c.position.y = 1.25+i*0.7; g.add(c); }
+  } else {                                            // 圓樹冠：綠為主，夾雜粉紅與鵝黃
+    const col = pick < 0.68 ? [0x6FCB8E,0x5DBF7D,0x7ED6A0][Math.floor(rnd()*3)] : (pick < 0.84 ? 0xFF9CC2 : 0xFFD24D);
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05,1), hillMat(col)); c.position.y = 1.7; g.add(c);
+    const c2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7,1), hillMat(col)); c2.position.set(0.5,2.3,0.2); g.add(c2);
+  }
+  g.position.set(x,0.02,z); g.scale.setScalar(sc); g.rotation.y = rnd()*6; scene.add(g); return g;
+}
+function grove(cx, cz, n, radius){
+  const placed = [];
+  for(let i=0;i<n*8 && placed.length<n;i++){
+    const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
+    if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
+    placed.push([x,z]); groundTree(x,z,1.3+rnd()*0.9);
+  }
+}
+[[-30,-20,7,4.5],[-18,-26,8,5],[-5,-22,5,3.5],[8,-27,8,5],[22,-21,6,4],[34,-18,7,4.5],[-40,-6,5,4],[-37,8,4,3.5],[38,-3,5,4],[36,10,4,3.5],[0,-34,7,5],[-26,-33,6,4.5],[24,-33,6,4.5]].forEach(([x,z,n,r])=>grove(x,z,n,r));
+[[0.30,5.0],[0.34,-5.2],[0.39,5.4],[0.45,-5.0],[0.52,5.2],[0.56,-5.3],[0.62,5.0],[0.67,-5.2]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
 
 function add(parent, geo, m, x=0, y=0, z=0){ const me = new THREE.Mesh(geo, m); me.position.set(x,y,z); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
 function prism(w, h, len){ const s = new THREE.Shape(); s.moveTo(-w/2,0); s.lineTo(w/2,0); s.lineTo(0,h); s.closePath(); const g = new THREE.ExtrudeGeometry(s,{depth:len,bevelEnabled:false}); g.translate(0,0,-len/2); return g; }
@@ -902,6 +999,7 @@ function applyTheme(){
   scene.fog = new THREE.Fog(p.sky, 90, 230);
   hills.forEach(h=>h.m.color.copy(h.base).multiplyScalar(p.hill));
   cloudMat.color.setHex(isDark()?0x9FB8C8:0xFFFFFF);
+  riverMat.color.setHex(isDark()?0x3E7FA8:0x6EC6E8);
   water.material.color.setHex(p.water);
   ring.material.color.setHex(p.deep);
   sun.intensity = p.sun; hemi.intensity = p.hemi;
@@ -1003,6 +1101,7 @@ renderer.setAnimationLoop(()=>{
   if(!reduce){
         for(const s of spinners) s.rotation.y += dt*0.9;
     cloudGroup.rotation.y += dt*0.006;
+    updateCritters(dt, t);
     for(const c of cars){ c.t += dt*c.speed*c.dir; if(c.t>1){ c.t=1; c.dir=-1; } if(c.t<0){ c.t=0; c.dir=1; } placeCar(c); }
     linkGroup.children.forEach(l=>{ l.material.dashOffset = -t*0.8; });
     for(const w of walkers){ w.t += dt*w.speed*w.dir; if(w.t>1){ w.t=1; w.dir=-1; } if(w.t<0){ w.t=0; w.dir=1; } placeWalker(w, t); }
