@@ -75,6 +75,14 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.94.woff2) format('woff2');
+  unicode-range: U+2139, U+2153, U+2194-2197, U+2199, U+219d-219e, U+21a0, U+21a9-21aa, U+21ac, U+21af-21b1, U+21b3-21b5, U+21ba-21bb, U+21c4, U+21ca, U+21cc, U+21d0, U+21d2-21d4, U+21d8, U+21dd, U+21e2-21e9, U+2200, U+2202, U+2205-2208, U+220e-220f, U+2211-2212, U+2215, U+2217-221a, U+221d-2220, U+2225, U+2227-222b, U+222e, U+2234-2237, U+223c-223d, U+2248, U+2256, U+2260-2261, U+2264-2265, U+226a-226b, U+226e-226f, U+2282-2283, U+2295-2296, U+2299, U+22a5, U+22b0-22b1, U+22b9, U+22bf, U+22c5-22c6, U+22c8, U+22d0-22d1, U+22ee, U+2312-2313, U+2318, U+231a-231b, U+2323, U+2328, U+239d, U+23a0, U+23af, U+23e4, U+23e9-23ea, U+23ec, U+23f0-23f3, U+23fa, U+2445, U+2460-2471, U+2474;
+}
+@font-face {
+  font-family: 'Huninn';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
   src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.95.woff2) format('woff2');
   unicode-range: U+1ec0-1ec3, U+1ec5-1ec6, U+1ec9, U+1ecb-1ecd, U+1ecf-1ed1, U+1ed3-1ed5, U+1ed7-1edd, U+1edf, U+1ee1, U+1ee3-1ee7, U+1ee9, U+1eeb, U+1eed, U+1eef-1ef1, U+1ef3, U+1ef7, U+1ef9, U+1f62, U+1fa2, U+2001-2006, U+2009-200a, U+200c-200d, U+200f-2012, U+2015-2016, U+201a, U+201e, U+2020-2021, U+2023-2025, U+2028, U+202a-202d, U+202f-2030, U+2032-2033, U+2035, U+2038, U+203e-203f, U+2042-2044, U+2049, U+204d-204e, U+2060-2061, U+2063, U+2070, U+2074-207b, U+207d-207e, U+2080-2083, U+208a, U+208d-208e, U+20a1, U+20a4, U+20a6, U+20a8-20ab, U+20ad-20ae, U+20b1-20b3, U+20b5, U+20b8-20ba, U+20bd, U+20dd, U+20e3, U+2105, U+2109, U+2112-2113, U+2115-2117, U+2120-2121, U+2126, U+212b;
 }
