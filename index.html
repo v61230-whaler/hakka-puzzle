@@ -901,10 +901,10 @@ for(const [a,b] of LINKS){
   for(let i=0;i<N;i++){
     const t0 = i/N+0.012, t1 = (i+0.62)/N, pts = [];
     for(let k=0;k<=6;k++) pts.push(c.getPoint(t0+(t1-t0)*k/6));
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.22, 6, false), m); tube.renderOrder = 20; grp.add(tube);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.42, 6, false), m); tube.renderOrder = 20; grp.add(tube);
   }
-  for(const t of [0,1]){ const sp = new THREE.Mesh(new THREE.SphereGeometry(0.6,12,10), m); sp.position.copy(c.getPoint(t)); sp.renderOrder = 21; grp.add(sp); }
-  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.5,12,10), new THREE.MeshBasicMaterial({color:0xFFFFFF, depthTest:false})); bead.renderOrder = 22; grp.add(bead);
+  for(const t of [0,1]){ const sp = new THREE.Mesh(new THREE.SphereGeometry(1.0,12,10), m); sp.position.copy(c.getPoint(t)); sp.renderOrder = 21; grp.add(sp); }
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.8,12,10), new THREE.MeshBasicMaterial({color:0xFFFFFF, depthTest:false})); bead.renderOrder = 22; grp.add(bead);
   linkBeads.push({bead, c, t:Math.random()});
   linkGroup.add(grp);
 }
@@ -1059,7 +1059,15 @@ onSelect3D = (id, lessonId) => {
   const t = g.position.clone().setY(g.userData.top*ISC);
   const off = new THREE.Vector3(0, 13, 15).multiplyScalar(ISC);
   if(id==='u3') off.set(4, 10, 12).multiplyScalar(ISC);
-  flyTo(t.clone().add(off), t);
+  if(id!=='hub' && !lessonId){
+    /* 把這個單元和所有相關單元一起框進畫面，讓關聯線連到哪裡看得清楚 */
+    const ids = [id, ...LINKS.filter(l=>l[0]===id||l[1]===id).map(l=>l[0]===id?l[1]:l[0])];
+    const ctr = new THREE.Vector3(); ids.forEach(i=>ctr.add(groups[i].position)); ctr.multiplyScalar(1/ids.length);
+    const R = Math.max(...ids.map(i=>groups[i].position.distanceTo(ctr)));
+    const d = Math.max(34, R*2.3 + 18);
+    const tgt = ctr.setY(g.userData.top*ISC);
+    flyTo(tgt.clone().add(new THREE.Vector3(0, d*0.52, d*0.85)), tgt);
+  } else flyTo(t.clone().add(off), t);
   if(lessonId && flagMeshes[lessonId]){
     flagMeshes[lessonId].scale.set(1.6,1.6,1.6);
     setTimeout(()=>flagMeshes[lessonId].scale.set(1,1,1), 1600);
