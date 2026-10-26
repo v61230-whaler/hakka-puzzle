@@ -92,6 +92,8 @@ h1{font:700 32px/1.2 var(--f-display);margin:4px 0 6px;text-wrap:balance}
 .links a:hover{border-color:var(--persimmon)}
 .links a:focus-visible{outline:2px solid var(--focus)}
 .links a small{display:block;color:var(--muted);font-size:12px}
+.links .nolink{display:block;color:var(--muted);border:2px dashed var(--line);border-radius:16px;padding:9px 14px;font-size:14px}
+.links .nolink small{display:block;font-size:12px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font:500 13px var(--f-body);background:var(--chip);color:var(--fg);border:0;border-radius:999px;padding:6px 11px;cursor:pointer}
 .chip:focus-visible{outline:2px solid var(--focus)}
@@ -200,7 +202,7 @@ const UNITS = [
     q:'什麼時候上台比賽？',
     desc:'進階單元：客語文競賽主要是各校的客語朗讀，以及市賽。想看賽事公告、報名和成績，可以到下面的網站。',
     links:[{t:'桃園市語文競賽',s:'最新消息、線上報名、出場順序與成績查詢',u:'https://lang.twnpo.com/index.aspx'},
-           {t:'中華民國115年全國語文競賽',s:'教育部主辦・大會公告、競賽內容、線上報名',u:'https://language115.eduweb.tw/Module/Home/Index.php'}] },
+           {t:'中華民國115年全國語文競賽',s:'教育部主辦・大會公告、競賽內容、線上報名'}] },
 ];
 
 const LESSONS = [
@@ -257,7 +259,9 @@ let onSelect3D = () => {};
 
 function linkList(arr){
   if(!arr.length) return '<p class="note">待補</p>';
-  return '<ul class="links">' + arr.map(l=>`<li><a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.t)}${l.s?`<small>${esc(l.s)}</small>`:''}</a></li>`).join('') + '</ul>';
+  return '<ul class="links">' + arr.map(l=> l.u
+    ? `<li><a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.t)}${l.s?`<small>${esc(l.s)}</small>`:''}</a></li>`
+    : `<li><div class="nolink">${esc(l.t)}${l.s?`<small>${esc(l.s)}</small>`:''}</div></li>`).join('') + '</ul>';
 }
 function unitRow(u){
   return `<li><button class="row" data-unit="${u.id}"><span class="no">${u.no}</span><span><span class="t">${esc(u.title)}</span><span class="s">${esc(u.q)}</span></span><span class="w ${u.adv?'adv':''}">${u.w}${u.adv?'+':''}</span></button></li>`;
