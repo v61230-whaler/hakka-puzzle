@@ -895,6 +895,7 @@ const pondTick = [];
 
 /* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
+let dogApi = null;
 (function dogs(){
   function makeDog(o){
     const g = new THREE.Group(), fur = mat(o.fur), acc = mat(o.acc||o.fur), dark = mat(0x1B1B20), pink = mat(0xF2A2AE), legs = [];
@@ -982,6 +983,24 @@ const pondTick = [];
   const pickFrom = (arr, b, minD)=>{ for(let k=0;k<40;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD) return c; } return -1; };
   /* ── 狗 ── */
   const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false}; });
+  /* 點到狗：牠轉頭看向鏡頭，汪汪叫兩聲（聲音用瀏覽器合成，沒有音檔） */
+  const PITCH = [140,190,230,300,170];
+  const barkTex = (()=>{ const c = document.createElement('canvas'); c.width = 256; c.height = 160; const x = c.getContext('2d');
+    x.font = '900 110px Huninn, "PingFang TC", "Noto Sans TC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    x.lineWidth = 22; x.strokeStyle = '#FFFFFF'; x.strokeText('汪！',128,86); x.fillStyle = '#E8502D'; x.fillText('汪！',128,86);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  let ac = null;
+  function dogBark(pitch){ try{
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume();
+    const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(pitch*1.25,t0); o.frequency.exponentialRampToValueAtTime(pitch*0.7,t0+0.16);
+    f.type = 'bandpass'; f.frequency.value = pitch*3.2; f.Q.value = 0.9;
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.3,t0+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.2);
+    o.connect(f); f.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0+0.22); }catch(_){} }
+  ds.forEach((d,i)=>{ d.g.userData.dog = d; d.pitch = PITCH[i]; d.barkT = 0; d.bf = [false,false];
+    d.bub = new THREE.Sprite(new THREE.SpriteMaterial({map:barkTex, transparent:true, depthTest:false, depthWrite:false})); d.bub.visible = false; d.bub.renderOrder = 10; scene.add(d.bub); });
+  const bumpD = (e,s0,dur)=> (e>=s0 && e<s0+dur) ? Math.sin(Math.PI*(e-s0)/dur) : 0;
+  dogApi = { groups: ds.map(d=>d.g), trigger(d){ if(!d || d.state==='init' || d.barkT>0) return; d.barkT = 1.7; d.bf = [false,false]; } };
   let ready = false;
   function startCell(d){ const c0 = ci(d.x,d.z); if(c0>=0 && fr[c0]) return c0; if(c0<0) return -1; const ix = c0%NX, iz = (c0-ix)/NX;
     for(let R=1;R<=8;R++){ let best = -1, bd = 1e9; for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix+a, jz = iz+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!fr[j]) continue; const dd = (cx(j)-d.x)**2+(cz(j)-d.z)**2; if(dd<bd){ bd = dd; best = j; } } if(best>=0) return best; }
@@ -1030,7 +1049,11 @@ const pondTick = [];
     if(dt>0.1) dt = 0.1;
     for(const d of ds){ if(d.state==='init') continue;
       d.gt -= dt;
-      if(d.state==='wait'){ d.wait -= dt; d.sp = Math.max(0, d.sp-6*dt); if(d.wait<=0){ if(d.waitPoi===undefined) d.waitPoi = false; decide(d); } }
+      if(d.barkT>0){ d.barkT -= dt; const e = 1.7-d.barkT;
+        const ty = Math.atan2(camera.position.x-d.x, camera.position.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-9*dt,Math.min(9*dt,df));
+        d.sp = Math.max(0, d.sp-8*dt);
+        for(let k=0;k<2;k++){ if(e>=0.3+k*0.55 && !d.bf[k]){ d.bf[k] = true; dogBark(d.pitch); } } }
+      else if(d.state==='wait'){ d.wait -= dt; d.sp = Math.max(0, d.sp-6*dt); if(d.wait<=0){ if(d.waitPoi===undefined) d.waitPoi = false; decide(d); } }
       else if(d.state==='go'){
         if(d.gt<=0){ d.run = !d.run; d.gt = 2+rnd()*4.5; }
         const wp = d.path[0]; if(!wp){ d.state = 'wait'; d.wait = d.poi ? 4+rnd()*5 : 1.5+rnd()*4; d.mood = rnd()<0.6 ? 1 : 2; }
@@ -1052,6 +1075,10 @@ const pondTick = [];
       u.head.rotation.x = moving ? (run ? -0.12 : 0.05) : (d.mood===1 ? 0.5+0.12*Math.sin(t*7+d.ph) : 0.05);
       u.head.rotation.y = moving ? 0 : (d.mood===2 ? 0.6*Math.sin(t*0.9+d.ph) : 0);
       if(u.hasTail) u.tail.rotation.y = Math.sin(t*(moving?9:5)+d.ph)*0.45;
+      const e2 = d.barkT>0 ? 1.7-d.barkT : -1, pul = e2<0 ? 0 : Math.max(bumpD(e2,0.3,0.34), bumpD(e2,0.85,0.34));
+      if(d.barkT>0){ u.head.rotation.x = 0.05-0.45*pul; u.head.rotation.y = 0; if(u.hasTail) u.tail.rotation.y = Math.sin(t*14)*0.6; d.g.position.y += 0.06*pul; }
+      d.bub.visible = pul>0.05;
+      if(pul>0.05){ d.bub.position.set(d.x+Math.sin(d.yaw)*0.4, 1.45, d.z+Math.cos(d.yaw)*0.4); const sc = 0.7+0.8*pul; d.bub.scale.set(1.2*sc, 0.75*sc, 1); }
     }
   });
 })();
@@ -1827,6 +1854,32 @@ renderer.domElement.addEventListener('pointermove', e=>{
     if(drag){ drag = null; controls.enabled = true; }
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+/* 點狗：回頭汪汪叫兩聲；點石虎：跳出「禁止」標示（紅圈斜線加貓掌印），石虎不能抓 */
+{
+  const el = renderer.domElement, rc = new THREE.Raycaster(), pt = new THREE.Vector2();
+  const signTex = (()=>{ const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+    x.fillStyle = 'rgba(255,255,255,0.94)'; x.beginPath(); x.arc(128,128,112,0,Math.PI*2); x.fill();
+    x.fillStyle = '#5A4030'; x.beginPath(); x.ellipse(128,150,36,30,0,0,Math.PI*2); x.fill();
+    for(const [px,py,rx,ry] of [[84,100,13,18],[112,82,13,19],[144,82,13,19],[172,100,13,18]]){ x.beginPath(); x.ellipse(px,py,rx,ry,0,0,Math.PI*2); x.fill(); }
+    x.strokeStyle = '#E53935'; x.lineWidth = 24; x.lineCap = 'round'; x.beginPath(); x.arc(128,128,112,0,Math.PI*2); x.stroke();
+    x.beginPath(); x.moveTo(52,52); x.lineTo(204,204); x.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const signs = chase.cats.map(c=>{ const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:signTex, transparent:true, depthTest:false, depthWrite:false})); sp.visible = false; sp.renderOrder = 11; scene.add(sp); return {sp, cat:c, t:0}; });
+  const aimAt = e=>{ const r = el.getBoundingClientRect(); pt.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(pt, camera); };
+  el.addEventListener('pointerdown', e=>{
+    aimAt(e);
+    if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ dogApi.trigger(o.userData.dog); return; } } }
+    const hc = rc.intersectObjects(chase.cats, true)[0];
+    if(hc){ let o = hc.object; while(o && !chase.cats.includes(o)) o = o.parent; const sg = signs.find(s=>s.cat===o); if(sg) sg.t = 2.4; }
+  });
+  el.addEventListener('pointermove', e=>{
+    aimAt(e);
+    const hot = (dogApi && rc.intersectObjects(dogApi.groups, true).length) || rc.intersectObjects(chase.cats, true).length;
+    if(hot) el.style.cursor = 'pointer';
+  });
+  pondTick.push(dt=>{ for(const s of signs){ if(s.t>0){ s.t -= dt; const e = 2.4-s.t, k = e<0.25 ? 0.4+0.75*Math.sin(Math.PI/2*e/0.25) : (e<0.4 ? 1.15-0.15*(e-0.25)/0.15 : 1), fade = s.t<0.5 ? s.t/0.5 : 1, sc = 2.6*k;
+      s.sp.visible = s.t>0; s.sp.material.opacity = fade; s.sp.scale.set(sc,sc,1); s.sp.position.set(s.cat.position.x, s.cat.position.y+s.cat.scale.x*0.95+1.0, s.cat.position.z); } else s.sp.visible = false; } });
 }
 renderer.domElement.addEventListener('keydown', e=>{
   const step = 0.08;
