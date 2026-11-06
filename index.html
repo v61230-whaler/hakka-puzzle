@@ -1056,26 +1056,25 @@ let dogApi = null, mouseNav = null;
   let ready = false;
   /* ── 狗狗集合：右池南邊的空地有一圈光圈，點一下七隻狗都跑來，到齊後停 7 秒自動散開；集合中再點一下就馬上散開 ── */
   const LOT = {x:17.5, z:10, r:3}, G = {mode:'idle', t:0, hold:0, label:''};
-  const lotTex = (()=>{ const c = document.createElement('canvas'); c.width = 512; c.height = 128; return c; })();
-  const lotLabel = new THREE.CanvasTexture(lotTex); lotLabel.colorSpace = THREE.SRGBColorSpace;
-  function drawLot(txt, hot){ const x = lotTex.getContext('2d'); x.clearRect(0,0,512,128);
-    x.font = '900 62px Huninn, "PingFang TC", "Noto Sans TC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
-    x.lineWidth = 16; x.strokeStyle = '#FFFFFF'; x.strokeText(txt,256,66); x.fillStyle = hot ? '#E8502D' : '#2F7CC4'; x.fillText(txt,256,66); lotLabel.needsUpdate = true; }
-  drawLot('點我集合狗狗', false);
-  const lotSp = new THREE.Sprite(new THREE.SpriteMaterial({map:lotLabel, transparent:true, depthTest:false, depthWrite:false})); lotSp.position.set(LOT.x, 3.0, LOT.z); lotSp.scale.set(7.6,1.9,1); lotSp.renderOrder = 10; scene.add(lotSp);
-  const lotDisc = new THREE.Mesh(new THREE.CircleGeometry(LOT.r+0.2,48).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFE27A, transparent:true, opacity:0.32, depthWrite:false})); lotDisc.position.set(LOT.x,0.13,LOT.z); scene.add(lotDisc);
-  const lotRing = new THREE.Mesh(new THREE.RingGeometry(LOT.r-0.12,LOT.r+0.2,64).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.95, depthWrite:false})); lotRing.position.set(LOT.x,0.15,LOT.z); scene.add(lotRing);
-  const lotRing2 = new THREE.Mesh(new THREE.RingGeometry(LOT.r-0.55,LOT.r-0.4,64).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFB02E, transparent:true, opacity:0.9, depthWrite:false})); lotRing2.position.set(LOT.x,0.16,LOT.z); scene.add(lotRing2);
+  /* 光圈：虛線畫成的小狗腳掌印，會閃動；沒有文字 */
+  const pawTex = (()=>{ const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d');
+    const el = (cx,cy,rx,ry,rot)=>{ x.beginPath(); x.ellipse(cx,cy,rx,ry,rot,0,Math.PI*2); };
+    const shapes = [[256,372,142,104,0],[104,236,44,66,-0.5],[198,128,42,66,-0.16],[314,128,42,66,0.16],[408,236,44,66,0.5]];
+    x.lineCap = 'round'; x.setLineDash([22,18]);
+    for(const [w,col] of [[20,'#FFFFFF'],[9,'#FFA51F']]){ x.lineWidth = w; x.strokeStyle = col; for(const sh of shapes){ el(...sh); x.stroke(); } }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })();
+  const lotPaw = new THREE.Mesh(new THREE.PlaneGeometry(7.2,7.2).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({map:pawTex, transparent:true, depthWrite:false})); lotPaw.position.set(LOT.x,0.16,LOT.z); scene.add(lotPaw);
+  const lotDisc = new THREE.Mesh(new THREE.CircleGeometry(LOT.r+0.4,48).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false})); lotDisc.position.set(LOT.x,0.15,LOT.z); scene.add(lotDisc); /* 看不見，只用來接點擊 */
   const slotOf = i=>{ const a = i/ds.length*Math.PI*2 + 0.3; return {x:LOT.x+Math.cos(a)*1.9, z:LOT.z+Math.sin(a)*1.9}; };
   function gatherStart(){
-    G.mode = 'call'; G.t = 0; G.hold = 0; drawLot('', true);
+    G.mode = 'call'; G.t = 0; G.hold = 0;
     ds.forEach((d,i)=>{ if(d.state==='init') return;
       if(d.pair){ d.pair.paired = false; d.pair = null; } d.paired = false; d.barkT = 0; d.flee = 0;
-      d.gat = true; d.arr = false; d.slot = slotOf(i); d.path = []; d.replan = 0; d.state = 'gather'; d.run = true; d.mood = 0; }); }
+      d.gat = true; d.arr = false; d.gT = 0; d.slot = slotOf(i); d.path = []; d.replan = 0; d.state = 'gather'; d.run = true; d.mood = 0; }); }
   function gatherEnd(){
-    G.mode = 'idle'; drawLot('點我集合狗狗', false);
+    G.mode = 'idle';
     ds.forEach(d=>{ if(!d.gat) return; d.gat = false; d.arr = false; d.state = 'wait'; d.wait = 0.2+rnd()*1.6; d.path = []; d.paired = false; d.pair = null; }); }
-  dogApi.lot = [lotDisc, lotSp]; dogApi.toggleGather = ()=>{ if(!ready) return; if(G.mode==='idle') gatherStart(); else gatherEnd(); };
+  dogApi.lot = [lotDisc, lotPaw]; dogApi.toggleGather = ()=>{ if(!ready) return; if(G.mode==='idle') gatherStart(); else gatherEnd(); };
   function startCell(d){ const c0 = ci(d.x,d.z); if(c0>=0 && fr[c0]) return c0; if(c0<0) return -1; const ix = c0%NX, iz = (c0-ix)/NX;
     for(let R=1;R<=8;R++){ let best = -1, bd = 1e9; for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix+a, jz = iz+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!fr[j]) continue; const dd = (cx(j)-d.x)**2+(cz(j)-d.z)**2; if(dd<bd){ bd = dd; best = j; } } if(best>=0) return best; }
     return -1; }
@@ -1132,10 +1131,9 @@ let dogApi = null, mouseNav = null;
       ds.forEach((d,i)=>{ const comp = big[Math.min(assign[i], big.length-1)], zone = comp.filter(inZone), pool = zone.length>50 ? zone : comp, c = pool[Math.floor(rnd()*pool.length)]; d.x = cx(c); d.z = cz(c); d.yaw = rnd()*6.28; d.g.visible = true; d.state = 'wait'; d.wait = rnd()*4; });
       ready = true; return; }
     if(dt>0.1) dt = 0.1;
-    { const k = Math.sin(t*3); lotRing2.scale.setScalar(1+0.025*k); lotDisc.material.opacity = (G.mode==='idle'?0.30:0.42)+0.07*k;
-      if(G.mode==='call'){ G.t += dt; const n = ds.filter(d=>d.gat && d.arr).length, tot = ds.filter(d=>d.gat).length; const txt = '集合中 '+n+'/'+tot; if(txt!==G.label){ G.label = txt; drawLot(txt, true); }
-        if(n>=tot || G.t>45){ G.mode = 'hold'; G.hold = 7; G.label = ''; } }
-      else if(G.mode==='hold'){ G.hold -= dt; const txt = '到齊了！'+Math.max(1,Math.ceil(G.hold)); if(txt!==G.label){ G.label = txt; drawLot(txt, true); } if(G.hold<=0) gatherEnd(); } }
+    { const act = G.mode!=='idle', k = 0.5+0.5*Math.sin(t*(act?9:4)); lotPaw.material.opacity = 0.25+0.75*k; lotPaw.scale.setScalar(1+0.03*k);
+      if(G.mode==='call'){ G.t += dt; const live = ds.filter(d=>d.gat); if(live.every(d=>d.arr) || G.t>150){ G.mode = 'hold'; G.hold = 7; } }
+      else if(G.mode==='hold'){ G.hold -= dt; if(G.hold<=0) gatherEnd(); } }
     for(const d of ds){ if(d.state==='init') continue;
       d.gt -= dt;
       if(d.shy && G.mode==='idle'){ if(d.fleeCd>0) d.fleeCd -= dt; if(dogApi.ptr && d.fleeCd<=0 && Math.hypot(dogApi.ptr.x-d.x, dogApi.ptr.z-d.z)<4.2) flee(d, dogApi.ptr.x, dogApi.ptr.z); }
@@ -1149,13 +1147,16 @@ let dogApi = null, mouseNav = null;
         const wp = d.path[0]; if(!wp){ d.state = 'wait'; d.wait = d.poi ? 4+rnd()*5 : 1.5+rnd()*4; d.mood = rnd()<0.6 ? 1 : 2; }
         else { const last = d.path.length===1, dist = steer(d, wp.x, wp.z, d.flee>0?6.6:(d.run?4.2:1.35), dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
       } else if(d.state==='gather'){
-        const sd = Math.hypot(d.slot.x-d.x, d.slot.z-d.z);
+        const sd = Math.hypot(d.slot.x-d.x, d.slot.z-d.z); d.gT = (d.gT||0)+dt;
         if(!d.arr){
           if(sd<0.4) d.arr = true;
+          else if(d.gT>25){ /* 路走不通或太慢：直接鑽過去（不管障礙）走向位置 */
+            const ty = Math.atan2(d.slot.x-d.x, d.slot.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-8*dt,Math.min(8*dt,df));
+            d.sp = Math.min(5.5, d.sp+10*dt); const st = Math.min(sd, d.sp*dt); d.x += (d.slot.x-d.x)/sd*st; d.z += (d.slot.z-d.z)/sd*st; }
           else if(sd<2.4 && los(d,d.slot)){ d.path = []; steer(d, d.slot.x, d.slot.z, 3.0, dt, true); }
           else { d.replan -= dt;
             if(!d.path.length && d.replan<=0){ const sc0 = startCell(d), gc = startCell(d.slot); d.replan = 1.0;
-              if(sc0>=0 && gc>=0){ const b = bfs(sc0); if(b.dist[gc]>=0) d.path = withStart(d, sc0, pathTo(b,gc)); else d.arr = true; } else d.arr = true; }
+              if(sc0>=0 && gc>=0){ const b = bfs(sc0); if(b.dist[gc]>=0) d.path = withStart(d, sc0, pathTo(b,gc)); } }
             const wp = d.path[0]; if(wp){ const dist = steer(d, wp.x, wp.z, 4.6, dt, false); if(dist<0.6) d.path.shift(); } }
         } else { d.sp = Math.max(0, d.sp-6*dt); const ty = Math.atan2(LOT.x-d.x, LOT.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-4*dt,Math.min(4*dt,df)); }
       } else if(d.state==='pair'){
