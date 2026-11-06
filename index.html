@@ -437,7 +437,7 @@ const ring = new THREE.Mesh(new THREE.RingGeometry(26, 120, 64), new THREE.MeshB
 ring.rotation.x = -Math.PI/2; ring.position.y = 0.01; scene.add(ring);
 
 /* 關西風的卡通山林：外圈淡藍綠遠山，內圈翠綠近山，山上有圓樹和杉樹，天上有雲 */
-const hills = [];
+const hills = [], treeSpots = [], hillSpots = [];
 const rnd = (seed => () => (seed = (seed*1664525 + 1013904223) >>> 0) / 4294967296)(20261024);
 function hillMat(hex){ const m = new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.95}); hills.push({m, base:new THREE.Color(hex)}); return m; }
 const domeGeo = new THREE.SphereGeometry(1, 12, 7, 0, Math.PI*2, 0, Math.PI/2);
@@ -445,6 +445,7 @@ function hill(x, z, r, h, hex, withTrees){
   const mesh = new THREE.Mesh(domeGeo, hillMat(hex));
   mesh.scale.set(r, h, r*(0.85+rnd()*0.3)); mesh.rotation.y = rnd()*Math.PI; mesh.position.set(x, -0.2, z);
   scene.add(mesh);
+  if(withTrees) hillSpots.push({x, z, r, zr:mesh.scale.z});
   if(!withTrees) return;
   const n = Math.round(r*0.9);
   for(let i=0;i<n;i++){
@@ -703,6 +704,7 @@ function updateCritters(dt, tm){
 
 /* 草地上的小樹林：島的後方與兩側成群的樹，河岸邊也有幾棵 */
 function groundTree(x, z, sc){
+  treeSpots.push([x,z,sc]);
   const g = new THREE.Group(), pick = rnd();
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,1.0,6), mat(C.wood)); trunk.position.y = 0.5; g.add(trunk);
   if(pick < 0.38){                                    // 杉樹
@@ -891,6 +893,168 @@ const pondTick = [];
   });
 })();
 
+/* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
+   做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
+(function dogs(){
+  function makeDog(o){
+    const g = new THREE.Group(), fur = mat(o.fur), acc = mat(o.acc||o.fur), dark = mat(0x1B1B20), pink = mat(0xF2A2AE), legs = [];
+    const bl = o.bl||1, bw = o.bw||1, L = o.legL||0.34, by = L+0.12*bw, hs = o.hs||1, sl = o.sl||1, sw = o.sw||1;
+    g.add(S(new THREE.CapsuleGeometry(0.17*bw,0.46*bl,4,10).rotateX(Math.PI/2),0,by,0,1,0.95,1,fur));
+    if(o.chest) g.add(S(new THREE.SphereGeometry(0.17*bw,8,6),0,by-0.01,0.2*bl,1,0.95,0.9,mat(o.chest)));
+    if(o.chestPatch){ for(const sx of [-1,1]) g.add(S(new THREE.SphereGeometry(0.05,6,5),sx*0.07,by-0.03,0.34*bl,1,1.3,0.6,acc)); }
+    const lm = mat(o.leg||o.fur);
+    for(const sx of [-1,1]) for(const fz of [1,-1]){
+      const hip = L+0.05, l = S(new THREE.CylinderGeometry(0.055,0.045,hip,6).translate(0,-hip/2,0),sx*0.1*bw,hip+0.02,fz*0.22*bl,1,1,1,lm);
+      l.add(S(new THREE.SphereGeometry(0.06,6,5),0,-hip+0.025,0.02,1,0.7,1.3,mat(o.paw||o.fur))); g.add(l); legs.push({m:l, ph:(sx*fz>0?0:Math.PI)}); }
+    const head = new THREE.Group(); head.position.set(0,by+0.11,0.28*bl+0.05); g.add(head);
+    head.add(S(new THREE.SphereGeometry(0.15*hs,10,8),0,0.04,0.1,1,1,1,fur));
+    head.add(S(new THREE.SphereGeometry(1,8,6),0,-0.02,0.2+0.04*sl,0.085*sw,0.07*sw,0.1*sl,mat(o.snout||o.fur)));
+    head.add(S(new THREE.SphereGeometry(0.03,6,5),0,0.0,0.2+0.04*sl+0.1*sl,1,0.9,1,dark));
+    for(const sx of [-1,1]){
+      head.add(S(new THREE.SphereGeometry(0.022,6,5),sx*0.065*hs,0.09,0.2,1,1,1,dark));
+      if(o.ear==='flop'){ const e = S(new THREE.SphereGeometry(1,7,5),sx*0.14*hs,0.06,0.06,0.04,0.11,0.075,mat(o.earC||o.fur)); e.rotation.z = sx*0.35; head.add(e); }
+      else if(o.ear==='bat'){ const e = S(new THREE.ConeGeometry(0.085,0.22,4),sx*0.1,0.24,0.04,1,1,0.55,mat(o.earC||o.fur)); e.rotation.z = -sx*0.18; head.add(e); head.add(S(new THREE.ConeGeometry(0.045,0.15,4),sx*0.1,0.23,0.08,1,1,0.4,pink)); }
+      else { const e = S(new THREE.ConeGeometry(0.07,0.17,4),sx*0.09,0.2,0.05,1,1,0.6,mat(o.earC||o.fur)); e.rotation.x = 0.5; e.rotation.z = -sx*0.25; head.add(e); }
+    }
+    if(o.blaze){ head.add(S(new THREE.SphereGeometry(1,7,5),0,0.1,0.2,0.03,0.05,0.09,mat(0xFFFFFF))); head.add(S(new THREE.SphereGeometry(1,7,5),0,-0.02,0.3,0.07,0.055,0.07,mat(0xFFFFFF))); }
+    if(o.brow){ for(const sx of [-1,1]){ head.add(S(new THREE.SphereGeometry(0.025,6,5),sx*0.065,0.14,0.19,1,1,1,acc)); head.add(S(new THREE.SphereGeometry(1,6,5),sx*0.11,-0.03,0.17,0.04,0.06,0.07,acc)); } }
+    const tail = new THREE.Group(); tail.position.set(0,by+0.06,-0.28*bl-0.02); g.add(tail);
+    if(o.tail==='stub') tail.add(S(new THREE.SphereGeometry(0.05,6,5),0,0.02,-0.03,1,1,1,fur));
+    else { const tl = o.tail==='fluff' ? 0.42 : 0.36, tr = o.tail==='thick' ? 0.06 : (o.tail==='fluff' ? 0.07 : 0.04);
+      const t1 = S(new THREE.CylinderGeometry(tr,tr*0.55,tl,6).translate(0,tl/2,0),0,0,0,1,1,1,fur); t1.rotation.x = -2.2; tail.add(t1);
+      if(o.tip){ const tp = S(new THREE.SphereGeometry(tr*1.1,6,5),0,tl,0,1,1.2,1,mat(o.tip)); t1.add(tp); } }
+    g.scale.setScalar(o.sc); g.userData = {legs, head, tail, hasTail:o.tail!=='stub'};
+    return g;
+  }
+  const BREEDS = [
+    {fur:0x26262C, acc:0xB87530, snout:0xB87530, paw:0xB87530, brow:true, chestPatch:true, ear:'flop', earC:0x26262C, tail:'stub', bw:1.18, bl:1.05, hs:1.1, sw:1.15, sc:1.5},   /* 羅威那 */
+    {fur:0xE8B650, ear:'flop', earC:0xD0A03C, tail:'fluff', sl:1.1, sc:1.45},                                                                                          /* 黃金獵犬 */
+    {fur:0x1F1F25, chest:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'semi', earC:0x1F1F25, tail:'fluff', tip:0xFFFFFF, sl:1.1, sc:1.4},                                     /* 邊牧 */
+    {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.15},                              /* 法鬥 */
+    {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.45}                                                                                          /* 拉布拉多 */
+  ];
+  /* ── 障礙地圖 ── */
+  const CS = 0.5, X0 = -51, Z0 = -47, NX = 204, NZ = 140;
+  const rv = riverCurve.getPoints(1500);
+  const riverZ = x=>{ if(x<=rv[0].x) return rv[0].z; let lo=0, hi=rv.length-1; if(x>=rv[hi].x) return rv[hi].z; while(hi-lo>1){ const m=(lo+hi)>>1; if(rv[m].x<=x) lo=m; else hi=m; } const f=(x-rv[lo].x)/(rv[hi].x-rv[lo].x||1); return rv[lo].z+(rv[hi].z-rv[lo].z)*f; };
+  const ell = (x,z,cx,cz,rx,rz)=>((x-cx)/rx)**2+((z-cz)/rz)**2 < 1;
+  const isFree = (x,z)=>{
+    if(x<-50||x>50||z<-46.5||z>riverZ(x)-5.4) return false;
+    if(x*x+z*z < 219) return false;
+    if(Math.hypot(x-15.4,z+8.9) < 4.9) return false;
+    if(ell(x,z,-24,-5,7.9,6.9) || ell(x,z,24,2,6.1,5.3) || ell(x,z,24,10,5,5)) return false;
+    if(x>-26.5&&x<-21.5&&z>-1) return false;
+    if(x>-29.5&&x<-25&&z>-17&&z<-8.5) return false;
+    if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.2) return false;
+    for(const q of treeSpots){ const r = 0.38*q[2]+0.4; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
+    for(const q of hillSpots){ if(((x-q.x)/(q.r*1.0+0.5))**2+((z-q.z)/(q.zr*1.0+0.5))**2 < 1) return false; }
+    return true;
+  };
+  let fr = null, riverC = [], paddyC = [], footC = [];
+  const ci = (x,z)=>{ const ix = Math.floor((x-X0)/CS), iz = Math.floor((z-Z0)/CS); return (ix<0||iz<0||ix>=NX||iz>=NZ) ? -1 : iz*NX+ix; };
+  const cx = i=>X0+(i%NX+0.5)*CS, cz = i=>Z0+(Math.floor(i/NX)+0.5)*CS;
+  const free = (x,z)=>{ const i = ci(x,z); return i>=0 && fr[i]===1; };
+  const los = (a,b)=>{ const d = Math.hypot(b.x-a.x,b.z-a.z), n = Math.ceil(d/0.25); for(let k=1;k<n;k++){ const f = k/n; if(!free(a.x+(b.x-a.x)*f, a.z+(b.z-a.z)*f)) return false; } return true; };
+  function build(){
+    fr = new Uint8Array(NX*NZ);
+    for(let i=0;i<fr.length;i++) fr[i] = isFree(cx(i),cz(i)) ? 1 : 0;
+    for(let i=0;i<fr.length;i++){ if(!fr[i]) continue; const x = cx(i), z = cz(i), rz = riverZ(x);
+      if(z > rz-6.4) riverC.push(i);
+      if((z<-12.6&&z>-14.3&&Math.abs(x)<43) || (Math.abs(x)>42.9&&Math.abs(x)<45&&z<-14.2&&z>-30.4)) paddyC.push(i);
+      for(const q of hillSpots){ const e = Math.sqrt(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2); if(e<1.0+3.4/q.r){ footC.push(i); break; } } }
+  }
+  const NB = [[1,0,1],[-1,0,1],[0,1,NX],[0,-1,-NX],[1,1,1.41],[1,-1,1.41],[-1,1,1.41],[-1,-1,1.41]];
+  function bfs(start){
+    const dist = new Int16Array(NX*NZ).fill(-1), par = new Int32Array(NX*NZ).fill(-1), q = new Int32Array(NX*NZ); let h = 0, t = 0;
+    dist[start] = 0; q[t++] = start;
+    while(h<t){ const c = q[h++], ix = c%NX, iz = (c-ix)/NX;
+      for(let k=0;k<8;k++){ const dx = NB[k][0], dz = NB[k][1], jx = ix+dx, jz = iz+dz; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx;
+        if(!fr[j]||dist[j]>=0) continue; if(dx&&dz&&(!fr[iz*NX+jx]||!fr[jz*NX+ix])) continue;
+        dist[j] = dist[c]+1; par[j] = c; q[t++] = j; } }
+    return {dist, par, n:t, list:q.subarray(0,t)};
+  }
+  function pathTo(b, goal){
+    const pts = []; for(let c = goal; c>=0; c = b.par[c]) pts.push({x:cx(c), z:cz(c)}); pts.reverse();
+    const sm = [pts[0]]; let i = 0;
+    while(i<pts.length-1){ let j = pts.length-1; while(j>i+1 && !los(pts[i],pts[j])) j--; sm.push(pts[j]); i = j; }
+    sm.shift(); return sm;
+  }
+  const pickFrom = (arr, b, minD)=>{ for(let k=0;k<40;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD) return c; } return -1; };
+  /* ── 狗 ── */
+  const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false}; });
+  let ready = false;
+  function startCell(d){ const c0 = ci(d.x,d.z); if(c0>=0 && fr[c0]) return c0; if(c0<0) return -1; const ix = c0%NX, iz = (c0-ix)/NX;
+    for(let R=1;R<=8;R++){ let best = -1, bd = 1e9; for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix+a, jz = iz+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!fr[j]) continue; const dd = (cx(j)-d.x)**2+(cz(j)-d.z)**2; if(dd<bd){ bd = dd; best = j; } } if(best>=0) return best; }
+    return -1; }
+  const withStart = (d, c0, path)=>{ if(c0!==ci(d.x,d.z)) path.unshift({x:cx(c0), z:cz(c0)}); return path; };
+  function decide(d){
+    const me = startCell(d); if(me<0){ d.wait = 1; return; }
+    const b = bfs(me), r = rnd(); let cell = -1, poi = false;
+    const others = ds.filter(o=>o!==d && o.state!=='init' && !o.pair && !o.paired && b.dist[startCell(o)]>=0);
+    if(rnd()<0.2 && others.length){ const o = others[Math.floor(rnd()*others.length)]; d.pair = o; o.paired = true; d.pt = 10+rnd()*8; d.state = 'pair'; d.replan = 0; d.path = []; return; }
+    if(r<0.15 && riverC.length){ cell = pickFrom(riverC,b,6); poi = true; }
+    else if(r<0.30 && paddyC.length){ cell = pickFrom(paddyC,b,6); poi = true; }
+    else if(r<0.45 && footC.length){ cell = pickFrom(footC,b,6); poi = true; }
+    if(cell<0){ for(let k=0;k<40 && cell<0;k++){ const c = b.list[Math.floor(rnd()*b.n)]; if(b.dist[c]>=12 && b.dist[c]<=120) cell = c; } poi = false; }
+    if(cell<0){ d.wait = 1.5; return; }
+    d.path = withStart(d, me, pathTo(b, cell)); d.state = 'go'; d.poi = poi; d.run = rnd()<0.4; d.gt = 2+rnd()*4;
+  }
+  function steer(d, tx, tz, spd, dt, arrive){
+    const dx = tx-d.x, dz = tz-d.z, dist = Math.hypot(dx,dz);
+    let want = spd; if(arrive) want = Math.min(spd, dist*2.2+0.15);
+    if(dist>0.05){ const ty = Math.atan2(dx,dz); const df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+      d.yaw += Math.max(-7*dt, Math.min(7*dt, df)); want *= Math.max(0.15, 1-Math.abs(df)/1.2); }
+    d.sp += Math.max(-6*dt, Math.min(3*dt, want-d.sp));
+    const nx = d.x+Math.sin(d.yaw)*d.sp*dt, nz = d.z+Math.cos(d.yaw)*d.sp*dt;
+    if(isFree(nx,nz)){ d.x = nx; d.z = nz; d.stuck = 0; }
+    else if(isFree(nx,d.z)){ d.x = nx; d.sp *= 0.7; }
+    else if(isFree(d.x,nz)){ d.z = nz; d.sp *= 0.7; }
+    else { d.sp *= 0.3; d.stuck = (d.stuck||0)+dt; }
+    if(d.stuck>1.2){ d.stuck = 0; d.path = []; d.state = 'wait'; d.wait = 0.4; d.stuckN = (d.stuckN||0)+1; if(d.pair){ d.pair.paired = false; d.pair = null; } const c = ci(d.x,d.z); if(c>=0 && fr[c]){ d.x = cx(c); d.z = cz(c); } }
+    return dist;
+  }
+  pondTick.push((dt,t)=>{
+    if(!ready){ build();
+      /* 把綠地分成幾塊互不相連的區域，兩隻一組分到最大的兩塊、最後一隻去第三塊，同一塊的才會相遇 */
+      const lab = new Int32Array(fr.length).fill(-1), comps = [];
+      for(let s0=0;s0<fr.length;s0++){ if(!fr[s0]||lab[s0]>=0) continue; const st = [s0], cells = []; lab[s0] = comps.length;
+        while(st.length){ const a = st.pop(); cells.push(a); const ix = a%NX, iz = (a-ix)/NX;
+          for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){ const jx = ix+dx, jz = iz+dz; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(fr[j]&&lab[j]<0){ lab[j] = comps.length; st.push(j); } } }
+        comps.push(cells); }
+      const zc = c=>c.reduce((a,i)=>a+cz(i),0)/c.length;
+      comps.sort((a,b)=>b.length-a.length);
+      const big = comps.filter(c=>c.length>800 && zc(c)>-20), assign = [0,0,1,1,2];
+      if(!big.length){ ready = true; return; }
+      ds.forEach((d,i)=>{ const comp = big[Math.min(assign[i], big.length-1)], c = comp[Math.floor(rnd()*comp.length)]; d.x = cx(c); d.z = cz(c); d.yaw = rnd()*6.28; d.g.visible = true; d.state = 'wait'; d.wait = rnd()*4; });
+      ready = true; return; }
+    if(dt>0.1) dt = 0.1;
+    for(const d of ds){ if(d.state==='init') continue;
+      d.gt -= dt;
+      if(d.state==='wait'){ d.wait -= dt; d.sp = Math.max(0, d.sp-6*dt); if(d.wait<=0){ if(d.waitPoi===undefined) d.waitPoi = false; decide(d); } }
+      else if(d.state==='go'){
+        if(d.gt<=0){ d.run = !d.run; d.gt = 2+rnd()*4.5; }
+        const wp = d.path[0]; if(!wp){ d.state = 'wait'; d.wait = d.poi ? 4+rnd()*5 : 1.5+rnd()*4; d.mood = rnd()<0.6 ? 1 : 2; }
+        else { const last = d.path.length===1, dist = steer(d, wp.x, wp.z, d.run?4.2:1.35, dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
+      } else if(d.state==='pair'){
+        const o = d.pair; d.pt -= dt;
+        if(d.pt<=0 || !o){ if(o) o.paired = false; d.pair = null; d.state = 'wait'; d.wait = 0.5+rnd()*1.5; }
+        else { const side = (ds.indexOf(d)%2?1:-1), tx = o.x+Math.cos(o.yaw)*1.2*side-Math.sin(o.yaw)*0.5, tz = o.z-Math.sin(o.yaw)*1.2*side-Math.cos(o.yaw)*0.5, dist = Math.hypot(tx-d.x,tz-d.z);
+          if(dist>4 || !los(d,{x:tx,z:tz})){ d.replan -= dt; if(d.replan<=0 || !d.path.length){ const sc0 = startCell(d), b = bfs(sc0<0?0:sc0), g = startCell(o); if(sc0>=0 && g>=0 && b.dist[g]>=0) d.path = withStart(d, sc0, pathTo(b,g)); d.replan = 1.5; }
+            const wp = d.path[0]; if(wp){ steer(d, wp.x, wp.z, 4.2, dt, false); if(Math.hypot(wp.x-d.x,wp.z-d.z)<0.6) d.path.shift(); } }
+          else { d.path = []; steer(d, tx, tz, Math.max(0, o.sp+(dist-0.3)*1.5), dt, true); } }
+      }
+      /* 姿勢 */
+      const u = d.g.userData, moving = d.sp>0.15, run = d.sp>2.4;
+      d.ph += d.sp*dt*(run?3.6:5.2);
+      const amp = run ? 0.9 : 0.5*Math.min(1,d.sp/1.2);
+      for(const l of u.legs) l.m.rotation.x = Math.sin(d.ph+l.ph)*amp;
+      d.g.position.set(d.x, moving ? Math.abs(Math.sin(d.ph))*(run?0.06:0.02) : 0, d.z); d.g.rotation.y = d.yaw;
+      u.head.rotation.x = moving ? (run ? -0.12 : 0.05) : (d.mood===1 ? 0.5+0.12*Math.sin(t*7+d.ph) : 0.05);
+      u.head.rotation.y = moving ? 0 : (d.mood===2 ? 0.6*Math.sin(t*0.9+d.ph) : 0);
+      if(u.hasTail) u.tail.rotation.y = Math.sin(t*(moving?9:5)+d.ph)*0.45;
+    }
+  });
+})();
 [[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
 
 
