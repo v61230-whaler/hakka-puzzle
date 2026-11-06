@@ -748,7 +748,7 @@ const pondTick = [];
     const bucket = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.1,0.55), mat(C.yellow)); bucket.position.set(0,R,0.2); arm.add(bucket); }
   for(const sx of [-1.1,1.1]){ for(const s of [-1,1]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,wy+0.5,6), wood);
       post.position.set(sx, (wy+0.5)/2 - 0.1, s*0.8); post.rotation.x = -s*0.25; post.position.z = s*0.45; wheel.add(post); } }
-  pondTick.push(dt=>{ spin.rotation.x += dt*0.7; });
+  pondTick.push(dt=>{ spin.rotation.x -= dt*0.7; });
   /* 引水槽：水車轉面朝向畫面，水從水車側邊（頂端往旁邊）流出，先橫向一小段、再轉向北斜下到稻田前緣；槽下有木柱撐著，槽裡有水在流 */
   const dashAll = [];
   function flumeSeg(start, end){
