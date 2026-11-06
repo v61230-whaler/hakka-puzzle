@@ -572,14 +572,14 @@ function makeMouse(){
   const tail = S(new THREE.CylinderGeometry(0.012,0.02,0.55,5).rotateX(Math.PI/2.3),0,0.2,-0.5,1,1,1,pink); g.add(tail);
   g.scale.setScalar(2.24); return g;
 }
-const chase = { z0:-22.4, A:34, B:4.0, w:0.17, lags:[0.55,1.0,1.45], zoff:[0,0.3,-0.3], cats:[], yaw:[0,0,0,0], mouse:null, ph:[0,0,0,0] };
+const chase = { z0:-22.4, A:34, B:3.2, w:0.17, W:2.0, f:1.0, lags:[1.3,1.8,2.3], zoff:[0,0.3,-0.3], cats:[], yaw:[0,0,0,0], mouse:null, ph:[0,0,0,0] };
 {
   [3.04,1.84,1.6].forEach(sc=>{ const c = makeWildCat(sc); scene.add(c); chase.cats.push(c); });
   chase.mouse = makeMouse(); scene.add(chase.mouse);
 }
 function updateChase(dt, tm){
-  /* 沿著一圈橢圓跑：田鼠在最前面，虎媽媽、兩隻小石虎依序跟在後面 */
-  const {A,B,w,z0} = chase, P = (t)=>[A*Math.cos(w*t), z0+B*Math.sin(w*t)], Vv = (t)=>[-A*w*Math.sin(w*t), B*w*Math.cos(w*t)];
+  /* 沿著一圈橢圓跑，中途左右拐彎：田鼠在最前面，虎媽媽、兩隻小石虎隔一段距離依序追在後面 */
+  const {A,B,w,z0,W,f} = chase, P = (t)=>[A*Math.cos(w*t), z0+B*Math.sin(w*t)+W*Math.sin(f*t)], Vv = (t)=>[-A*w*Math.sin(w*t), B*w*Math.cos(w*t)+W*f*Math.cos(f*t)];
   const place = (g, i, t, hop, speedK, zw)=>{
     const [x,z] = P(t), [vx,vz] = Vv(t), want = Math.atan2(vx,vz);
     let d = want-chase.yaw[i]; d = Math.atan2(Math.sin(d),Math.cos(d)); chase.yaw[i] += d*(1-Math.exp(-9*dt));
