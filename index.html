@@ -571,6 +571,7 @@ function makeMouse(){
   g.add(S(new THREE.SphereGeometry(0.03,6,5),0,0.24,0.52,1,1,1,pink));
   for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.1,0.38,0.28,1,1,0.4,pink)); g.add(S(new THREE.SphereGeometry(0.025,6,5),sx*0.06,0.3,0.46,1,1,1,blackM)); }
   const tail = S(new THREE.CylinderGeometry(0.012,0.02,0.55,5).rotateX(Math.PI/2.3),0,0.2,-0.5,1,1,1,pink); g.add(tail);
+  const hit = new THREE.Mesh(new THREE.SphereGeometry(0.6,8,6), new THREE.MeshBasicMaterial()); hit.position.y = 0.3; hit.visible = false; g.add(hit);
   g.scale.setScalar(2.24); return g;
 }
 /* 追逐的節奏：①追逐約 24–36 秒（田鼠在前面一左一右拐彎、虎媽媽與兩隻小石虎排成一列追，距離忽近忽遠）→ ②石虎放棄，繞道往後方山區走去，田鼠停下來在田中央慢慢逛、偶爾停下休息 → ③石虎在山邊逛一會兒，再走回來 → ④靠近到約 15 單位時田鼠發現，加速逃跑，回到①。全部用「朝目標轉向、前進」模擬，不是固定軌跡。 */
@@ -594,12 +595,23 @@ function updateChase(dt, tm){
   dt = Math.min(dt, 0.1);
   const S = chase, m = S.m, cs = S.c, z0 = S.z0, MZ = -30.5; /* MZ：石虎在山邊逛的位置（稻田後方） */
   S.pt += dt;
+  /* 田鼠被人抓起來、或正慢慢走回田裡時，石虎先退到山邊逛，等田鼠回到田中才再靠近 */
+  if(m.mode==='held' || m.mode==='return'){
+    if(S.phase==='chase' || S.phase==='back'){ S.phase = 'away'; S.pt = 0; S.ax = (cs[0].x>=0 ? 1 : -1)*30; }
+    if(S.phase==='linger') S.pt = 0;
+  }
   if(S.phase==='chase' && S.pt > S.dur){ S.phase = 'away'; S.pt = 0; m.mode = 'stroll'; m.pause = 0; m.tgt = null; S.ax = (cs[0].x>=m.x ? 1 : -1)*30; /* 往原本跑來的那一側、離田鼠遠遠的山邊退去 */ }
   else if(S.phase==='away' && (S.pt>14 || cs.every((c,i)=>Math.hypot(S.ax+(i-1)*4-c.x, MZ-c.z)<2.5))){ S.phase = 'linger'; S.pt = 0; }
   else if(S.phase==='linger' && S.pt>8){ S.phase = 'back'; S.pt = 0; }
   else if(S.phase==='back' && Math.hypot(m.x-cs[0].x, m.z-cs[0].z) < 12){ S.phase = 'chase'; S.pt = 0; S.dur = 24+Math.random()*12; m.mode = 'run'; m.boost = 2.5; m.dirx = m.x>=cs[0].x ? 1 : -1; }
   /* 田鼠 */
-  if(m.mode==='run'){
+  if(m.mode==='held'){ m.sp = 0; }
+  else if(m.mode==='return'){
+    const wp = m.path && m.path[0];
+    if(!wp){ m.mode = 'stroll'; m.pause = 1.5; m.tgt = null; S.phase = 'linger'; S.pt = 0; }
+    else { m.sp = chApproach(m.sp, 1.7, 4, dt); chSteer(m, dt, wp.x, wp.z, 6); if(Math.hypot(wp.x-m.x, wp.z-m.z) < 0.5) m.path.shift(); }
+  }
+  else if(m.mode==='run'){
     m.boost = Math.max(0, m.boost-dt);
     if(Math.abs(m.x)>32 && Math.sign(m.x)===m.dirx) m.dirx = -m.dirx;
     m.sp = chApproach(m.sp, 5.8+(m.boost>0?3:0), 7, dt);
@@ -626,7 +638,8 @@ function updateChase(dt, tm){
   });
   [m, ...cs].forEach(e=>{ e.h.push([tm,e.x,e.z]); while(e.h.length && tm-e.h[0][0]>14) e.h.shift(); });
   m.ph += m.sp*dt*1.6; const g = S.mouse, k = Math.min(1, m.sp/3);
-  g.position.set(m.x, 0.14+Math.abs(Math.sin(m.ph))*0.12*k, m.z); g.rotation.y = m.yaw; g.rotation.z = Math.sin(tm*18)*0.05*k;
+  m.fy = m.mode==='held' ? 1.3 : Math.max(0, (m.fy||0)-dt*5);
+  g.position.set(m.x, 0.14+m.fy+Math.abs(Math.sin(m.ph))*0.12*k, m.z); g.rotation.y = m.yaw; g.rotation.z = m.mode==='held' ? Math.sin(tm*22)*0.3 : Math.sin(tm*18)*0.05*k;
   S.cats.forEach((g2,i)=>{ const c = cs[i]; c.ph += c.sp*dt*1.1;
     g2.position.set(c.x, 0.14+Math.abs(Math.sin(c.ph*0.5))*0.07*Math.min(1,c.sp/2), c.z); g2.rotation.y = c.yaw;
     g2.userData.legs.forEach(l=>{ l.m.rotation.x = Math.sin(c.ph+l.ph)*0.9; });
@@ -895,7 +908,7 @@ const pondTick = [];
 
 /* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
-let dogApi = null;
+let dogApi = null, mouseNav = null;
 (function dogs(){
   function makeDog(o){
     const g = new THREE.Group(), fur = mat(o.fur), acc = mat(o.acc||o.fur), dark = mat(0x1B1B20), pink = mat(0xF2A2AE), legs = [];
@@ -951,40 +964,62 @@ let dogApi = null;
     for(const q of hillSpots){ if(((x-q.x)/(q.r*1.0+0.5))**2+((z-q.z)/(q.zr*1.0+0.5))**2 < 1) return false; }
     return true;
   };
-  let fr = null, riverC = [], paddyC = [], footC = [];
+  /* 田鼠回田裡用的路：地塊、河、池塘、引水渠、樹與山丘擋路，稻田可以穿過 */
+  const isFreeM = (x,z)=>{
+    if(x<-50||x>50||z<-46.5||z>riverZ(x)-4.9) return false;
+    if(x*x+z*z < 213) return false;
+    if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
+    if(ell(x,z,-24,-5,6.9,5.9) || ell(x,z,24,2,5.1,4.3)) return false;
+    if(x>-26&&x<-22&&z>-1) return false;
+    if(x>-29&&x<-25.5&&z>-17&&z<-8.5) return false;
+    for(const q of treeSpots){ const r = 0.3*q[2]+0.25; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
+    for(const q of hillSpots){ if(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2 < 1) return false; }
+    return true;
+  };
+  let fr = null, frM = null, laneC = [], riverC = [], paddyC = [], footC = [];
   const ci = (x,z)=>{ const ix = Math.floor((x-X0)/CS), iz = Math.floor((z-Z0)/CS); return (ix<0||iz<0||ix>=NX||iz>=NZ) ? -1 : iz*NX+ix; };
   const cx = i=>X0+(i%NX+0.5)*CS, cz = i=>Z0+(Math.floor(i/NX)+0.5)*CS;
-  const free = (x,z)=>{ const i = ci(x,z); return i>=0 && fr[i]===1; };
-  const los = (a,b)=>{ const d = Math.hypot(b.x-a.x,b.z-a.z), n = Math.ceil(d/0.25); for(let k=1;k<n;k++){ const f = k/n; if(!free(a.x+(b.x-a.x)*f, a.z+(b.z-a.z)*f)) return false; } return true; };
+  const freeIn = (g,x,z)=>{ const i = ci(x,z); return i>=0 && g[i]===1; };
+  const free = (x,z)=>freeIn(fr,x,z);
+  const los = (a,b,g=fr)=>{ const d = Math.hypot(b.x-a.x,b.z-a.z), n = Math.ceil(d/0.25); for(let k=1;k<n;k++){ const f = k/n; if(!freeIn(g,a.x+(b.x-a.x)*f, a.z+(b.z-a.z)*f)) return false; } return true; };
   function build(){
     fr = new Uint8Array(NX*NZ);
     for(let i=0;i<fr.length;i++) fr[i] = isFree(cx(i),cz(i)) ? 1 : 0;
+    frM = new Uint8Array(NX*NZ); for(let i=0;i<frM.length;i++){ frM[i] = isFreeM(cx(i),cz(i)) ? 1 : 0; if(frM[i] && Math.abs(cz(i)+22.4)<1.0 && Math.abs(cx(i))<=28) laneC.push(i); }
+    mouseNav = { path(x,z){
+      const c0 = ci(x,z); let s0 = -1;
+      if(c0>=0 && frM[c0]) s0 = c0; else { let bd = 1e9; const ix = c0<0 ? Math.floor((Math.max(-50,Math.min(50,x))-X0)/CS) : c0%NX, iz = c0<0 ? Math.floor((Math.max(-46,Math.min(22,z))-Z0)/CS) : (c0-c0%NX)/NX;
+        for(let R=1;R<=60 && s0<0;R++){ for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix+a, jz = iz+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!frM[j]) continue; const dd = a*a+b*b; if(dd<bd){ bd = dd; s0 = j; } } } }
+      if(s0<0) return null;
+      const b = bfs(s0, frM); let best = -1, bdist = 1e9; for(const i of laneC){ if(b.dist[i]>=0 && b.dist[i]<bdist){ bdist = b.dist[i]; best = i; } }
+      if(best<0) return null;
+      const pts = pathTo(b, best, frM); if(s0!==c0) pts.unshift({x:cx(s0), z:cz(s0)}); return pts; } };
     for(let i=0;i<fr.length;i++){ if(!fr[i]) continue; const x = cx(i), z = cz(i), rz = riverZ(x);
       if(z > rz-6.4) riverC.push(i);
       if((z<-12.6&&z>-14.3&&Math.abs(x)<43) || (Math.abs(x)>42.9&&Math.abs(x)<45&&z<-14.2&&z>-30.4)) paddyC.push(i);
       for(const q of hillSpots){ const e = Math.sqrt(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2); if(e<1.0+3.4/q.r){ footC.push(i); break; } } }
   }
   const NB = [[1,0,1],[-1,0,1],[0,1,NX],[0,-1,-NX],[1,1,1.41],[1,-1,1.41],[-1,1,1.41],[-1,-1,1.41]];
-  function bfs(start){
+  function bfs(start, g){ g = g || fr;
     const dist = new Int16Array(NX*NZ).fill(-1), par = new Int32Array(NX*NZ).fill(-1), q = new Int32Array(NX*NZ); let h = 0, t = 0;
     dist[start] = 0; q[t++] = start;
     while(h<t){ const c = q[h++], ix = c%NX, iz = (c-ix)/NX;
       for(let k=0;k<8;k++){ const dx = NB[k][0], dz = NB[k][1], jx = ix+dx, jz = iz+dz; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx;
-        if(!fr[j]||dist[j]>=0) continue; if(dx&&dz&&(!fr[iz*NX+jx]||!fr[jz*NX+ix])) continue;
+        if(!g[j]||dist[j]>=0) continue; if(dx&&dz&&(!g[iz*NX+jx]||!g[jz*NX+ix])) continue;
         dist[j] = dist[c]+1; par[j] = c; q[t++] = j; } }
     return {dist, par, n:t, list:q.subarray(0,t)};
   }
-  function pathTo(b, goal){
+  function pathTo(b, goal, g){ g = g || fr;
     const pts = []; for(let c = goal; c>=0; c = b.par[c]) pts.push({x:cx(c), z:cz(c)}); pts.reverse();
     const sm = [pts[0]]; let i = 0;
-    while(i<pts.length-1){ let j = pts.length-1; while(j>i+1 && !los(pts[i],pts[j])) j--; sm.push(pts[j]); i = j; }
+    while(i<pts.length-1){ let j = pts.length-1; while(j>i+1 && !los(pts[i],pts[j],g)) j--; sm.push(pts[j]); i = j; }
     sm.shift(); return sm;
   }
   const pickFrom = (arr, b, minD)=>{ for(let k=0;k<40;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD) return c; } return -1; };
   /* ── 狗 ── */
   const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false}; });
   /* 點到狗：牠轉頭看向鏡頭，汪汪叫兩聲（聲音用瀏覽器合成，沒有音檔） */
-  const PITCH = [140,190,230,300,170];
+  const PITCH = [250,330,420,520,310];
   const barkTex = (()=>{ const c = document.createElement('canvas'); c.width = 256; c.height = 160; const x = c.getContext('2d');
     x.font = '900 110px Huninn, "PingFang TC", "Noto Sans TC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
     x.lineWidth = 22; x.strokeStyle = '#FFFFFF'; x.strokeText('汪！',128,86); x.fillStyle = '#E8502D'; x.fillText('汪！',128,86);
@@ -992,11 +1027,22 @@ let dogApi = null;
   let ac = null;
   function dogBark(pitch){ try{
     ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume();
-    const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
-    o.type = 'sawtooth'; o.frequency.setValueAtTime(pitch*1.25,t0); o.frequency.exponentialRampToValueAtTime(pitch*0.7,t0+0.16);
-    f.type = 'bandpass'; f.frequency.value = pitch*3.2; f.Q.value = 0.9;
-    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.3,t0+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.2);
-    o.connect(f); f.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0+0.22); }catch(_){} }
+    const t0 = ac.currentTime, dur = 0.26, out = ac.createGain(), lp = ac.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 4200; out.gain.setValueAtTime(0.0001,t0); out.gain.exponentialRampToValueAtTime(0.5,t0+0.012);
+    out.gain.setValueAtTime(0.5,t0+0.07); out.gain.exponentialRampToValueAtTime(0.0001,t0+dur); out.connect(lp); lp.connect(ac.destination);
+    /* 聲帶：兩個略微走音的鋸齒波，音高先上衝再下滑，加一點抖動，像「汪」的粗糙聲 */
+    const f0 = pitch, lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 38; lg.gain.value = f0*0.05; lfo.connect(lg);
+    const mixV = ac.createGain(); mixV.gain.value = 1;
+    for(const det of [1, 1.012]){ const o = ac.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f0*1.15*det,t0); o.frequency.linearRampToValueAtTime(f0*1.3*det,t0+0.03); o.frequency.exponentialRampToValueAtTime(f0*0.72*det,t0+dur);
+      lg.connect(o.frequency); o.connect(mixV); o.start(t0); o.stop(t0+dur+0.02); }
+    /* 共振峰：母音從「ㄨ」滑向「ㄚ」，F1 與 F2 各一個帶通濾波 */
+    for(const [fa,fb,q,gv] of [[420,780,5,1.0],[1000,1250,7,0.7],[2300,2600,9,0.25]]){ const bp = ac.createBiquadFilter(), g = ac.createGain(); bp.type = 'bandpass'; bp.Q.value = q; g.gain.value = gv;
+      bp.frequency.setValueAtTime(fa,t0); bp.frequency.linearRampToValueAtTime(fb,t0+0.06); mixV.connect(bp); bp.connect(g); g.connect(out); }
+    /* 開頭的氣聲「ㄏ」：短短一段帶通雜訊 */
+    const nb = ac.createBuffer(1, Math.floor(ac.sampleRate*0.05), ac.sampleRate), nd = nb.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i] = (Math.random()*2-1)*(1-i/nd.length);
+    const ns = ac.createBufferSource(), nf = ac.createBiquadFilter(), ng = ac.createGain(); ns.buffer = nb; nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 0.8; ng.gain.value = 0.5; ns.connect(nf); nf.connect(ng); ng.connect(out);
+    lfo.start(t0); lfo.stop(t0+dur+0.02); ns.start(t0); }catch(_){} }
   ds.forEach((d,i)=>{ d.g.userData.dog = d; d.pitch = PITCH[i]; d.barkT = 0; d.bf = [false,false];
     d.bub = new THREE.Sprite(new THREE.SpriteMaterial({map:barkTex, transparent:true, depthTest:false, depthWrite:false})); d.bub.visible = false; d.bub.renderOrder = 10; scene.add(d.bub); });
   const bumpD = (e,s0,dur)=> (e>=s0 && e<s0+dur) ? Math.sin(Math.PI*(e-s0)/dur) : 0;
@@ -1867,6 +1913,16 @@ renderer.domElement.addEventListener('pointermove', e=>{
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   const signs = chase.cats.map(c=>{ const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:signTex, transparent:true, depthTest:false, depthWrite:false})); sp.visible = false; sp.renderOrder = 11; scene.add(sp); return {sp, cat:c, t:0}; });
   const aimAt = e=>{ const r = el.getBoundingClientRect(); pt.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(pt, camera); };
+  /* 抓田鼠：按住拖到任何地方，放開後牠自己慢慢走回田中 */
+  const gp = new THREE.Plane(new THREE.Vector3(0,1,0), -0.14), gh = new THREE.Vector3(); let holding = false;
+  el.addEventListener('pointerdown', e=>{
+    aimAt(e);
+    if(rc.intersectObject(chase.mouse, true).length){ holding = true; chase.m.mode = 'held'; chase.m.path = null; controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; e.stopImmediatePropagation(); }
+  }, true);
+  el.addEventListener('pointermove', e=>{ if(!holding) return; aimAt(e); if(rc.ray.intersectPlane(gp, gh)){ chase.m.x = Math.max(-70,Math.min(70,gh.x)); chase.m.z = Math.max(-60,Math.min(40,gh.z)); } el.style.cursor = 'grabbing'; });
+  const letGo = ()=>{ if(!holding) return; holding = false; controls.enabled = true; const m = chase.m;
+    m.path = (mouseNav && mouseNav.path(m.x, m.z)) || [{x:Math.max(-26,Math.min(26,m.x)), z:chase.z0}]; m.mode = 'return'; m.sp = 0; };
+  el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
   el.addEventListener('pointerdown', e=>{
     aimAt(e);
     if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ dogApi.trigger(o.userData.dog); return; } } }
@@ -1876,7 +1932,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
   el.addEventListener('pointermove', e=>{
     aimAt(e);
     const hot = (dogApi && rc.intersectObjects(dogApi.groups, true).length) || rc.intersectObjects(chase.cats, true).length;
-    if(hot) el.style.cursor = 'pointer';
+    if(rc.intersectObject(chase.mouse, true).length && !holding) el.style.cursor = 'grab'; else if(hot) el.style.cursor = 'pointer';
   });
   pondTick.push(dt=>{ for(const s of signs){ if(s.t>0){ s.t -= dt; const e = 2.4-s.t, k = e<0.25 ? 0.4+0.75*Math.sin(Math.PI/2*e/0.25) : (e<0.4 ? 1.15-0.15*(e-0.25)/0.15 : 1), fade = s.t<0.5 ? s.t/0.5 : 1, sc = 2.6*k;
       s.sp.visible = s.t>0; s.sp.material.opacity = fade; s.sp.scale.set(sc,sc,1); s.sp.position.set(s.cat.position.x, s.cat.position.y+s.cat.scale.x*0.95+1.0, s.cat.position.z); } else s.sp.visible = false; } });
