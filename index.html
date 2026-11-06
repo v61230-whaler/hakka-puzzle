@@ -946,8 +946,10 @@ let dogApi = null, mouseNav = null;
     {fur:0x26262C, acc:0xB87530, snout:0xB87530, paw:0xB87530, brow:true, chestPatch:true, ear:'flop', earC:0x26262C, tail:'stub', bw:1.18, bl:1.05, hs:1.1, sw:1.15, sc:1.95},   /* 羅威那 */
     {fur:0xE8B650, ear:'flop', earC:0xD0A03C, tail:'fluff', sl:1.1, sc:1.89},                                                                                          /* 黃金獵犬 */
     {fur:0x1F1F25, chest:0xFFFFFF, belly:true, ruff:true, leg:0xFFFFFF, snout:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'semi', earC:0x1F1F25, tail:'fluff', tip:0xFFFFFF, sl:1.1, sc:1.82},                                     /* 邊牧 */
-    {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.49},                              /* 法鬥 */
-    {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.89}                                                                                          /* 拉布拉多 */
+    {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.49, shy:true},                              /* 法鬥 */
+    {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.89},                                                                                         /* 拉布拉多 */
+    {fur:0x1C1A1C, acc:0xA8581F, brow:true, chest:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'flop', earC:0x1C1A1C, tail:'fluff', bw:1.2, bl:1.05, hs:1.08, sw:1.05, sc:2.0},  /* 伯恩山犬：黑底、鏽褐臉頰與眉點、白胸白掌 */
+    {fur:0xFAF8F4, ruff:true, chest:0xFFFFFF, snout:0xF2EEE6, ear:'semi', earC:0xFAF8F4, tail:'fluff', bw:1.15, hs:1.06, sl:0.95, sc:1.95}  /* 薩摩耶：全白蓬鬆、豎耳、尾巴捲在背上 */
   ];
   /* ── 障礙地圖 ── */
   const CS = 0.5, X0 = -51, Z0 = -47, NX = 204, NZ = 140;
@@ -1021,9 +1023,9 @@ let dogApi = null, mouseNav = null;
   const inZone = c=>Math.abs(cx(c))<30;
   const pickFrom = (arr, b, minD)=>{ for(let k=0;k<60;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD && (inZone(c) || k>=40)) return c; } return -1; };
   /* ── 狗 ── */
-  const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false}; });
+  const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false, shy:!!o.shy, flee:0, fleeCd:0}; });
   /* 點到狗：牠轉頭看向鏡頭，汪汪叫兩聲（聲音用瀏覽器合成，沒有音檔） */
-  const PITCH = [0.72,0.92,1.1,1.38,0.86]; /* 播放速度：羅威那最低、法鬥最高 */
+  const PITCH = [0.72,0.92,1.1,1.38,0.86,0.66,1.0]; /* 播放速度：伯恩山最低、法鬥最高（法鬥不叫） */
   const barkTex = (()=>{ const c = document.createElement('canvas'); c.width = 256; c.height = 160; const x = c.getContext('2d');
     x.font = '900 110px Huninn, "PingFang TC", "Noto Sans TC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
     x.lineWidth = 22; x.strokeStyle = '#FFFFFF'; x.strokeText('汪！',128,86); x.fillStyle = '#E8502D'; x.fillText('汪！',128,86);
@@ -1040,7 +1042,7 @@ let dogApi = null, mouseNav = null;
   ds.forEach((d,i)=>{ d.g.userData.dog = d; d.pitch = PITCH[i]; d.barkT = 0; d.bf = [false,false];
     d.bub = new THREE.Sprite(new THREE.SpriteMaterial({map:barkTex, transparent:true, depthTest:false, depthWrite:false})); d.bub.visible = false; d.bub.renderOrder = 10; scene.add(d.bub); });
   const bumpD = (e,s0,dur)=> (e>=s0 && e<s0+dur) ? Math.sin(Math.PI*(e-s0)/dur) : 0;
-  dogApi = { groups: ds.map(d=>d.g), trigger(d){ if(!d || d.state==='init' || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,false]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; } };
+  dogApi = { groups: ds.map(d=>d.g), ptr: null, scare(d,px,pz){ if(!d || d.state==='init') return; d.fleeCd = 0; flee(d,px,pz); }, trigger(d){ if(!d || d.shy || d.state==='init' || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,false]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; } };
   let ready = false;
   function startCell(d){ const c0 = ci(d.x,d.z); if(c0>=0 && fr[c0]) return c0; if(c0<0) return -1; const ix = c0%NX, iz = (c0-ix)/NX;
     for(let R=1;R<=8;R++){ let best = -1, bd = 1e9; for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix+a, jz = iz+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!fr[j]) continue; const dd = (cx(j)-d.x)**2+(cz(j)-d.z)**2; if(dd<bd){ bd = dd; best = j; } } if(best>=0) return best; }
@@ -1058,12 +1060,23 @@ let dogApi = null, mouseNav = null;
     if(cell<0){ d.wait = 1.5; return; }
     d.path = withStart(d, me, pathTo(b, cell)); d.state = 'go'; d.poi = poi; d.run = rnd()<0.4; d.gt = 2+rnd()*4;
   }
+  /* 法鬥怕人：游標靠近或被點到，就往遠離的方向加速跑開（不叫） */
+  function flee(d, px, pz){
+    if(d.fleeCd>0) return; const me = startCell(d); if(me<0) return;
+    const b = bfs(me); let best = -1, bs = -1e9, ax = d.x-px, az = d.z-pz; const al = Math.hypot(ax,az)||1; ax /= al; az /= al;
+    for(let k=0;k<70;k++){ const c = b.list[Math.floor(rnd()*b.n)], dd = b.dist[c]; if(dd<10||dd>80) continue;
+      const vx = cx(c)-d.x, vz = cz(c)-d.z, vl = Math.hypot(vx,vz)||1; if((vx*ax+vz*az)/vl < 0.3) continue;
+      const sc = Math.hypot(cx(c)-px, cz(c)-pz) - 0.05*dd + (inZone(c)?6:0); if(sc>bs){ bs = sc; best = c; } }
+    d.fleeCd = 0.6; if(best<0) return;
+    if(d.pair){ d.pair.paired = false; d.pair = null; }
+    d.path = withStart(d, me, pathTo(b, best)); d.state = 'go'; d.poi = false; d.run = true; d.flee = 3.5; d.mood = 0;
+  }
   function steer(d, tx, tz, spd, dt, arrive){
     const dx = tx-d.x, dz = tz-d.z, dist = Math.hypot(dx,dz);
     let want = spd; if(arrive) want = Math.min(spd, dist*2.2+0.15);
     if(dist>0.05){ const ty = Math.atan2(dx,dz); const df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
       d.yaw += Math.max(-7*dt, Math.min(7*dt, df)); want *= Math.max(0.15, 1-Math.abs(df)/1.2); }
-    d.sp += Math.max(-6*dt, Math.min(3*dt, want-d.sp));
+    d.sp += Math.max(-6*dt, Math.min((d.flee>0?14:3)*dt, want-d.sp));
     const nx = d.x+Math.sin(d.yaw)*d.sp*dt, nz = d.z+Math.cos(d.yaw)*d.sp*dt;
     if(isFree(nx,nz)){ d.x = nx; d.z = nz; d.stuck = 0; }
     else if(isFree(nx,d.z)){ d.x = nx; d.sp *= 0.7; }
@@ -1082,22 +1095,23 @@ let dogApi = null, mouseNav = null;
         comps.push(cells); }
       const zc = c=>c.reduce((a,i)=>a+cz(i),0)/c.length;
       comps.sort((a,b)=>b.length-a.length);
-      const xc = c=>c.reduce((a,i)=>a+cx(i),0)/c.length, big = comps.filter(c=>c.length>600 && zc(c)>-20 && xc(c)>-30), assign = [0,0,0,1,1];
+      const xc = c=>c.reduce((a,i)=>a+cx(i),0)/c.length, big = comps.filter(c=>c.length>600 && zc(c)>-20 && xc(c)>-30), assign = [0,0,0,1,1,0,1];
       if(!big.length){ ready = true; return; }
       ds.forEach((d,i)=>{ const comp = big[Math.min(assign[i], big.length-1)], zone = comp.filter(inZone), pool = zone.length>50 ? zone : comp, c = pool[Math.floor(rnd()*pool.length)]; d.x = cx(c); d.z = cz(c); d.yaw = rnd()*6.28; d.g.visible = true; d.state = 'wait'; d.wait = rnd()*4; });
       ready = true; return; }
     if(dt>0.1) dt = 0.1;
     for(const d of ds){ if(d.state==='init') continue;
       d.gt -= dt;
+      if(d.shy){ if(d.fleeCd>0) d.fleeCd -= dt; if(dogApi.ptr && d.fleeCd<=0 && Math.hypot(dogApi.ptr.x-d.x, dogApi.ptr.z-d.z)<4.2) flee(d, dogApi.ptr.x, dogApi.ptr.z); }
       if(d.barkT>0){ d.barkT -= dt; const e = 1.7-d.barkT;
         const ty = Math.atan2(camera.position.x-d.x, camera.position.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-9*dt,Math.min(9*dt,df));
         d.sp = Math.max(0, d.sp-8*dt);
         for(let k=0;k<2;k++){ if(e>=0.3+k*0.55 && !d.bf[k]){ d.bf[k] = true; dogBark(d.pitch, d.bk[k]); } } }
       else if(d.state==='wait'){ d.wait -= dt; d.sp = Math.max(0, d.sp-6*dt); if(d.wait<=0){ if(d.waitPoi===undefined) d.waitPoi = false; decide(d); } }
       else if(d.state==='go'){
-        if(d.gt<=0){ d.run = !d.run; d.gt = 2+rnd()*4.5; }
+        if(d.flee>0){ d.flee -= dt; d.run = true; d.gt = 1.5; } else if(d.gt<=0){ d.run = !d.run; d.gt = 2+rnd()*4.5; }
         const wp = d.path[0]; if(!wp){ d.state = 'wait'; d.wait = d.poi ? 4+rnd()*5 : 1.5+rnd()*4; d.mood = rnd()<0.6 ? 1 : 2; }
-        else { const last = d.path.length===1, dist = steer(d, wp.x, wp.z, d.run?4.2:1.35, dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
+        else { const last = d.path.length===1, dist = steer(d, wp.x, wp.z, d.flee>0?6.6:(d.run?4.2:1.35), dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
       } else if(d.state==='pair'){
         const o = d.pair; d.pt -= dt;
         if(d.pt<=0 || !o){ if(o) o.paired = false; d.pair = null; d.state = 'wait'; d.wait = 0.5+rnd()*1.5; }
@@ -1922,12 +1936,14 @@ renderer.domElement.addEventListener('pointermove', e=>{
   el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
   el.addEventListener('pointerdown', e=>{
     aimAt(e);
-    if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ dogApi.trigger(o.userData.dog); return; } } }
+    if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ const dd = o.userData.dog; if(dd.shy) dogApi.scare(dd, h.point.x, h.point.z); else dogApi.trigger(dd); return; } } }
     const hc = rc.intersectObjects(chase.cats, true)[0];
     if(hc){ let o = hc.object; while(o && !chase.cats.includes(o)) o = o.parent; const sg = signs.find(s=>s.cat===o); if(sg) sg.t = 2.4; }
   });
+  el.addEventListener('pointerleave', ()=>{ if(dogApi) dogApi.ptr = null; });
   el.addEventListener('pointermove', e=>{
     aimAt(e);
+    if(dogApi && rc.ray.intersectPlane(gp, gh)) dogApi.ptr = {x:gh.x, z:gh.z};
     const hot = (dogApi && rc.intersectObjects(dogApi.groups, true).length) || rc.intersectObjects(chase.cats, true).length;
     if((nearMouse(e) || rc.intersectObject(chase.mouse, true).length) && !holding) el.style.cursor = 'grab'; else if(hot) el.style.cursor = 'pointer';
   });
