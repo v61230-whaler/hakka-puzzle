@@ -941,11 +941,11 @@ let dogApi = null, mouseNav = null;
     return g;
   }
   const BREEDS = [
-    {fur:0x26262C, acc:0xB87530, snout:0xB87530, paw:0xB87530, brow:true, chestPatch:true, ear:'flop', earC:0x26262C, tail:'stub', bw:1.18, bl:1.05, hs:1.1, sw:1.15, sc:1.5},   /* 羅威那 */
-    {fur:0xE8B650, ear:'flop', earC:0xD0A03C, tail:'fluff', sl:1.1, sc:1.45},                                                                                          /* 黃金獵犬 */
-    {fur:0x1F1F25, chest:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'semi', earC:0x1F1F25, tail:'fluff', tip:0xFFFFFF, sl:1.1, sc:1.4},                                     /* 邊牧 */
-    {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.15},                              /* 法鬥 */
-    {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.45}                                                                                          /* 拉布拉多 */
+    {fur:0x26262C, acc:0xB87530, snout:0xB87530, paw:0xB87530, brow:true, chestPatch:true, ear:'flop', earC:0x26262C, tail:'stub', bw:1.18, bl:1.05, hs:1.1, sw:1.15, sc:1.95},   /* 羅威那 */
+    {fur:0xE8B650, ear:'flop', earC:0xD0A03C, tail:'fluff', sl:1.1, sc:1.89},                                                                                          /* 黃金獵犬 */
+    {fur:0x1F1F25, chest:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'semi', earC:0x1F1F25, tail:'fluff', tip:0xFFFFFF, sl:1.1, sc:1.82},                                     /* 邊牧 */
+    {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.49},                              /* 法鬥 */
+    {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.89}                                                                                          /* 拉布拉多 */
   ];
   /* ── 障礙地圖 ── */
   const CS = 0.5, X0 = -51, Z0 = -47, NX = 204, NZ = 140;
@@ -954,13 +954,13 @@ let dogApi = null, mouseNav = null;
   const ell = (x,z,cx,cz,rx,rz)=>((x-cx)/rx)**2+((z-cz)/rz)**2 < 1;
   const isFree = (x,z)=>{
     if(x<-50||x>50||z<-46.5||z>riverZ(x)-5.4) return false;
-    if(x*x+z*z < 219) return false;
+    if(x*x+z*z < 207) return false;
     if(Math.hypot(x-15.4,z+8.9) < 4.9) return false;
-    if(ell(x,z,-24,-5,7.9,6.9) || ell(x,z,24,2,6.1,5.3) || ell(x,z,24,10,5,5)) return false;
+    if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,24,2,5.6,4.8) || ell(x,z,24,10,5,5)) return false;
     if(x>-26.5&&x<-21.5&&z>-1) return false;
     if(x>-29.5&&x<-25&&z>-17&&z<-8.5) return false;
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.2) return false;
-    for(const q of treeSpots){ const r = 0.38*q[2]+0.4; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
+    for(const q of treeSpots){ const r = 0.3*q[2]+0.3; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/(q.r*1.0+0.5))**2+((z-q.z)/(q.zr*1.0+0.5))**2 < 1) return false; }
     return true;
   };
@@ -1015,7 +1015,9 @@ let dogApi = null, mouseNav = null;
     while(i<pts.length-1){ let j = pts.length-1; while(j>i+1 && !los(pts[i],pts[j],g)) j--; sm.push(pts[j]); i = j; }
     sm.shift(); return sm;
   }
-  const pickFrom = (arr, b, minD)=>{ for(let k=0;k<40;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD) return c; } return -1; };
+  /* 預設畫面只看得到 |x|<30 這一帶，目的地盡量挑在這裡，才不會常常跑到畫面外 */
+  const inZone = c=>Math.abs(cx(c))<30;
+  const pickFrom = (arr, b, minD)=>{ for(let k=0;k<60;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD && (inZone(c) || k>=40)) return c; } return -1; };
   /* ── 狗 ── */
   const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false}; });
   /* 點到狗：牠轉頭看向鏡頭，汪汪叫兩聲（聲音用瀏覽器合成，沒有音檔） */
@@ -1050,7 +1052,7 @@ let dogApi = null, mouseNav = null;
     if(r<0.15 && riverC.length){ cell = pickFrom(riverC,b,6); poi = true; }
     else if(r<0.30 && paddyC.length){ cell = pickFrom(paddyC,b,6); poi = true; }
     else if(r<0.45 && footC.length){ cell = pickFrom(footC,b,6); poi = true; }
-    if(cell<0){ for(let k=0;k<40 && cell<0;k++){ const c = b.list[Math.floor(rnd()*b.n)]; if(b.dist[c]>=12 && b.dist[c]<=120) cell = c; } poi = false; }
+    if(cell<0){ for(let k=0;k<60 && cell<0;k++){ const c = b.list[Math.floor(rnd()*b.n)]; if(b.dist[c]>=12 && b.dist[c]<=120 && (inZone(c) || k>=45)) cell = c; } poi = false; }
     if(cell<0){ d.wait = 1.5; return; }
     d.path = withStart(d, me, pathTo(b, cell)); d.state = 'go'; d.poi = poi; d.run = rnd()<0.4; d.gt = 2+rnd()*4;
   }
@@ -1070,7 +1072,7 @@ let dogApi = null, mouseNav = null;
   }
   pondTick.push((dt,t)=>{
     if(!ready){ build();
-      /* 把綠地分成幾塊互不相連的區域，兩隻一組分到最大的兩塊、最後一隻去第三塊，同一塊的才會相遇 */
+      /* 綠地被切成幾塊互不相連的區域；只選預設畫面看得到的兩塊（右側大塊 3 隻、左前方小塊 2 隻），同一塊的才會相遇 */
       const lab = new Int32Array(fr.length).fill(-1), comps = [];
       for(let s0=0;s0<fr.length;s0++){ if(!fr[s0]||lab[s0]>=0) continue; const st = [s0], cells = []; lab[s0] = comps.length;
         while(st.length){ const a = st.pop(); cells.push(a); const ix = a%NX, iz = (a-ix)/NX;
@@ -1078,9 +1080,9 @@ let dogApi = null, mouseNav = null;
         comps.push(cells); }
       const zc = c=>c.reduce((a,i)=>a+cz(i),0)/c.length;
       comps.sort((a,b)=>b.length-a.length);
-      const big = comps.filter(c=>c.length>800 && zc(c)>-20), assign = [0,0,1,1,2];
+      const xc = c=>c.reduce((a,i)=>a+cx(i),0)/c.length, big = comps.filter(c=>c.length>600 && zc(c)>-20 && xc(c)>-30), assign = [0,0,0,1,1];
       if(!big.length){ ready = true; return; }
-      ds.forEach((d,i)=>{ const comp = big[Math.min(assign[i], big.length-1)], c = comp[Math.floor(rnd()*comp.length)]; d.x = cx(c); d.z = cz(c); d.yaw = rnd()*6.28; d.g.visible = true; d.state = 'wait'; d.wait = rnd()*4; });
+      ds.forEach((d,i)=>{ const comp = big[Math.min(assign[i], big.length-1)], zone = comp.filter(inZone), pool = zone.length>50 ? zone : comp, c = pool[Math.floor(rnd()*pool.length)]; d.x = cx(c); d.z = cz(c); d.yaw = rnd()*6.28; d.g.visible = true; d.state = 'wait'; d.wait = rnd()*4; });
       ready = true; return; }
     if(dt>0.1) dt = 0.1;
     for(const d of ds){ if(d.state==='init') continue;
