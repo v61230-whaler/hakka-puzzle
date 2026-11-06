@@ -705,8 +705,8 @@ function grove(cx, cz, n, radius){
     }
   }
   buckets.forEach((list,i)=>{ if(!list.length) return; const im = new THREE.InstancedMesh(clumpGeo, hillMat(kinds[i].rice), list.length); list.forEach((m,j)=>im.setMatrixAt(j,m)); scene.add(im); });
-  /* 兩排稻田中間的水圳 */
-  const ditch = new THREE.Mesh(new THREE.BoxGeometry(84,0.04,0.8), new THREE.MeshStandardMaterial({color:0x7EC8E0, roughness:0.35, flatShading:true})); ditch.position.set(0,0.14,-22.4); scene.add(ditch);
+  /* 稻田前緣的橫向灌溉溝渠（水車的水先流進這裡） */
+  const ditch = new THREE.Mesh(new THREE.BoxGeometry(84,0.04,0.8), new THREE.MeshStandardMaterial({color:0x7EC8E0, roughness:0.35, flatShading:true})); ditch.position.set(0,0.14,-16.3); scene.add(ditch);
   /* 稻草人 */
   for(const [sx,sz] of [[-10,-19.6],[19,-25.2]]){
     const g = new THREE.Group(), wood = mat(C.wood);
@@ -767,7 +767,7 @@ const pondTick = [];
     const np = Math.max(2,Math.round(L/3.2)); for(let k=1;k<np;k++){ const f = k/np, y = start.y+(end.y-start.y)*f - 0.15, px = start.x+(end.x-start.x)*f, pz = start.z+(end.z-start.z)*f;
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,y,6), wood); post.position.set(px,y/2,pz); scene.add(post); }
   }
-  const top = wy+R, p0 = new THREE.Vector3(LX, top+0.1, wz), p1 = new THREE.Vector3(LX-3.2, top-0.2, wz), end = new THREE.Vector3(LX-3.2, 0.8, -22.1); /* 終點在稻田中間橫向灌溉溝渠（z=-22.4）正上方 */
+  const top = wy+R, p0 = new THREE.Vector3(LX, top+0.1, wz), p1 = new THREE.Vector3(LX-3.2, top-0.2, wz), end = new THREE.Vector3(LX-3.2, 0.8, -16.0); /* 終點在稻田前緣橫向灌溉溝渠（z=-16.3）正上方，不跨過稻田 */
   flumeSeg(p0, p1); flumeSeg(p1, end);
   /* 流進稻田：槽口落下水柱，落進灌溉溝渠 */
   const stream = new THREE.Mesh(new THREE.BoxGeometry(0.7,1,0.12), new THREE.MeshBasicMaterial({color:0x8FD8F0, transparent:true, opacity:0.75}));
