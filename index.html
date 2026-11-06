@@ -1132,7 +1132,7 @@ let dogApi = null, mouseNav = null;
       ready = true; return; }
     if(dt>0.1) dt = 0.1;
     { const act = G.mode!=='idle', k = 0.5+0.5*Math.sin(t*(act?9:4)); lotPaw.material.opacity = 0.25+0.75*k; lotPaw.scale.setScalar(1+0.03*k);
-      if(G.mode==='call'){ G.t += dt; const live = ds.filter(d=>d.gat); if(live.every(d=>d.arr) || G.t>150){ G.mode = 'hold'; G.hold = 7; } }
+      if(G.mode==='call'){ G.t += dt; const live = ds.filter(d=>d.gat); if(live.every(d=>d.arr) || G.t>150){ G.mode = 'hold'; G.hold = 12; } }
       else if(G.mode==='hold'){ G.hold -= dt; if(G.hold<=0) gatherEnd(); } }
     for(const d of ds){ if(d.state==='init') continue;
       d.gt -= dt;
