@@ -819,6 +819,76 @@ const pondTick = [];
     pondTick.push((dt,t)=>{ const a = t*(0.35+i*0.08)*(i?-1:1)+i*3, rx = RRX*0.6, rz = RRZ*0.6;
       k.position.x = RX+Math.cos(a)*rx; k.position.z = RZ+Math.sin(a)*rz; const dx = -Math.sin(a)*rx*(i?-1:1), dz = Math.cos(a)*rz*(i?-1:1); k.rotation.y = Math.atan2(-dz,dx)+Math.PI; });
   }
+  /* 水牛：灰藍色身體、向後彎的角。頭連脖子是一組，繞肩膀轉（rotation.x 愈大頭愈低）。左池的牛泡在水裡偶爾轉頭；右池的牛每 17 秒回來喝一次水，其餘時間在附近散步 */
+  function makeBuffalo(sc){
+    const g = new THREE.Group(), fur = mat(0x7C8190), dk = mat(0x4C4E58), hornM = mat(0xEADFC8), legs = [];
+    const body = S(new THREE.SphereGeometry(1,14,10),0,1.05,0,0.62,0.6,1.2,fur); g.add(body);
+    g.add(S(new THREE.SphereGeometry(1,10,8),0,1.5,0.5,0.42,0.3,0.45,fur));
+    for(const sx of [-1,1]) for(const sz of [-1,1]){
+      const l = S(new THREE.CylinderGeometry(0.19,0.15,0.95,7).translate(0,-0.475,0),sx*0.34,0.95,sz*0.68,1,1,1,fur);
+      l.add(S(new THREE.CylinderGeometry(0.17,0.17,0.14,7),0,-0.9,0,1,1,1,dk)); g.add(l); legs.push({m:l, ph:(sx*sz>0?0:Math.PI)}); }
+    const head = new THREE.Group(); head.position.set(0,1.2,0.85); g.add(head);
+    head.add(S(new THREE.CapsuleGeometry(0.3,0.4,4,8).rotateX(Math.PI/2),0,0,0.35,1,1,1,fur));
+    head.add(S(new THREE.SphereGeometry(1,10,8),0,-0.02,0.85,0.3,0.32,0.42,fur));
+    head.add(S(new THREE.SphereGeometry(1,10,8),0,-0.1,1.18,0.22,0.19,0.24,dk));
+    const ears = [];
+    for(const sx of [-1,1]){
+      head.add(S(new THREE.SphereGeometry(1,6,5),sx*0.07,-0.06,1.38,0.05,0.04,0.04,blackM));
+      head.add(S(new THREE.SphereGeometry(0.045,6,5),sx*0.25,0.08,0.9,1,1,1,blackM));
+      const ear = new THREE.Group(); ear.position.set(sx*0.3,0.12,0.7); head.add(ear); ear.add(S(new THREE.SphereGeometry(1,7,5),sx*0.14,0,0,0.2,0.06,0.11,fur)); ears.push({g:ear, sx});
+      const hn = new THREE.Group(); hn.position.set(sx*0.26,0.2,0.72-0.34); hn.scale.x = sx; hn.rotation.z = 0.35; head.add(hn);
+      hn.add(new THREE.Mesh(new THREE.TorusGeometry(0.34,0.06,6,14,Math.PI*0.75).rotateZ(-Math.PI/2).rotateX(-Math.PI/2), hornM)); }
+    const tail = new THREE.Group(); tail.position.set(0,1.15,-1.15); g.add(tail);
+    tail.add(S(new THREE.CylinderGeometry(0.04,0.03,0.9,5).translate(0,-0.45,0),0,0,0,1,1,1,fur)); tail.add(S(new THREE.SphereGeometry(0.1,6,5),0,-0.95,0,1,1.6,1,dk));
+    g.scale.setScalar(sc); g.userData = {legs, head, ears, tail, body};
+    return g;
+  }
+  const bump = (t,per,off,dur)=>{ const x = (((t-off)%per)+per)%per; return x<dur ? Math.pow(Math.sin(Math.PI*x/dur),2) : 0; };
+  function buffaloIdle(bw, t, tailF){
+    const u = bw.userData;
+    u.tail.rotation.z = 0.25*Math.sin(t*tailF) + 0.5*bump(t,6.1,1.7,0.9)*Math.sin(t*14);
+    for(const e of u.ears) e.g.rotation.z = e.sx*(-0.15 + 0.4*bump(t,5.3+e.sx*0.7,2.1,0.45));
+    u.body.scale.y = 0.6*(1+0.012*Math.sin(t*1.7));
+  }
+  /* 左池：泡澡的水牛，身體沉在水裡，只露出背、頭和角；偶爾慢慢轉頭，水面有一圈圈漣漪 */
+  const BS = 0.85, bwL = makeBuffalo(BS); bwL.position.set(LX-1.0,-0.57,LZ+0.6); bwL.rotation.y = 0.6; scene.add(bwL);
+  const rings = [0,1].map(()=>{ const r = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); r.position.set(LX-1.0,0.15,LZ+0.6); r.rotation.y = 0.6; scene.add(r); return r; });
+  pondTick.push((dt,t)=>{
+    const u = bwL.userData, a = bump(t,11,1,3.4), b = bump(t,11,6.5,3.4);
+    u.head.rotation.y = 0.55*a - 0.6*b;
+    u.head.rotation.x = 0.05 + 0.03*Math.sin(t*0.9) - 0.1*a + 0.1*b;
+    buffaloIdle(bwL, t, 0.8);
+    rings.forEach((r,i)=>{ const k = (t*0.22 + i*0.5) % 1; r.scale.set(1.0+0.7*k, 1, 1.9+0.9*k); r.material.opacity = 0.55*(1-k); });
+  });
+  /* 右池：每 17 秒一輪——低頭喝水約 5 秒，抬頭離開，走到附近一處停下來吃草，再繞另一條路走回池邊 */
+  const bwR = makeBuffalo(BS); scene.add(bwR);
+  const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+1.45), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
+  const outC = new THREE.CatmullRomCurve3([DRK, V(-2.6,6.6), V(-4.2,8.6), V(-1.2,10.4)], false, 'centripetal');
+  const backC = new THREE.CatmullRomCurve3([V(-1.2,10.4), V(2.2,9.6), V(1.8,7.9), V(0.0,6.6), DRK], false, 'centripetal');
+  const T = 17, ease = x=>x*x*(3-2*x), bs = {yaw:Math.PI, wph:0, last:0, sp:0};
+  const drinkRing = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); drinkRing.position.set(DRK.x,0.15,RZ+RRZ-0.2); scene.add(drinkRing);
+  const angD = (a,b)=>((b-a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  pondTick.push((dt,t)=>{
+    const u = t % T, g = bwR, ud = g.userData; let pos = DRK, tan = null, headX = 0.12, moving = false, drink = 0;
+    if(u < 5.4){ /* 喝水：0–0.9 低頭，到 4.4 之前一直喝，之後抬頭 */
+      drink = u<0.9 ? ease(u/0.9) : (u>4.4 ? 1-ease(Math.min(1,(u-4.4)/1.0)) : 1); }
+    else if(u < 10){ const x = (u-5.4)/4.6, s = ease(x); pos = outC.getPointAt(s); tan = outC.getTangentAt(s); moving = true; }
+    else if(u < 11.8){ pos = outC.getPointAt(1); const k = bump(u,1.8,10,1.8); headX = 0.12+0.7*k; }
+    else if(u < 16.6){ const x = (u-11.8)/4.8, s = ease(x); pos = backC.getPointAt(s); tan = backC.getTangentAt(s); moving = true; }
+    else { pos = DRK; }
+    if(u>=16.6) drink = 0;
+    const dx = pos.x-bs.px, dz = pos.z-bs.pz; bs.sp = bs.px===undefined ? 0 : Math.hypot(dx,dz)/Math.max(dt,1e-3); if(bs.sp>6) bs.sp = 0; bs.px = pos.x; bs.pz = pos.z;
+    const target = (moving && tan) ? Math.atan2(tan.x,tan.z) : (u<5.4 || u>=16.6 ? Math.PI : bs.yaw);
+    bs.yaw += Math.max(-2.4*dt, Math.min(2.4*dt, angD(bs.yaw,target)));
+    g.position.set(pos.x,0,pos.z); g.rotation.y = bs.yaw;
+    const walk = Math.min(1,bs.sp/0.5); bs.wph += bs.sp*dt*2.6;
+    for(const l of ud.legs) l.m.rotation.x = Math.sin(bs.wph*1.0+l.ph)*0.5*walk;
+    g.position.y = Math.abs(Math.sin(bs.wph))*0.04*walk;
+    ud.head.rotation.x = (u>=10 && u<11.8) ? headX : headX*(1-drink) + 0.88*drink + 0.03*drink*Math.sin(t*5);
+    ud.head.rotation.y = (drink>0.5 ? 0 : 0.18*Math.sin(t*0.7)*(moving?1:0));
+    buffaloIdle(g, t, 1.1);
+    drinkRing.scale.set(0.5+0.8*((t*0.7)%1),1,0.4+0.6*((t*0.7)%1)); drinkRing.material.opacity = drink>0.9 ? 0.6*(1-((t*0.7)%1)) : 0;
+  });
 })();
 
 [[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
