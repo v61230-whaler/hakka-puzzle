@@ -542,7 +542,7 @@ function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeomet
     const c = {kind:'crab', g, t:0.5, off:-4.25, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); }
   /* 河邊的青蛙：坐在岸上朝著河，一下一下跳 */
-  [[0.36,5.6],[0.42,-5.7],[0.49,5.6],[0.55,5.7],[0.64,-5.7]].forEach(([t,off],i)=>{ const f = makeFrog(); scene.add(f); critters.push({kind:'frog', g:f, t, off, ph:i*2.3}); });
+  [[0.36,5.6],[0.42,-5.7],[0.49,5.6],[0.55,5.7],[0.64,-5.7]].forEach(([t,off],i)=>{ const f = makeFrog(); scene.add(f); const fc = {kind:'frog', g:f, t, off, ph:i*2.3, mode:'sit', home:riverPoint(t,off), pos:new THREE.Vector3(), end:new THREE.Vector3(), t0:0, rip:0}; critters.push(fc); });
   [0.38,0.5,0.62].forEach((t,i)=>{ const s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.45, ph:i*1.3}); });
 }
 /* 稻田裡的追逐：虎媽媽帶兩隻小石虎追一隻田鼠，沿著兩排稻田中間的水圳來回跑；田鼠忽左忽右，三隻石虎排成一列跟在後面（不會抓到） */
@@ -595,8 +595,19 @@ function updateChase(dt, tm){
     c.userData.tail.rotation.z = Math.sin(tm*5+i)*0.25;
   });
 }
+let frogNext = 5;
 function updateCritters(dt, tm){
   updateChase(dt, tm);
+  /* 每 11 秒，隨機一隻坐在岸上的青蛙跳進河裡 */
+  if(tm>=frogNext){
+    frogNext = tm+11;
+    const sitting = critters.filter(c=>c.kind==='frog' && c.mode==='sit');
+    if(sitting.length){
+      const c = sitting[Math.floor(Math.random()*sitting.length)], p = riverPoint(c.t+(Math.random()-0.5)*0.01, Math.sign(c.off)*(0.3+Math.random()*2.3));
+      c.end.set(p.x, 0, p.z); c.t0 = tm; c.mode = 'jump';
+      const dir = c.end.clone().sub(c.home); c.g.rotation.y = Math.atan2(dir.x,dir.z);
+    }
+  }
   for(const c of critters){
     if(c.kind==='fish'){ c.t += dt*c.speed*(1-0.5*nearDam(c.t))*c.dir; if(c.t>0.69){ c.t=0.69; c.dir=-1; } if(c.t<0.31){ c.t=0.31; c.dir=1; }
       const p = riverPoint(c.t, dodgeOff(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.8)), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
@@ -628,9 +639,26 @@ function updateCritters(dt, tm){
       }
     }
     else if(c.kind==='frog'){
-      const p = riverPoint(c.t, c.off), tg = riverCurve.getTangentAt(c.t), n = new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(-Math.sign(c.off));
-      const hop = Math.max(0, Math.sin(tm*1.5+c.ph)*1.4-0.6);
-      c.g.position.set(p.x+n.x*hop*0.25, 0.04+hop*0.55, p.z+n.z*hop*0.25); c.g.rotation.y = Math.atan2(n.x,n.z); c.g.rotation.x = -hop*0.3; }
+      if(c.mode==='jump'){                         // 跳進河裡：一道拋物線
+        const k = Math.min(1, (tm-c.t0)/0.95); c.pos.lerpVectors(c.home, c.end, k);
+        c.g.position.set(c.pos.x, 0.04+Math.sin(Math.PI*k)*2.3, c.pos.z); c.g.rotation.x = -0.5+k*0.9;
+        if(k>=1){ c.mode = 'swim'; c.pos.y = 0; addRipple(c.pos.x,c.pos.z,1.8); c.rip = 0; }
+      } else if(c.mode==='swim'){                  // 慢慢游回岸邊，爬上岸、走回原來的位置
+        const dx = c.home.x-c.pos.x, dz = c.home.z-c.pos.z, d = Math.hypot(dx,dz);
+        if(d<0.2){ c.mode = 'sit'; }
+        else {
+          const sp = 1.3*dt; c.pos.x += dx/d*sp; c.pos.z += dz/d*sp;
+          const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65;
+          c.g.position.set(c.pos.x, inRiver ? -0.1+Math.sin(tm*5)*0.03 : 0.04+Math.abs(Math.sin(tm*6))*0.1, c.pos.z);
+          c.g.rotation.y = Math.atan2(dx,dz); c.g.rotation.x = inRiver ? 0.15 : 0;
+          if(inRiver){ c.rip += dt; if(c.rip>0.7){ c.rip = 0; addRipple(c.pos.x,c.pos.z,0.9); } }
+        }
+      } else {
+        const tg = riverCurve.getTangentAt(c.t), n = new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(-Math.sign(c.off));
+        const hop = Math.max(0, Math.sin(tm*1.5+c.ph)*1.4-0.6);
+        c.g.position.set(c.home.x+n.x*hop*0.25, 0.04+hop*0.55, c.home.z+n.z*hop*0.25); c.g.rotation.y = Math.atan2(n.x,n.z); c.g.rotation.x = -hop*0.3;
+      }
+    }
     else { const t = c.t + Math.sin(tm*0.5+c.ph)*0.02, p = riverPoint(t, dodgeOff(t, c.off)); const hop = Math.max(0, Math.sin(tm*2.2+c.ph));
       c.g.position.set(p.x, 0.06+hop*0.35, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.rotation.x = -hop*0.4; }
   }
