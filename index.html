@@ -497,9 +497,9 @@ function makeFish(col){
   f.add(S(new THREE.ConeGeometry(0.4,0.7,4).rotateX(Math.PI/2).rotateZ(Math.PI/2),0,0.35,-0.85,0.25,1.2,1,body));
   f.add(S(new THREE.ConeGeometry(0.2,0.4,4),0,0.85,-0.05,0.4,1,1,body));
   for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
-  f.scale.setScalar(1.36); return f;
+  f.scale.setScalar(1.09); return f;
 }
-function makeCrab(col=0xFF7B6B, sc=1.2){
+function makeCrab(col=0xFF7B6B, sc=0.96){
   const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
   c.add(S(new THREE.SphereGeometry(0.5,12,8),0,0.3,0,1.3,0.6,0.95,red));
   for(const sx of [-1,1]){
@@ -517,7 +517,7 @@ function makeFrog(){
     g.add(S(new THREE.SphereGeometry(0.17,8,6),sx*0.26,0.82,0.42,1,1,1,gr)); g.add(S(new THREE.SphereGeometry(0.1,8,6),sx*0.27,0.86,0.52,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.05,6,5),sx*0.27,0.87,0.6,1,1,1,blackM));
     g.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.5,0.2,-0.3,0.7,0.8,1.4,gr)); g.add(S(new THREE.SphereGeometry(0.12,6,5),sx*0.28,0.1,0.7,1.4,0.5,1.4,gr));
   }
-  g.scale.setScalar(1.52); return g;
+  g.scale.setScalar(1.22); return g;
 }
 function makeShrimp(){
   const g = new THREE.Group(), pk = new THREE.MeshStandardMaterial({color:0xFFB08A, flatShading:true, roughness:0.6});
@@ -525,7 +525,7 @@ function makeShrimp(){
   g.add(S(new THREE.ConeGeometry(0.16,0.3,4).rotateX(-Math.PI/2),0,0.15,-0.82,1.4,1,1,pk));
   for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.14,0.62,0.7,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.04,6,5),sx*0.14,0.63,0.77,1,1,1,blackM));
     g.add(S(new THREE.CylinderGeometry(0.015,0.015,0.9,4).rotateX(Math.PI/2.4),sx*0.15,0.72,1.0,1,1,1,pk)); }
-  g.scale.setScalar(1.36); return g;
+  g.scale.setScalar(1.09); return g;
 }
 function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r,0), new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.95}));
   m.scale.set(1+rnd()*0.3,0.7+rnd()*0.2,1+rnd()*0.3); m.rotation.y = rnd()*6; m.castShadow = false; return m; }
@@ -538,7 +538,7 @@ function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeomet
     const c = {kind:'crab', g, t, off:i?4.15:-4.15, ph:i*2.1, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:i?1:-1, rip:0};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); });
   /* 第三隻：小一點、紫色、動作更快 */
-  { const g = makeCrab(0xB388FF, 0.8); scene.add(g);
+  { const g = makeCrab(0xB388FF, 0.64); scene.add(g);
     const c = {kind:'crab', g, t:0.5, off:-4.25, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); }
   /* 河邊的青蛙：坐在岸上朝著河，一下一下跳 */
