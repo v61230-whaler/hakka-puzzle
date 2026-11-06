@@ -485,8 +485,8 @@ function ribbon(curve, width, y, material, n=240){
   const m = new THREE.Mesh(g, material); m.receiveShadow = true; scene.add(m); return m;
 }
 const bankMat = new THREE.MeshStandardMaterial({color:0xFFF0CC, roughness:0.95, flatShading:true});
-ribbon(riverCurve, 7.2, 0.02, bankMat);
-ribbon(riverCurve, 5.6, 0.05, riverMat);
+ribbon(riverCurve, 9.4, 0.02, bankMat);
+ribbon(riverCurve, 7.3, 0.05, riverMat);
 const riverPoint = (t, off=0)=>{ const p = riverCurve.getPointAt(t), tg = riverCurve.getTangentAt(t); return p.clone().add(new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(off)); };
 const critters = [], crabPickables = [];
 const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.position.set(x,y,z); me.scale.set(sx,sy,sz); me.castShadow = false; return me; };
@@ -509,6 +509,16 @@ function makeCrab(col=0xFF7B6B, sc=1.5){
   }
   c.scale.setScalar(sc); return c;
 }
+function makeFrog(){
+  const g = new THREE.Group(), gr = new THREE.MeshStandardMaterial({color:0x7ED957, flatShading:true, roughness:0.6}), belly = new THREE.MeshStandardMaterial({color:0xF3F7C2, flatShading:true});
+  g.add(S(new THREE.SphereGeometry(0.45,12,8),0,0.4,0,1.15,0.8,1.2,gr));
+  g.add(S(new THREE.SphereGeometry(0.3,10,8),0,0.32,0.5,1,0.75,0.9,belly));
+  for(const sx of [-1,1]){
+    g.add(S(new THREE.SphereGeometry(0.17,8,6),sx*0.26,0.82,0.42,1,1,1,gr)); g.add(S(new THREE.SphereGeometry(0.1,8,6),sx*0.27,0.86,0.52,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.05,6,5),sx*0.27,0.87,0.6,1,1,1,blackM));
+    g.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.5,0.2,-0.3,0.7,0.8,1.4,gr)); g.add(S(new THREE.SphereGeometry(0.12,6,5),sx*0.28,0.1,0.7,1.4,0.5,1.4,gr));
+  }
+  g.scale.setScalar(1.9); return g;
+}
 function makeShrimp(){
   const g = new THREE.Group(), pk = new THREE.MeshStandardMaterial({color:0xFFB08A, flatShading:true, roughness:0.6});
   [[0,0.5,0.45,0.32],[0,0.6,0.1,0.3],[0,0.55,-0.22,0.26],[0,0.38,-0.48,0.2],[0,0.2,-0.62,0.15]].forEach(([x,y,z,r])=>g.add(S(new THREE.SphereGeometry(r,10,8),x,y,z,1,1,1,pk)));
@@ -521,22 +531,75 @@ function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeomet
   m.scale.set(1+rnd()*0.3,0.7+rnd()*0.2,1+rnd()*0.3); m.rotation.y = rnd()*6; m.castShadow = false; return m; }
 {
   const rocks = [[0.31,-3.2,1.3,0xB9B6C8],[0.33,2.9,1.1,0xA9B6CC],[0.37,-3.4,1.6,0xC8C2D6],[0.4,3.1,1.0,0xB0BCCB],[0.44,-3.3,1.4,0xBFBBD0],[0.47,3.2,1.2,0xAAB7C9],[0.5,-3.1,1.5,0xC3BED4],[0.54,3.1,1.0,0xB4B9CB],[0.57,-3.4,1.3,0xB9B6C8],[0.61,3.2,1.5,0xA9B6CC],[0.65,-3.2,1.2,0xC8C2D6],[0.68,3.0,1.0,0xAAB7C9],[0.42,-1.0,0.8,0xBFBBD0],[0.59,1.1,0.9,0xB9B6C8]];
-  for(const [t,off,r,hex] of rocks){ const p = riverPoint(t,off), m = makeRock(r,hex); m.position.set(p.x, 0.1+r*0.25, p.z); scene.add(m); }
+  for(const [t,off,r,hex] of rocks){ const p = riverPoint(t, Math.abs(off)>2 ? off+Math.sign(off)*0.85 : off), m = makeRock(r,hex); m.position.set(p.x, 0.1+r*0.25, p.z); scene.add(m); }
   const cols = [0xFF9F43,0xFF7FA8,0xFFD24D,0x74C0FF];
-  [0.36,0.43,0.55,0.63].forEach((t,i)=>{ const f = makeFish(cols[i%4]); scene.add(f); critters.push({kind:'fish', g:f, t, dir:i%2?1:-1, speed:0.006+i*0.0015, off:(i%2?0.8:-0.8), ph:i*1.7}); });
+  [0.36,0.43,0.55,0.63].forEach((t,i)=>{ const f = makeFish(cols[i%4]); scene.add(f); critters.push({kind:'fish', g:f, t, dir:i%2?1:-1, speed:0.006+i*0.0015, off:(i%2?1.05:-1.05), ph:i*1.7}); });
   [0.4,0.58].forEach((t,i)=>{ const g = makeCrab(); scene.add(g);
-    const c = {kind:'crab', g, t, off:i?3.3:-3.3, ph:i*2.1, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:i?1:-1, rip:0};
+    const c = {kind:'crab', g, t, off:i?4.15:-4.15, ph:i*2.1, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:i?1:-1, rip:0};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); });
   /* 第三隻：小一點、紫色、動作更快 */
   { const g = makeCrab(0xB388FF, 1.0); scene.add(g);
-    const c = {kind:'crab', g, t:0.5, off:-3.4, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
+    const c = {kind:'crab', g, t:0.5, off:-4.25, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); }
-  [0.38,0.5,0.62].forEach((t,i)=>{ const s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.1, ph:i*1.3}); });
+  /* 河邊的青蛙：坐在岸上朝著河，一下一下跳 */
+  [[0.36,5.6],[0.42,-5.7],[0.49,5.6],[0.55,5.7],[0.64,-5.7]].forEach(([t,off],i)=>{ const f = makeFrog(); scene.add(f); critters.push({kind:'frog', g:f, t, off, ph:i*2.3}); });
+  [0.38,0.5,0.62].forEach((t,i)=>{ const s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.45, ph:i*1.3}); });
+}
+/* 稻田裡的追逐：虎媽媽帶兩隻小石虎追一隻田鼠，沿著兩排稻田中間的水圳來回跑；田鼠忽左忽右，三隻石虎排成一列跟在後面（不會抓到） */
+function makeWildCat(sc){
+  const g = new THREE.Group(), fur = mat(0xE9B565), dark = mat(0x5A4030), cream = mat(0xFFF1D6), legs = [];
+  const bd = S(new THREE.CapsuleGeometry(0.2,0.5,4,8),0,0.4,0,1,1,1,fur); bd.rotation.x = Math.PI/2; g.add(bd);
+  g.add(S(new THREE.SphereGeometry(0.22,10,8),0,0.55,0.55,1,1,1,fur));
+  g.add(S(new THREE.SphereGeometry(0.12,8,6),0,0.48,0.74,1.2,0.8,1,cream));
+  g.add(S(new THREE.SphereGeometry(0.035,6,5),0,0.5,0.85,1,1,1,mat(0xFF8FA8)));
+  for(const sx of [-1,1]){
+    g.add(S(new THREE.ConeGeometry(0.08,0.15,4),sx*0.14,0.8,0.5,1,1,1,fur)); g.add(S(new THREE.SphereGeometry(0.03,6,5),sx*0.14,0.8,0.56,1,1,1,cream));
+    g.add(S(new THREE.SphereGeometry(0.035,6,5),sx*0.09,0.6,0.73,1,1,1,blackM));
+    for(const [lz,fz] of [[0.2,0],[-0.2,1]]){ const l = S(new THREE.CylinderGeometry(0.06,0.055,0.26,6).translate(0,-0.13,0),sx*0.13,0.26,lz,1,1,1,fur); g.add(l); legs.push({m:l, ph:(sx>0?0:Math.PI)+fz*Math.PI}); }
+  }
+  for(const [x,y,z] of [[0.19,0.5,0.1],[-0.18,0.52,-0.12],[0.12,0.6,-0.3],[-0.2,0.45,0.28],[0.0,0.62,0.0]]) g.add(S(new THREE.SphereGeometry(0.05,6,5),x,y,z,1,1,1,dark));
+  const tail = new THREE.Group(); tail.position.set(0,0.46,-0.5); tail.rotation.x = -1.3;
+  tail.add(S(new THREE.CapsuleGeometry(0.06,0.45,3,6),0,0.28,0,1,1,1,fur)); tail.add(S(new THREE.CylinderGeometry(0.066,0.066,0.05,6),0,0.3,0,1,1,1,dark)); tail.add(S(new THREE.SphereGeometry(0.065,6,5),0,0.56,0,1,1,1,dark));
+  g.add(tail); g.scale.setScalar(sc); g.userData = {legs, tail};
+  return g;
+}
+function makeMouse(){
+  const g = new THREE.Group(), fur = mat(0xA79A8A), pink = mat(0xFFB4C4), legs = [];
+  g.add(S(new THREE.SphereGeometry(0.2,10,8),0,0.22,0,1,0.85,1.5,fur));
+  g.add(S(new THREE.SphereGeometry(0.13,8,6),0,0.25,0.36,1,0.9,1.2,fur));
+  g.add(S(new THREE.SphereGeometry(0.03,6,5),0,0.24,0.52,1,1,1,pink));
+  for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.1,0.38,0.28,1,1,0.4,pink)); g.add(S(new THREE.SphereGeometry(0.025,6,5),sx*0.06,0.3,0.46,1,1,1,blackM)); }
+  const tail = S(new THREE.CylinderGeometry(0.012,0.02,0.55,5).rotateX(Math.PI/2.3),0,0.2,-0.5,1,1,1,pink); g.add(tail);
+  g.scale.setScalar(2.8); return g;
+}
+const chase = { z0:-22.4, A:34, B:4.0, w:0.17, lags:[0.55,1.0,1.45], zoff:[0,0.3,-0.3], cats:[], yaw:[0,0,0,0], mouse:null, ph:[0,0,0,0] };
+{
+  [3.8,2.3,2.0].forEach(sc=>{ const c = makeWildCat(sc); scene.add(c); chase.cats.push(c); });
+  chase.mouse = makeMouse(); scene.add(chase.mouse);
+}
+function updateChase(dt, tm){
+  /* 沿著一圈橢圓跑：田鼠在最前面，虎媽媽、兩隻小石虎依序跟在後面 */
+  const {A,B,w,z0} = chase, P = (t)=>[A*Math.cos(w*t), z0+B*Math.sin(w*t)], Vv = (t)=>[-A*w*Math.sin(w*t), B*w*Math.cos(w*t)];
+  const place = (g, i, t, hop, speedK, zw)=>{
+    const [x,z] = P(t), [vx,vz] = Vv(t), want = Math.atan2(vx,vz);
+    let d = want-chase.yaw[i]; d = Math.atan2(Math.sin(d),Math.cos(d)); chase.yaw[i] += d*(1-Math.exp(-9*dt));
+    chase.ph[i] += Math.hypot(vx,vz)*dt*speedK;
+    g.position.set(x, 0.14+hop, z+zw); g.rotation.y = chase.yaw[i];
+  };
+  const m = chase.mouse;
+  place(m, 3, tm, Math.abs(Math.sin(tm*9))*0.12, 1.3, Math.sin(tm*2.3)*0.25); m.rotation.z = Math.sin(tm*18)*0.05;
+  chase.cats.forEach((c,i)=>{
+    const ph = chase.ph[i];
+    place(c, i, tm-chase.lags[i], Math.abs(Math.sin(ph*0.5))*0.07, 1.1, chase.zoff[i]+Math.sin(tm*1.7+i)*0.15);
+    c.userData.legs.forEach(l=>{ l.m.rotation.x = Math.sin(ph+l.ph)*0.9; });
+    c.userData.tail.rotation.z = Math.sin(tm*5+i)*0.25;
+  });
 }
 function updateCritters(dt, tm){
+  updateChase(dt, tm);
   for(const c of critters){
     if(c.kind==='fish'){ c.t += dt*c.speed*(1-0.5*nearDam(c.t))*c.dir; if(c.t>0.69){ c.t=0.69; c.dir=-1; } if(c.t<0.31){ c.t=0.31; c.dir=1; }
-      const p = riverPoint(c.t, dodgeOff(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.6)), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
+      const p = riverPoint(c.t, dodgeOff(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.8)), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
       c.g.position.set(p.x, 0.06+Math.abs(Math.sin(tm*2+c.ph))*0.12, p.z); c.g.rotation.y = Math.atan2(tg.x,tg.z); c.g.rotation.z = Math.sin(tm*6+c.ph)*0.08; }
     else if(c.kind==='crab'){
       if(c.mode==='drag'){                         // 被抓起來：在半空中亂揮
@@ -545,14 +608,14 @@ function updateCritters(dt, tm){
         c.g.rotation.x = 0; c.g.rotation.z = 0;
         if(c.vy!==0 || c.pos.y>0.13){
           c.vy -= 30*dt; c.pos.y += c.vy*dt;
-          if(c.pos.y<=0.12){ c.pos.y = 0.12; c.vy = 0; if(nearestRiver(c.pos.x,c.pos.z).dist<2.9) addRipple(c.pos.x,c.pos.z,1.7); }
+          if(c.pos.y<=0.12){ c.pos.y = 0.12; c.vy = 0; if(nearestRiver(c.pos.x,c.pos.z).dist<3.75) addRipple(c.pos.x,c.pos.z,1.7); }
           c.g.position.copy(c.pos);
         } else {
           const dx = c.target.x-c.pos.x, dz = c.target.z-c.pos.z, d = Math.hypot(dx,dz);
-          if(d<0.25){ const nr = nearestRiver(c.pos.x,c.pos.z); c.t = Math.min(0.69, Math.max(0.31, nr.u)); c.off = c.side*3.3; c.mode = 'bank'; }
+          if(d<0.25){ const nr = nearestRiver(c.pos.x,c.pos.z); c.t = Math.min(0.69, Math.max(0.31, nr.u)); c.off = c.side*4.15; c.mode = 'bank'; }
           else {
             const sp = (c.run||2.6)*dt; c.pos.x += dx/d*sp; c.pos.z += dz/d*sp;
-            const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<2.8;
+            const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65;
             c.pos.y = 0.12 + (inRiver ? Math.sin(tm*9)*0.05 : Math.abs(Math.sin(tm*12))*0.06);
             if(inRiver){ c.rip += dt; if(c.rip>0.35){ c.rip = 0; addRipple(c.pos.x,c.pos.z,1.0); } }
             c.g.position.copy(c.pos); c.g.rotation.y = Math.atan2(dx,dz)+Math.PI/2;
@@ -564,6 +627,10 @@ function updateCritters(dt, tm){
         c.g.position.set(p.x, 0.12, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.position.y += Math.abs(Math.sin(tm*(c.hf||5)+c.ph))*0.05;
       }
     }
+    else if(c.kind==='frog'){
+      const p = riverPoint(c.t, c.off), tg = riverCurve.getTangentAt(c.t), n = new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(-Math.sign(c.off));
+      const hop = Math.max(0, Math.sin(tm*1.5+c.ph)*1.4-0.6);
+      c.g.position.set(p.x+n.x*hop*0.25, 0.04+hop*0.55, p.z+n.z*hop*0.25); c.g.rotation.y = Math.atan2(n.x,n.z); c.g.rotation.x = -hop*0.3; }
     else { const t = c.t + Math.sin(tm*0.5+c.ph)*0.02, p = riverPoint(t, dodgeOff(t, c.off)); const hop = Math.max(0, Math.sin(tm*2.2+c.ph));
       c.g.position.set(p.x, 0.06+hop*0.35, p.z); const tg = riverCurve.getTangentAt(t); c.g.rotation.y = Math.atan2(tg.x,tg.z)+Math.PI/2; c.g.rotation.x = -hop*0.4; }
   }
@@ -623,7 +690,7 @@ function grove(cx, cz, n, radius){
     g.position.set(sx,0.1,sz); g.scale.setScalar(1.3); scene.add(g);
   }
 })();
-[[0.30,5.0],[0.34,-5.2],[0.39,5.4],[0.52,5.2],[0.62,5.0],[0.67,-5.2]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
+[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
 
 
 /* 攔水壩：擋住約一半河面，水從另一半流過並冒出白色水花；可以用滑鼠或手指左右拖動，改變位置 */
@@ -631,8 +698,8 @@ const dams = [], damPickables = [];
 const damSamples = []; for(let t=0.27; t<=0.73; t+=0.002) damSamples.push({t, p:riverCurve.getPointAt(t)});
 function makeDam(t, side){
   const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({color:0xB9825A, flatShading:true, roughness:0.9}), cap = new THREE.MeshStandardMaterial({color:0xE6C792, flatShading:true});
-  const log = (x,y)=>{ const l = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,2.8,10).rotateZ(Math.PI/2), wood); l.position.set(0,y,x); g.add(l); damPickables.push(l);
-    for(const sx of [-1.4,1.4]){ const e = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.06,10).rotateZ(Math.PI/2), cap); e.position.set(sx,y,x); g.add(e); } };
+  const log = (x,y)=>{ const l = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,3.64,10).rotateZ(Math.PI/2), wood); l.position.set(0,y,x); g.add(l); damPickables.push(l);
+    for(const sx of [-1.82,1.82]){ const e = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.06,10).rotateZ(Math.PI/2), cap); e.position.set(sx,y,x); g.add(e); } };
   log(-0.28,0.3); log(0.28,0.3); log(0,0.85);
   /* 水花與水流：從壩旁的缺口流過 */
   const foamM = new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.85});
@@ -648,12 +715,12 @@ function makeDam(t, side){
   placeDam(d); dams.push(d); return d;
 }
 function placeDam(d){
-  const p = riverPoint(d.t, d.side*1.4), tg = riverCurve.getTangentAt(d.t);
+  const p = riverPoint(d.t, d.side*1.82), tg = riverCurve.getTangentAt(d.t);
   d.g.position.set(p.x, 0.04, p.z); d.g.rotation.y = Math.atan2(tg.x, tg.z);
 }
 function updateDams(tm){
   for(const d of dams){
-    const gapX = 2.8*d.side;
+    const gapX = 3.64*d.side;
     for(const f of d.foams){ const z = ((f.z + tm*f.sp) % 3.4) - 0.5; f.m.position.set(gapX + f.x*0.55, 0.12, z); f.m.scale.x = 0.7+0.3*Math.sin(tm*4+f.z*3); }
     for(const s of d.splash){ s.m.position.set(s.x, 0.6+Math.abs(Math.sin(tm*5+s.ph))*0.35, 0.7); }
     d.arrows.forEach(a=>{ a.m.position.z = a.dir*(1.5+Math.sin(tm*3)*0.18); });
@@ -678,12 +745,12 @@ function updateRipples(dt){
 function nearDam(t){ let w = 0; for(const d of dams){ const dist = Math.abs(t - d.t)*riverLen; w = Math.max(w, Math.min(1, Math.max(0, (4.8 - dist)/3.4))); } return w; }
 function dodgeOff(t, off){
   for(const d of dams){ const dist = Math.abs(t - d.t)*riverLen, w = Math.min(1, Math.max(0, (4.8 - dist)/3.4));
-    if(w > 0){ const gap = -d.side*1.5; off = off*(1-w) + gap*w; } }
+    if(w > 0){ const gap = -d.side*1.95; off = off*(1-w) + gap*w; } }
   return off;
 }
 function dodgeBank(t, off){
   for(const d of dams){ const dist = Math.abs(t - d.t)*riverLen, w = Math.min(1, Math.max(0, (4.8 - dist)/3.4));
-    if(w > 0 && Math.sign(off) === d.side) off += d.side*1.1*w; }
+    if(w > 0 && Math.sign(off) === d.side) off += d.side*1.4*w; }
   return off;
 }
 
@@ -754,7 +821,7 @@ function dodgeBank(t, off){
   const board = new THREE.Mesh(new THREE.BoxGeometry(3.4,1.9,0.14), red); board.position.y = 2.1; g.add(board);
   const face = new THREE.Mesh(new THREE.PlaneGeometry(3.28,1.78), new THREE.MeshBasicMaterial({map:tex})); face.position.set(0,2.1,0.08); g.add(face);
   for(const sx of [-1.2,1.2]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,2.2,6), mat(C.wood)); post.position.set(sx,1.1,-0.02); g.add(post); }
-  const p = riverPoint(0.58, -3.7); g.position.set(p.x, 0.02, p.z); g.rotation.order = 'YXZ'; g.rotation.y = -0.1; g.rotation.x = -0.5; g.scale.setScalar(1.35); scene.add(g);
+  const p = riverPoint(0.58, -4.55); g.position.set(p.x, 0.02, p.z); g.rotation.order = 'YXZ'; g.rotation.y = -0.1; g.rotation.x = -0.5; g.scale.setScalar(1.35); scene.add(g);
 })();
 
 function add(parent, geo, m, x=0, y=0, z=0){ const me = new THREE.Mesh(geo, m); me.position.set(x,y,z); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
@@ -1375,7 +1442,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
       /* 放開螃蟹：找出離牠最近的河岸，讓牠自己跑（或游）上岸 */
       const nr = nearestRiver(cdrag.pos.x, cdrag.pos.z), tg = riverCurve.getTangentAt(nr.u), n = new THREE.Vector3(-tg.z,0,tg.x);
       const side = Math.sign(new THREE.Vector3(cdrag.pos.x-nr.p.x,0,cdrag.pos.z-nr.p.z).dot(n)) || cdrag.side;
-      cdrag.side = side; cdrag.target.set(nr.p.x+n.x*side*3.3, 0.12, nr.p.z+n.z*side*3.3);
+      cdrag.side = side; cdrag.target.set(nr.p.x+n.x*side*4.15, 0.12, nr.p.z+n.z*side*4.15);
       cdrag.pos.y = 1.2; cdrag.vy = 0; cdrag.mode = 'return'; cdrag = null; controls.enabled = true;
     }
     if(drag){ drag = null; controls.enabled = true; }
