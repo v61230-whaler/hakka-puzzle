@@ -758,15 +758,14 @@ const pondTick = [];
     const wat = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.1,L), waterM); wat.position.set(0,0.06,L/2); fl.add(wat);
     const n = Math.max(3,Math.round(L/1.1));
     for(let i=0;i<n;i++){ const d = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.03,0.2), new THREE.MeshBasicMaterial({color:0xFFFFFF})); d.position.y = 0.13; fl.add(d); dashAll.push({d, i, n, L}); }
-    for(let k=1;k<=2;k++){ const f = k/3, y = start.y+(end.y-start.y)*f - 0.15, px = start.x+(end.x-start.x)*f, pz = start.z+(end.z-start.z)*f;
+    const np = Math.max(2,Math.round(L/3.2)); for(let k=1;k<np;k++){ const f = k/np, y = start.y+(end.y-start.y)*f - 0.15, px = start.x+(end.x-start.x)*f, pz = start.z+(end.z-start.z)*f;
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,y,6), wood); post.position.set(px,y/2,pz); scene.add(post); }
   }
-  const top = wy+R, p0 = new THREE.Vector3(LX, top+0.1, wz), p1 = new THREE.Vector3(LX-3.2, top-0.2, wz), end = new THREE.Vector3(LX-3.2, 0.9, -16.9);
+  const top = wy+R, p0 = new THREE.Vector3(LX, top+0.1, wz), p1 = new THREE.Vector3(LX-3.2, top-0.2, wz), end = new THREE.Vector3(LX-3.2, 0.8, -22.1); /* 終點在稻田中間橫向灌溉溝渠（z=-22.4）正上方 */
   flumeSeg(p0, p1); flumeSeg(p1, end);
-  /* 流進稻田：槽口落下水柱，落地處一小灘水 */
+  /* 流進稻田：槽口落下水柱，落進灌溉溝渠 */
   const stream = new THREE.Mesh(new THREE.BoxGeometry(0.7,1,0.12), new THREE.MeshBasicMaterial({color:0x8FD8F0, transparent:true, opacity:0.75}));
-  stream.scale.y = end.y-0.15; stream.position.set(end.x,(end.y+0.15)/2,end.z-0.1); scene.add(stream);
-  const puddle = new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.4,0.04,16), waterM); puddle.scale.z = 0.7; puddle.position.set(end.x,0.15,end.z-1.1); scene.add(puddle);
+  stream.scale.y = end.y-0.15; stream.position.set(end.x,(end.y+0.15)/2,end.z-0.15); scene.add(stream);
   pondTick.push((dt,t)=>{ dashAll.forEach(o=>{ o.d.position.z = ((o.i*o.L/o.n + t*1.6) % o.L); }); stream.material.opacity = 0.65+0.1*Math.sin(t*9); });
   /* 右邊池塘 + 兩尾錦鯉 */
   const RX = 24, RZ = 2, RRX = 4.2, RRZ = 3.4;
