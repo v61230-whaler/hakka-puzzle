@@ -572,28 +572,64 @@ function makeMouse(){
   const tail = S(new THREE.CylinderGeometry(0.012,0.02,0.55,5).rotateX(Math.PI/2.3),0,0.2,-0.5,1,1,1,pink); g.add(tail);
   g.scale.setScalar(2.24); return g;
 }
-const chase = { z0:-22.4, A:34, B:3.2, w:0.17, W:2.0, f:1.0, lagBase:[2.4,3.3,4.2], lagAmp:[1.7,1.8,2.0], lagF:[0.35,0.28,0.31], lagPh:[0,2,4], zoff:[0,0.3,-0.3], cats:[], yaw:[0,0,0,0], mouse:null, ph:[0,0,0,0] };
+/* 追逐的節奏：①追逐約 24–36 秒（田鼠在前面一左一右拐彎、虎媽媽與兩隻小石虎排成一列追，距離忽近忽遠）→ ②石虎放棄，繞道往後方山區走去，田鼠停下來在田中央慢慢逛、偶爾停下休息 → ③石虎在山邊逛一會兒，再走回來 → ④靠近到約 15 單位時田鼠發現，加速逃跑，回到①。全部用「朝目標轉向、前進」模擬，不是固定軌跡。 */
+const chase = { z0:-22.4, cats:[], mouse:null };
 {
   [3.04,1.84,1.6].forEach(sc=>{ const c = makeWildCat(sc); scene.add(c); chase.cats.push(c); });
   chase.mouse = makeMouse(); scene.add(chase.mouse);
+  const mk = (x,z)=>({x,z,yaw:Math.PI/2,sp:0,ph:0,h:[]});
+  chase.m = Object.assign(mk(-30,chase.z0), {sp:5.8, mode:'run', dirx:1, pause:0, tgt:null, boost:0});
+  chase.c = [0,1,2].map(i=>Object.assign(mk(-38-i*2.5,chase.z0), {wp:null, wt:0}));
+  chase.phase = 'chase'; chase.pt = 0; chase.dur = 30; chase.ax = 0;
 }
+const chApproach = (v, target, rate, dt)=> v + Math.max(-rate*dt, Math.min(rate*dt, target-v));
+function chSteer(e, dt, tx, tz, turn){
+  const want = Math.atan2(tx-e.x, tz-e.z); let d = want-e.yaw; d = Math.atan2(Math.sin(d),Math.cos(d));
+  const mx = turn*dt; e.yaw += Math.max(-mx, Math.min(mx, d));
+  e.x += Math.sin(e.yaw)*e.sp*dt; e.z += Math.cos(e.yaw)*e.sp*dt;
+}
+function chHist(h, t, x, z){ if(!h.length) return [x,z]; let i = h.length-1; while(i>0 && h[i][0]>t) i--; return [h[i][1],h[i][2]]; }
 function updateChase(dt, tm){
-  /* 沿著一圈橢圓跑，中途左右拐彎：田鼠在最前面，虎媽媽、兩隻小石虎隔一段距離依序追在後面，距離忽近忽遠 */
-  const {A,B,w,z0,W,f} = chase, P = (t)=>[A*Math.cos(w*t), z0+B*Math.sin(w*t)+W*Math.sin(f*t)], Vv = (t)=>[-A*w*Math.sin(w*t), B*w*Math.cos(w*t)+W*f*Math.cos(f*t)];
-  const place = (g, i, t, hop, speedK, zw)=>{
-    const [x,z] = P(t), [vx,vz] = Vv(t), want = Math.atan2(vx,vz);
-    let d = want-chase.yaw[i]; d = Math.atan2(Math.sin(d),Math.cos(d)); chase.yaw[i] += d*(1-Math.exp(-9*dt));
-    chase.ph[i] += Math.hypot(vx,vz)*dt*speedK;
-    g.position.set(x, 0.14+hop, z+zw); g.rotation.y = chase.yaw[i];
-  };
-  const m = chase.mouse;
-  place(m, 3, tm, Math.abs(Math.sin(tm*9))*0.12, 1.3, Math.sin(tm*2.3)*0.25); m.rotation.z = Math.sin(tm*18)*0.05;
-  chase.cats.forEach((c,i)=>{
-    const ph = chase.ph[i];
-    place(c, i, tm-(chase.lagBase[i]+chase.lagAmp[i]*Math.sin(tm*chase.lagF[i]+chase.lagPh[i])), Math.abs(Math.sin(ph*0.5))*0.07, 1.1, chase.zoff[i]+Math.sin(tm*1.7+i)*0.15);
-    c.userData.legs.forEach(l=>{ l.m.rotation.x = Math.sin(ph+l.ph)*0.9; });
-    c.userData.tail.rotation.z = Math.sin(tm*5+i)*0.25;
+  dt = Math.min(dt, 0.1);
+  const S = chase, m = S.m, cs = S.c, z0 = S.z0, MZ = -30.5; /* MZ：石虎在山邊逛的位置（稻田後方） */
+  S.pt += dt;
+  if(S.phase==='chase' && S.pt > S.dur){ S.phase = 'away'; S.pt = 0; m.mode = 'stroll'; m.pause = 0; m.tgt = null; S.ax = (cs[0].x>=m.x ? 1 : -1)*30; /* 往原本跑來的那一側、離田鼠遠遠的山邊退去 */ }
+  else if(S.phase==='away' && (S.pt>14 || cs.every((c,i)=>Math.hypot(S.ax+(i-1)*4-c.x, MZ-c.z)<2.5))){ S.phase = 'linger'; S.pt = 0; }
+  else if(S.phase==='linger' && S.pt>8){ S.phase = 'back'; S.pt = 0; }
+  else if(S.phase==='back' && Math.hypot(m.x-cs[0].x, m.z-cs[0].z) < 12){ S.phase = 'chase'; S.pt = 0; S.dur = 24+Math.random()*12; m.mode = 'run'; m.boost = 2.5; m.dirx = m.x>=cs[0].x ? 1 : -1; }
+  /* 田鼠 */
+  if(m.mode==='run'){
+    m.boost = Math.max(0, m.boost-dt);
+    if(Math.abs(m.x)>32 && Math.sign(m.x)===m.dirx) m.dirx = -m.dirx;
+    m.sp = chApproach(m.sp, 5.8+(m.boost>0?3:0), 7, dt);
+    chSteer(m, dt, m.x+m.dirx*6, z0+3*Math.sin(tm*0.55)+1.8*Math.sin(tm*1.1), 3.2);
+  } else {
+    if(m.pause>0){ m.pause -= dt; m.sp = chApproach(m.sp, 0, 5, dt); chSteer(m, dt, m.x+Math.sin(m.yaw), m.z+Math.cos(m.yaw), 3); }
+    else {
+      if(!m.tgt) m.tgt = [Math.max(-26,Math.min(26,m.x+(Math.random()-0.5)*16)), z0+(Math.random()-0.5)*5];
+      if(Math.hypot(m.tgt[0]-m.x, m.tgt[1]-m.z) < 0.7){ m.tgt = null; m.pause = 1.5+Math.random()*2.5; }
+      else { m.sp = chApproach(m.sp, 1.0, 5, dt); chSteer(m, dt, m.tgt[0], m.tgt[1], 3); }
+    }
+  }
+  /* 石虎 */
+  const lags = [2.4+1.7*Math.sin(tm*0.35), 0.9+0.5*Math.sin(tm*0.28+2), 0.9+0.5*Math.sin(tm*0.31+4)];
+  cs.forEach((c,i)=>{
+    const src = i===0 ? m : cs[i-1]; let tx, tz, spd;
+    if(S.phase==='chase' || (S.phase==='back' && i>0)){ [tx,tz] = chHist(src.h, tm-lags[i], src.x, src.z);
+      if(i===0 && Math.hypot(tx-m.x,tz-m.z)<5.5){ const ex = c.x-m.x, ez = c.z-m.z, ed = Math.hypot(ex,ez)||1; tx = m.x+ex/ed*5.5; tz = m.z+ez/ed*5.5; } /* 至少保持一段距離，不會貼到田鼠身上 */
+      spd = Math.min(9, Math.hypot(tx-c.x,tz-c.z)*3); }
+    else if(S.phase==='back'){ tx = m.x; tz = m.z; spd = 3.8; }
+    else if(S.phase==='away'){ tx = S.ax+(i-1)*4; tz = MZ; spd = Math.min(4.5, Math.hypot(tx-c.x,tz-c.z)*2); }
+    else { c.wt -= dt; if(!c.wp || c.wt<=0){ c.wp = [S.ax+(i-1)*4+(Math.random()-0.5)*8, MZ+(Math.random()-0.5)*2]; c.wt = 2+Math.random()*2; } tx = c.wp[0]; tz = c.wp[1]; spd = Math.min(1.3, Math.hypot(tx-c.x,tz-c.z)*1.5); }
+    c.sp = chApproach(c.sp, spd, 10, dt); chSteer(c, dt, tx, tz, 4.5);
   });
+  [m, ...cs].forEach(e=>{ e.h.push([tm,e.x,e.z]); while(e.h.length && tm-e.h[0][0]>14) e.h.shift(); });
+  m.ph += m.sp*dt*1.6; const g = S.mouse, k = Math.min(1, m.sp/3);
+  g.position.set(m.x, 0.14+Math.abs(Math.sin(m.ph))*0.12*k, m.z); g.rotation.y = m.yaw; g.rotation.z = Math.sin(tm*18)*0.05*k;
+  S.cats.forEach((g2,i)=>{ const c = cs[i]; c.ph += c.sp*dt*1.1;
+    g2.position.set(c.x, 0.14+Math.abs(Math.sin(c.ph*0.5))*0.07*Math.min(1,c.sp/2), c.z); g2.rotation.y = c.yaw;
+    g2.userData.legs.forEach(l=>{ l.m.rotation.x = Math.sin(c.ph+l.ph)*0.9; });
+    g2.userData.tail.rotation.z = Math.sin(tm*5+i)*0.25; });
 }
 let frogNext = 5;
 function updateCritters(dt, tm){
