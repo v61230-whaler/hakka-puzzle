@@ -1146,7 +1146,7 @@ let dogApi = null, mouseNav = null;
       else if(d.state==='go'){
         if(d.flee>0){ d.flee -= dt; d.run = true; d.gt = 1.5; } else if(d.gt<=0){ d.run = !d.run; d.gt = 2+rnd()*4.5; }
         const wp = d.path[0]; if(!wp){ d.state = 'wait'; d.wait = d.poi ? 4+rnd()*5 : 1.5+rnd()*4; d.mood = rnd()<0.6 ? 1 : 2; }
-        else { const last = d.path.length===1, dist = steer(d, wp.x, wp.z, d.flee>0?6.6:(d.run?4.2:1.35), dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
+        else { const last = d.path.length===1, dist = steer(d, wp.x, wp.z, d.flee>0?6.6:(d.run?4.2:1.35)*(d.shy?0.5:1), dt, last); /* 法鬥平常走得慢（一半速度），被靠近才加速到 6.6，差異才看得出來 */ if(dist<(last?0.35:0.6)) d.path.shift(); }
       } else if(d.state==='gather'){
         const sd = Math.hypot(d.slot.x-d.x, d.slot.z-d.z); d.gT = (d.gT||0)+dt;
         if(!d.arr){
