@@ -1061,9 +1061,10 @@ let dogApi = null, mouseNav = null;
   /* 光圈：虛線畫成的小狗腳掌印，會閃動；沒有文字 */
   const mkPaw = pc=>{ const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d');
     const el = (cx,cy,rx,ry,rot)=>{ x.beginPath(); x.ellipse(cx,cy,rx,ry,rot,0,Math.PI*2); };
-    const shapes = [[256,372,142,104,0],[104,236,44,66,-0.5],[198,128,42,66,-0.16],[314,128,42,66,0.16],[408,236,44,66,0.5]];
+    const pad = ()=>{ x.beginPath(); for(let i=0;i<=120;i++){ const a = i/120*Math.PI*2, d = (a-1.5*Math.PI), bump = 24*Math.exp(-(d*d)/0.2); const px = 256+142*Math.cos(a), py = 372+104*Math.sin(a)-bump; if(i===0) x.moveTo(px,py); else x.lineTo(px,py); } x.closePath(); }; /* 大肉墊：橢圓，上緣中間（兩個中間腳趾之間）微微往前凸 */
+    const shapes = [[104,236,44,66,-0.5],[198,128,42,66,-0.16],[314,128,42,66,0.16],[408,236,44,66,0.5]];
     x.lineCap = 'round'; x.setLineDash([22,18]);
-    for(const [w,col] of [[20,'#FFFFFF'],[9,pc]]){ x.lineWidth = w; x.strokeStyle = col; for(const sh of shapes){ el(...sh); x.stroke(); } }
+    for(const [w,col] of [[20,'#FFFFFF'],[9,pc]]){ x.lineWidth = w; x.strokeStyle = col; pad(); x.stroke(); for(const sh of shapes){ el(...sh); x.stroke(); } }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
   const pawTex = mkPaw('#FFA51F'), pawGreen = mkPaw('#1FB34F');
   const lotPaw = new THREE.Mesh(new THREE.PlaneGeometry(7.2,7.2).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({map:pawTex, transparent:true, depthWrite:false})); lotPaw.position.set(LOT.x,0.16,LOT.z); scene.add(lotPaw);
