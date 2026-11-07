@@ -881,9 +881,9 @@ const pondTick = [];
   /* 右池：每 17 秒一輪——低頭喝水約 5 秒，抬頭離開，走到附近一處停下來吃草，再繞另一條路走回池邊 */
   const bwR = makeBuffalo(BS); scene.add(bwR);
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+1.45), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
-  /* 右池水牛：每次繞稻田外圍走一整圈（約 2 分鐘，路上停下來低頭吃草 4 次），走回池邊喝一次水，再出發 */
-  const WP = [DRK, [31,2.5],[34,-4],[39,-11],[44,-14.4],[46,-21],[46,-30],[40,-31.2],[20,-31.4],[0,-31.5],[-20,-31.4],[-40,-31.2],[-46,-30],[-46,-21],[-44.5,-14.6],[-38,-13.8],[-30,-13.4],[-20,-13.8],[-10,-14.1],[0,-14.1],[10,-14.1],[20,-14.0],[28,-13.2],[32,-8],[32,-1],[28,3],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
-  const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.2,0.4,0.6,0.8].map(f=>f*LL);
+  /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
+  const WP = [DRK, [31,2.5],[34,-4],[33,-11],[31,-15.5],[29,-19.6],[20,-19.6],[8,-19.6],[-5,-19.6],[-18,-19.6],[-30,-19.6],[-36,-20.3],[-38.5,-22.4],[-36,-24.6],[-30,-25.2],[-18,-25.2],[-5,-25.2],[8,-25.2],[20,-25.2],[32,-25.2],[38.5,-23.6],[38.5,-21.2],[35,-19.7],[32,-17.5],[31,-14],[32,-8],[32,-1],[28,3],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
+  const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.3,0.45,0.6,0.75].map(f=>f*LL);
   const ease = x=>x*x*(3-2*x), bs = {yaw:Math.PI, wph:0, last:0, sp:0}, bm = {mode:'drink', tm:0, s:0, gi:0};
   const drinkRing = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); drinkRing.position.set(DRK.x,0.15,RZ+RRZ-0.2); scene.add(drinkRing);
   const angD = (a,b)=>((b-a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
