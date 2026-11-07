@@ -1786,9 +1786,9 @@ function makeCar(color, buddy=false){
   const spd = 2.0;
   const addCar = (loop, t, i)=>{ const car = makeCar(cols[i%cols.length]); carGroup.add(car); cars.push({car, bp:loop, loop:true, t, dir:1, lane:0.45, speed:spd/loop.len}); };
   let n = 0;
-  traffic.outer.chord.forEach(t=> addCar(traffic.outer, t, n++));
-  [2,5].forEach(i=> addCar(traffic.outer, traffic.outer.road[i], n++));
-  [0,1/3,2/3].forEach(t=> addCar(traffic.hub, t, n++));
+  /* 數量減半（教師 2026-11-07）：12 輛 → 6 輛（外圈 4、主島 2） */
+  traffic.outer.chord.forEach((t,i)=>{ if(i%2===0) addCar(traffic.outer, t, n++); });
+  [0,1/2].forEach(t=> addCar(traffic.hub, t, n++));
 }
 function placeCar(c){
   const t = c.loop ? ((c.t%1)+1)%1 : Math.min(1, Math.max(0, c.t));
@@ -1811,7 +1811,7 @@ const walkers = [];
     const legs = [-0.06,0.06].map(x=>{ const l = new THREE.Group(); l.position.set(x,0.26,0); g.add(l); add(l, new THREE.CylinderGeometry(0.04,0.04,0.24,6), mat(0x4B5D8A), 0,-0.12,0); return l; });
     g.scale.setScalar(1.1); scene.add(g);
     walkers.push({g, legs, bp:loop, loop:true, t:(j/n + offset)%1, dir:(k%2?1:-1), lane:0.8, speed:(0.7+Math.random()*0.3)/loop.len, ph:Math.random()*6}); } };
-  mkWalkers(traffic.outer, 10, 0.05); mkWalkers(traffic.hub, 6, 0.03);
+  mkWalkers(traffic.outer, 5, 0.05); mkWalkers(traffic.hub, 3, 0.03); /* 16 位 → 8 位（教師 2026-11-07） */
 })();
 function placeWalker(w, tm){
   const t = w.loop ? ((w.t%1)+1)%1 : Math.min(1, Math.max(0, w.t));
