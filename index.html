@@ -573,12 +573,12 @@ function makeMouse(){
   for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.1,0.38,0.28,1,1,0.4,pink)); g.add(S(new THREE.SphereGeometry(0.025,6,5),sx*0.06,0.3,0.46,1,1,1,blackM)); }
   const tail = S(new THREE.CylinderGeometry(0.012,0.02,0.55,5).rotateX(Math.PI/2.3),0,0.2,-0.5,1,1,1,pink); g.add(tail);
   const hit = new THREE.Mesh(new THREE.SphereGeometry(0.6,8,6), new THREE.MeshBasicMaterial()); hit.position.y = 0.3; hit.visible = false; g.add(hit);
-  g.scale.setScalar(2.24); return g;
+  g.scale.setScalar(1.33); return g;
 }
 /* 追逐的節奏：①追逐約 24–36 秒（田鼠在前面一左一右拐彎、虎媽媽與兩隻小石虎排成一列追，距離忽近忽遠）→ ②石虎放棄，繞道往後方山區走去，田鼠停下來在田中央慢慢逛、偶爾停下休息 → ③石虎在山邊逛一會兒，再走回來 → ④靠近到約 15 單位時田鼠發現，加速逃跑，回到①。全部用「朝目標轉向、前進」模擬，不是固定軌跡。 */
 const chase = { z0:-22.4, cats:[], mouse:null };
 {
-  [3.04,1.84,1.6].forEach(sc=>{ const c = makeWildCat(sc); scene.add(c); chase.cats.push(c); });
+  [1.4,0.85,0.74].forEach(sc=>{ const c = makeWildCat(sc); scene.add(c); chase.cats.push(c); });
   chase.mouse = makeMouse(); scene.add(chase.mouse);
   const mk = (x,z)=>({x,z,yaw:Math.PI/2,sp:0,ph:0,h:[]});
   chase.m = Object.assign(mk(-30,chase.z0), {sp:5.8, mode:'run', dirx:1, pause:0, tgt:null, boost:0});
@@ -869,7 +869,7 @@ const pondTick = [];
     u.body.scale.y = 0.6*(1+0.012*Math.sin(t*1.7));
   }
   /* 左池：泡澡的水牛，身體沉在水裡，只露出背、頭和角；偶爾慢慢轉頭，水面有一圈圈漣漪 */
-  const BS = 0.85, bwL = makeBuffalo(BS); bwL.position.set(LX-1.0,-0.57,LZ+0.6); bwL.rotation.y = 0.6; scene.add(bwL);
+  const BS = 1.4, bwL = makeBuffalo(BS); bwL.position.set(LX-1.0,-0.94,LZ+0.6); bwL.rotation.y = 0.6; scene.add(bwL);
   const rings = [0,1].map(()=>{ const r = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); r.position.set(LX-1.0,0.15,LZ+0.6); r.rotation.y = 0.6; scene.add(r); return r; });
   pondTick.push((dt,t)=>{
     const u = bwL.userData, a = bump(t,11,1,3.4), b = bump(t,11,6.5,3.4);
@@ -880,7 +880,7 @@ const pondTick = [];
   });
   /* 右池：每 17 秒一輪——低頭喝水約 5 秒，抬頭離開，走到附近一處停下來吃草，再繞另一條路走回池邊 */
   const bwR = makeBuffalo(BS); scene.add(bwR);
-  const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+1.45), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
+  const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
   const WP = [DRK, [31,2.5],[34,-4],[33,-11],[31,-15.5],[29,-19.6],[20,-19.6],[8,-19.6],[-5,-19.6],[-18,-19.6],[-30,-19.6],[-36,-20.3],[-38.5,-22.4],[-36,-24.6],[-30,-25.2],[-18,-25.2],[-5,-25.2],[8,-25.2],[20,-25.2],[32,-25.2],[38.5,-23.6],[38.5,-21.2],[35,-19.7],[32,-17.5],[31,-14],[32,-8],[32,-1],[28,3],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
   const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.3,0.45,0.6,0.75].map(f=>f*LL);
@@ -967,7 +967,7 @@ let dogApi = null, mouseNav = null;
   const isFree = (x,z)=>{
     if(x<-50||x>50||z<-46.5||z>40) return false;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
-    if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,24,-3,5.6,4.8) || ell(x,z,23.5,2.0,1.8,1.8)) return false;
+    if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,24,-3,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
     if(x>-26.5&&x<-21.5&&z>-1&&z<riverZ(x)-5.4) return false;
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
     for(const q of treeSpots){ const r = 0.1*q[2]+0.2; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
