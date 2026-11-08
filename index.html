@@ -976,7 +976,9 @@ const pondTick = [];
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
 let dogApi = null, mouseNav = null;
 (function dogs(){
+  const matBase = mat, FLUFF = new THREE.MeshStandardMaterial({color:0xFFFFFF, emissive:0x787878, flatShading:true, roughness:1});
   function makeDog(o){
+    const mat = o.fluffy ? (c=>(c===0x1B1B20||c===0xF2A2AE) ? matBase(c) : FLUFF) : matBase;
     const g = new THREE.Group(), fur = mat(o.fur), acc = mat(o.acc||o.fur), dark = mat(0x1B1B20), pink = mat(0xF2A2AE), legs = [];
     const bl = o.bl||1, bw = o.bw||1, L = o.legL||0.34, by = L+0.12*bw, hs = o.hs||1, sl = o.sl||1, sw = o.sw||1;
     g.add(S(new THREE.CapsuleGeometry(0.17*bw,0.46*bl,4,10).rotateX(Math.PI/2),0,by,0,1,0.95,1,fur));
@@ -998,10 +1000,20 @@ let dogApi = null, mouseNav = null;
       else { const e = S(new THREE.ConeGeometry(0.07,0.17,4),sx*0.09,0.2,0.05,1,1,0.6,mat(o.earC||o.fur)); e.rotation.x = 0.5; e.rotation.z = -sx*0.25; head.add(e); }
     }
     if(o.ruff) head.add(S(new THREE.SphereGeometry(1,8,6),0,-0.03,-0.03,0.2,0.19,0.13,mat(0xFFFFFF)));
+    if(o.fluffy){
+      head.add(S(new THREE.SphereGeometry(1,8,6),0,-0.06,-0.06,0.27,0.24,0.2,FLUFF));            /* big neck ruff */
+      head.add(S(new THREE.SphereGeometry(1,8,6),0,0.12,0.04,0.16,0.07,0.15,FLUFF));            /* top of head fluff */
+      for(const sx of [-1,1]){ head.add(S(new THREE.SphereGeometry(1,7,5),sx*0.14,-0.02,0.1,0.075,0.09,0.11,FLUFF)); head.add(S(new THREE.SphereGeometry(1,7,5),sx*0.1,-0.07,0.2,0.06,0.05,0.08,FLUFF)); }
+      g.add(S(new THREE.SphereGeometry(1,9,7),0,by,0,0.23*bw,0.21,0.45*bl,FLUFF));               /* thick coat over the body */
+      g.add(S(new THREE.SphereGeometry(1,9,7),0,by-0.1,0.02,0.22*bw,0.12,0.38*bl,FLUFF));        /* fluffy belly skirt */
+      g.add(S(new THREE.SphereGeometry(1,8,6),0,by-0.03,0.3*bl,0.2*bw,0.2,0.16,FLUFF));          /* chest */
+      for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(1,7,5),sx*0.13*bw,by-0.07,-0.2*bl,0.09,0.16,0.14,FLUFF)); g.add(S(new THREE.SphereGeometry(1,7,5),sx*0.12*bw,by-0.18,0.22*bl,0.07,0.12,0.07,FLUFF)); }
+    }
     if(o.blaze){ head.add(S(new THREE.SphereGeometry(1,7,5),0,0.1,0.2,0.03,0.05,0.09,mat(0xFFFFFF))); head.add(S(new THREE.SphereGeometry(1,7,5),0,-0.02,0.3,0.07,0.055,0.07,mat(0xFFFFFF))); }
     if(o.brow){ for(const sx of [-1,1]){ head.add(S(new THREE.SphereGeometry(0.025,6,5),sx*0.065,0.14,0.19,1,1,1,acc)); head.add(S(new THREE.SphereGeometry(1,6,5),sx*0.11,-0.03,0.17,0.04,0.06,0.07,acc)); } }
     const tail = new THREE.Group(); tail.position.set(0,by+0.06,-0.28*bl-0.02); g.add(tail);
     if(o.tail==='stub') tail.add(S(new THREE.SphereGeometry(0.05,6,5),0,0.02,-0.03,1,1,1,fur));
+    else if(o.curl){ [[0,0.04,-0.05,0.09],[0,0.15,-0.07,0.105],[0,0.25,-0.02,0.115],[0,0.3,0.08,0.115],[0,0.27,0.18,0.1]].forEach(([x,y,z,r])=>tail.add(S(new THREE.SphereGeometry(r,8,6),x,y,z,1,1.05,1.1,FLUFF))); }
     else { const tl = o.tail==='fluff' ? 0.42 : 0.36, tr = o.tail==='thick' ? 0.06 : (o.tail==='fluff' ? 0.07 : 0.04);
       const t1 = S(new THREE.CylinderGeometry(tr,tr*0.55,tl,6).translate(0,tl/2,0),0,0,0,1,1,1,fur); t1.rotation.x = -2.2; tail.add(t1);
       if(o.tip){ const tp = S(new THREE.SphereGeometry(tr*1.1,6,5),0,tl,0,1,1.2,1,mat(o.tip)); t1.add(tp); } }
@@ -1015,7 +1027,7 @@ let dogApi = null, mouseNav = null;
     {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.49, shy:true},                              /* 法鬥 */
     {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.89},                                                                                         /* 拉布拉多 */
     {fur:0x1C1A1C, acc:0xA8581F, brow:true, chest:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'flop', earC:0x1C1A1C, tail:'fluff', bw:1.2, bl:1.05, hs:1.08, sw:1.05, sc:2.0},  /* 伯恩山犬：黑底、鏽褐臉頰與眉點、白胸白掌 */
-    {fur:0xFAF8F4, ruff:true, chest:0xFFFFFF, snout:0xF2EEE6, ear:'semi', earC:0xFAF8F4, tail:'fluff', bw:1.15, hs:1.06, sl:0.95, sc:1.95}  /* 薩摩耶：全白蓬鬆、豎耳、尾巴捲在背上 */
+    {fur:0xFFFFFF, fluffy:true, curl:true, ruff:true, chest:0xFFFFFF, snout:0xFFFFFF, ear:'semi', earC:0xFFFFFF, tail:'fluff', bw:1.15, hs:1.06, sl:0.95, sc:1.95}  /* 薩摩耶：全白蓬鬆、豎耳、尾巴捲在背上 */
   ];
   /* ── 障礙地圖 ── */
   const CS = 0.5, X0 = -51, Z0 = -47, NX = 204, NZ = 180;
