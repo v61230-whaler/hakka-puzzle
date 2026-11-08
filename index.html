@@ -424,7 +424,7 @@ const C = { grass:0xA8DC6E, grass2:0x92CF5A, soil:0xFFE6C0, rock:0xE4DCF3, wall:
   wood:0xA9744E, tea:0x4FA64A, indigo:0x5B8DEF, persimmon:0xFF8A3D, gold:0xFFC857, white:0xFFFFFF,
   pink:0xFF9CC2, sky:0x74C0FF, yellow:0xFFD24D, glass:0xC9ECFF };
 /* 每座島自己的頂面顏色：粉紅、淺藍、鵝黃輪流，只有課文島（茶園）保留綠色 */
-const HOUSE_H = 2.55; /* 房屋世界高度：走路的人約 1.5，房屋比人高 70%（教師 2026-11-08） */
+const HOUSE_H = 3.1; /* house height in world units; walker is about 1.5 (teacher 11-08) */
 const ISC = 1.3; /* 島（連同島上的房子與道具）整體放大倍率 */
 const ISLAND_ROT = { hub:0, u1:0, u2:0, u3:0, u4:0, u5:0, u6:0, u7:0 }; /* 六角形地塊全部同方向：邊與邊互相平行，排成蜂巢狀 */
 const ISLAND_COL = { hub:0xFFE58F, u1:0xFFBFD6, u2:0xA6D9FF, u3:0xB9E88A, u4:0x9CC8FF, u5:0xFFD0B0, u6:0xFFDB6E, u7:0xFFB0CF };
@@ -1351,19 +1351,32 @@ function teaRows(p, x, z, n=3){
   const y = p.userData.top;
   for(let i=0;i<n;i++) for(let j=0;j<4;j++) add(p, new THREE.IcosahedronGeometry(0.22,0), mat(C.tea), x+j*0.45, y+0.16, z+i*0.5);
 }
-/* 現代可愛小屋：一樓平房——一個方塊、平屋頂、大窗、圓窗、小門檻棚，門邊有一盆植物。蓋好後在 placeIsland 依「比人高 70%」把高度校正（只拉高度、不動占地） */
+/* Modern single-storey house (teacher's reference photo): flat roof with deep eaves, wood-slat band, grey porch posts, big sliding glass, chimney, steps. placeIsland later stretches height to HOUSE_H (footprint unchanged). */
 function cuteHouse(p, x, z, s=1, o={}){
   const {wall=C.white, roof=C.pink, accent=C.sky, wide=1} = o;
   const y = p.userData.top, g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(s); p.add(g);
-  const W = 1.8*wide, B = (w,h,d)=>new THREE.BoxGeometry(w,h,d);
+  const W = 1.8*wide, B = (w,h,d)=>new THREE.BoxGeometry(w,h,d), gray = 0x8E9299, dkGray = 0x4A4F58, woodM = mat(0xB9824F), woodD = mat(0x8E5F36);
   add(g, B(W,1.0,1.3), mat(wall), 0, 0.5, 0);
-  add(g, B(W+0.25,0.14,1.55), mat(roof), 0, 1.07, 0);
-  add(g, B(0.6,0.5,0.04), mat(C.glass), -W*0.25, 0.62, 0.66);
-  add(g, B(0.34,0.72,0.04), mat(accent), W*0.22, 0.36, 0.66);
-  add(g, B(0.5,0.06,0.24), mat(accent), W*0.22, 0.78, 0.76);
-  add(g, new THREE.CylinderGeometry(0.15,0.15,0.04,16).rotateX(Math.PI/2), mat(C.glass), 0, 0.88, 0.66);
-  add(g, new THREE.CylinderGeometry(0.1,0.08,0.2,8), mat(accent), W/2+0.18, 0.1, 0.55);
-  add(g, new THREE.IcosahedronGeometry(0.17,1), mat(C.tea), W/2+0.18, 0.33, 0.55);
+  add(g, B(W+0.05,0.26,1.35), woodM, 0, 0.87, 0);
+  for(const yy of [0.8,0.88,0.96]) add(g, B(W+0.07,0.012,1.37), woodD, 0, yy, 0);
+  add(g, B(W+0.3,0.1,1.95), mat(roof), 0, 1.05, 0.15);
+  add(g, B(0.22,0.32,0.22), mat(gray), -W*0.36, 1.26, -0.3);
+  add(g, B(0.26,0.04,0.26), mat(dkGray), -W*0.36, 1.43, -0.3);
+  const gx = -W*0.2, gw = W*0.4;
+  add(g, B(gw,0.66,0.04), mat(C.glass), gx, 0.46, 0.66);
+  for(const k of [-0.5,0,0.5]) add(g, B(0.03,0.7,0.06), mat(dkGray), gx+k*gw, 0.46, 0.67);
+  add(g, B(gw+0.04,0.04,0.06), mat(dkGray), gx, 0.81, 0.67); add(g, B(gw+0.04,0.04,0.06), mat(dkGray), gx, 0.12, 0.67);
+  add(g, B(0.2,0.9,0.16), woodM, W*0.03, 0.45, 0.72);
+  add(g, B(0.2,0.012,0.17), woodD, W*0.03, 0.3, 0.72); add(g, B(0.2,0.012,0.17), woodD, W*0.03, 0.55, 0.72); add(g, B(0.2,0.012,0.17), woodD, W*0.03, 0.8, 0.72);
+  add(g, B(W*0.46,0.05,0.36), mat(0xE9E6E0), W*0.26, 0.025, 0.82);
+  for(const px of [W*0.07, W*0.47]) add(g, B(0.1,1.0,0.1), mat(gray), px, 0.5, 0.95);
+  add(g, B(0.36,0.78,0.04), mat(accent), W*0.27, 0.39, 0.66);
+  add(g, B(0.05,0.1,0.02), mat(dkGray), W*0.27+0.12, 0.4, 0.69);
+  add(g, B(0.16,0.55,0.04), mat(C.glass), W*0.43, 0.46, 0.66);
+  add(g, B(W*0.3,0.03,0.2), mat(0xD9D5CE), W*0.27, 0.015, 1.1);
+  add(g, new THREE.CylinderGeometry(0.1,0.08,0.2,8), mat(accent), W/2+0.2, 0.1, 0.7);
+  add(g, new THREE.IcosahedronGeometry(0.17,1), mat(C.tea), W/2+0.2, 0.33, 0.7);
+  add(g, new THREE.IcosahedronGeometry(0.2,1), mat(C.tea), -W/2-0.12, 0.17, 0.75);
   g.userData.house = true;
   return g;
 }
