@@ -56,6 +56,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tour-btns button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .tour-cap{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);z-index:2000000;max-width:min(90%,420px);box-sizing:border-box;text-align:center;
   background:var(--card);color:var(--fg);border:2px solid var(--persimmon);border-radius:20px;padding:10px 16px;font:700 16px/1.5 var(--f-display);box-shadow:0 5px 0 rgba(42,63,99,.14)}
+.dogcam{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:12px;z-index:2000000;font:700 13px/1 var(--f-body);color:#fff;background:#E8502D;border-radius:999px;padding:8px 14px}
+.dogcam::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:7px;animation:dogblink 1s infinite}
+@keyframes dogblink{50%{opacity:.25}}
+.dogfade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s;z-index:1999999}
+.tour-cap a{color:var(--indigo)}
 .fallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 
 #panel{border-left:1px solid var(--line);background:var(--card);overflow-y:auto;min-width:0;
@@ -131,7 +136,10 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <button id="btnLinks" type="button" aria-pressed="false">關聯線</button>
       <button id="btnReset" type="button" aria-pressed="true">回到全景</button>
       <button id="btnTour" type="button" aria-pressed="false">探險隊</button>
+      <button id="btnDog" type="button" aria-pressed="false">狗狗視角</button>
     </div>
+    <div class="dogcam" id="dogCam" hidden>狗狗視角</div>
+    <div class="dogfade" id="dogFade"></div>
     <div class="tour-dialog" id="tourDialog" role="dialog" aria-modal="true" aria-labelledby="tourMsg" hidden>
       <p id="tourMsg">歡迎上車！開始15秒看兩個行程囉！</p>
       <div class="tour-btns"><button id="tourGo" type="button">好，出發！</button><button id="tourNo" type="button">我自己逛</button></div>
@@ -1151,7 +1159,28 @@ let dogApi = null, mouseNav = null;
   ds.forEach((d,i)=>{ d.g.userData.dog = d; d.pitch = PITCH[i]; d.barkT = 0; d.bf = [false,false];
     d.bub = new THREE.Sprite(new THREE.SpriteMaterial({map:barkTex, transparent:true, depthTest:false, depthWrite:false})); d.bub.visible = false; d.bub.renderOrder = 10; scene.add(d.bub); });
   const bumpD = (e,s0,dur)=> (e>=s0 && e<s0+dur) ? Math.sin(Math.PI*(e-s0)/dur) : 0;
-  dogApi = { groups: ds.map(d=>d.g), ptr: null, scare(d,px,pz){ if(!d || d.state==='init' || G.mode!=='idle') return; d.fleeCd = 0; flee(d,px,pz); }, trigger(d){ if(!d || d.shy || d.state==='init' || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,false]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; } };
+  dogApi = { groups: ds.map(d=>d.g), ptr: null, scare(d,px,pz){ if(!d || d.tour || d.state==='init' || G.mode!=='idle') return; d.fleeCd = 0; flee(d,px,pz); }, trigger(d){ if(!d || d.tour || d.shy || d.state==='init' || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,false]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; } };
+  /* Dog-eye tour: pick a random dog, drop it near a spot, walk it to the spot, then let it look at the feature (camera is driven from outside) */
+  dogApi.tourAcquire = ()=>{
+    if(!ready) return null;
+    const live = ds.filter(d=>d.state!=='init' && !d.tour && d.barkT<=0); if(!live.length) return null;
+    const d = live[Math.floor(rnd()*live.length)];
+    if(d.pair){ d.pair.paired = false; d.pair = null; } d.paired = false;
+    d.tour = true; d.state = 'tour'; d.path = []; d.flee = 0; d.turnMax = 2.4; d.save = {x:d.x, z:d.z, yaw:d.yaw}; d.arrived = false; d.look = {x:d.x, z:d.z+1, y:0};
+    d.g.updateMatrixWorld(true); const v = new THREE.Vector3(); u0(d).head.getWorldPosition(v); d.eyeH = Math.max(0.5, v.y-(d.gy||0)); d.idx = ds.indexOf(d);
+    return d; };
+  const u0 = d=>d.g.userData;
+  dogApi.tourPlace = (d, sx, sz, lx, ly, lz)=>{
+    const near = (x,z)=>{ const c0 = ci(x,z); if(c0>=0 && frN[c0]) return c0; const ix0 = Math.floor((x-X0)/CS), iz0 = Math.floor((z-Z0)/CS); let best = -1, bd = 1e9;
+      for(let R=1;R<=40 && best<0;R++){ for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix0+a, jz = iz0+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!frN[j]) continue; const dd = a*a+b*b; if(dd<bd){ bd = dd; best = j; } } }
+      return best; };
+    fr = frN; const sc = near(sx,sz); if(sc<0) return false;
+    const b0 = bfs(sc, frN); let cands = []; for(let k=0;k<b0.n;k++){ const c = b0.list[k], dd = b0.dist[c]; if(dd>=11 && dd<=16) cands.push(c); } if(!cands.length) return false;
+    const ac = cands[Math.floor(rnd()*cands.length)], b1 = bfs(ac, frN);
+    d.x = cx(ac); d.z = cz(ac); d.path = pathTo(b1, sc, frN); d.sp = 0; d.arrived = false; d.look = {x:lx, y:ly, z:lz};
+    const w = d.path[0]; if(w) d.yaw = Math.atan2(w.x-d.x, w.z-d.z); d.gy = heightAt(d.x,d.z); d.g.position.set(d.x, d.gy, d.z); d.g.rotation.y = d.yaw;
+    return true; };
+  dogApi.tourRelease = d=>{ if(!d) return; d.tour = false; d.turnMax = 0; d.state = 'wait'; d.wait = 0.5; d.path = []; d.arrived = false; if(d.save){ d.x = d.save.x; d.z = d.save.z; d.yaw = d.save.yaw; d.gy = heightAt(d.x,d.z); } d.g.visible = true; };
   let ready = false;
   /* ── 狗狗集合：右池南邊的空地有一圈光圈，點一下七隻狗都跑來，到齊後停 7 秒自動散開；集合中再點一下就馬上散開 ── */
   const LOT = {x:17.5, z:10, r:3}, G = {mode:'idle', t:0, hold:0, label:''};
@@ -1169,7 +1198,7 @@ let dogApi = null, mouseNav = null;
   const slotOf = i=>{ const a = i/ds.length*Math.PI*2 + 0.3; return {x:LOT.x+Math.cos(a)*1.9, z:LOT.z+Math.sin(a)*1.9}; };
   function gatherStart(){
     G.mode = 'call'; G.t = 0; G.hold = 0; fr = frA; /* 集合期間地塊也能走 */
-    ds.forEach((d,i)=>{ if(d.state==='init') return;
+    ds.forEach((d,i)=>{ if(d.state==='init' || d.tour) return;
       if(d.pair){ d.pair.paired = false; d.pair = null; } d.paired = false; d.barkT = 0; d.flee = 0;
       d.gat = true; d.arr = false; d.gT = 0; d.slot = slotOf(i); d.path = []; d.replan = 0; d.state = 'gather'; d.run = true; d.mood = 0; }); }
   function gatherEnd(){
@@ -1178,7 +1207,7 @@ let dogApi = null, mouseNav = null;
       /* 還在地塊上的狗：沿最近的路走出地塊（走出去之前地塊也能走） */
       if(onTile(d.x,d.z)){ const c0 = ci(d.x,d.z); if(c0>=0 && frA[c0]){ const b = bfs(c0, frA); let goal = -1; for(let k=0;k<b.n;k++){ if(mainN[b.list[k]]){ goal = b.list[k]; break; } }
         if(goal>=0){ d.path = pathTo(b, goal, frA); d.state = 'go'; d.leave = true; d.leaveGoal = {x:cx(goal), z:cz(goal)}; d.run = true; d.poi = false; d.gt = 3; } } } }); }
-  dogApi.lot = [lotDisc, lotPaw]; dogApi.toggleGather = ()=>{ if(!ready) return; if(G.mode==='idle') gatherStart(); else gatherEnd(); };
+  dogApi.lot = [lotDisc, lotPaw]; dogApi.toggleGather = ()=>{ if(!ready || ds.some(d=>d.tour)) return; if(G.mode==='idle') gatherStart(); else gatherEnd(); };
   function startCell(d){ const c0 = ci(d.x,d.z); if(c0>=0 && fr[c0]) return c0; if(c0<0) return -1; const ix = c0%NX, iz = (c0-ix)/NX;
     for(let R=1;R<=8;R++){ let best = -1, bd = 1e9; for(let a=-R;a<=R;a++) for(let b=-R;b<=R;b++){ if(Math.max(Math.abs(a),Math.abs(b))!==R) continue; const jx = ix+a, jz = iz+b; if(jx<0||jz<0||jx>=NX||jz>=NZ) continue; const j = jz*NX+jx; if(!fr[j]) continue; const dd = (cx(j)-d.x)**2+(cz(j)-d.z)**2; if(dd<bd){ bd = dd; best = j; } } if(best>=0) return best; }
     return -1; }
@@ -1197,7 +1226,7 @@ let dogApi = null, mouseNav = null;
   }
   /* 法鬥怕人：游標靠近或被點到，就往遠離的方向加速跑開（不叫） */
   function flee(d, px, pz){
-    if(d.fleeCd>0) return; const me = startCell(d); if(me<0) return;
+    if(d.tour || d.fleeCd>0) return; const me = startCell(d); if(me<0) return;
     const b = bfs(me); let best = -1, bs = -1e9, ax = d.x-px, az = d.z-pz; const al = Math.hypot(ax,az)||1; ax /= al; az /= al;
     for(let k=0;k<70;k++){ const c = b.list[Math.floor(rnd()*b.n)], dd = b.dist[c]; if(dd<10||dd>80) continue;
       const vx = cx(c)-d.x, vz = cz(c)-d.z, vl = Math.hypot(vx,vz)||1; if((vx*ax+vz*az)/vl < 0.3) continue;
@@ -1210,7 +1239,7 @@ let dogApi = null, mouseNav = null;
     const dx = tx-d.x, dz = tz-d.z, dist = Math.hypot(dx,dz);
     let want = spd; if(arrive) want = Math.min(spd, dist*2.2+0.15);
     if(dist>0.05){ const ty = Math.atan2(dx,dz); const df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
-      d.yaw += Math.max(-7*dt, Math.min(7*dt, df)); want *= Math.max(0.15, 1-Math.abs(df)/1.2); }
+      const tm0 = d.turnMax||7; d.yaw += Math.max(-tm0*dt, Math.min(tm0*dt, df)); want *= Math.max(0.15, 1-Math.abs(df)/1.2); }
     d.sp += Math.max(-6*dt, Math.min((d.flee>0?14:3)*dt, want-d.sp));
     const nx = d.x+Math.sin(d.yaw)*d.sp*dt, nz = d.z+Math.cos(d.yaw)*d.sp*dt;
     const fz = (d.leave || !isFree(d.x,d.z)) ? baseFree : isFree; /* 卡在地塊邊緣時，先讓牠走出來 */
@@ -1264,6 +1293,11 @@ let dogApi = null, mouseNav = null;
               if(sc0>=0 && gc>=0){ const b = bfs(sc0); if(b.dist[gc]>=0) d.path = withStart(d, sc0, pathTo(b,gc)); } }
             const wp = d.path[0]; if(wp){ const dist = steer(d, wp.x, wp.z, 4.6, dt, false); if(dist<0.6) d.path.shift(); } }
         } else { d.sp = Math.max(0, d.sp-6*dt); const ty = Math.atan2(LOT.x-d.x, LOT.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-4*dt,Math.min(4*dt,df)); }
+      } else if(d.state==='tour'){
+        const wp = d.path[0];
+        if(wp){ const last = d.path.length===1, dist = steer(d, wp.x, wp.z, 2.1, dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
+        else { d.sp = Math.max(0, d.sp-4*dt); d.arrived = true;
+          const ty = Math.atan2(d.look.x-d.x, d.look.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-1.4*dt, Math.min(1.4*dt, df)); }
       } else if(d.state==='pair'){
         const o = d.pair; d.pt -= dt;
         if(d.pt<=0 || !o){ if(o) o.paired = false; d.pair = null; d.state = 'wait'; d.wait = 0.5+rnd()*1.5; }
@@ -2241,14 +2275,96 @@ $('#btnTour').addEventListener('click', ()=>{
 $('#tourGo').addEventListener('click', tourStart);
 $('#tourNo').addEventListener('click', ()=>{ $tourDlg.hidden = true; });
 
+/* Dog-eye tour (teacher 2026-11-08): a random dog walks to two outdoor spots, camera rides at its head height. Photo and link are optional per spot (teacher will supply selfies later). */
+const $dogCam = $('#dogCam'), $dogFade = $('#dogFade');
+const DOG_NAMES = ['羅威那','黃金獵犬','邊牧','法鬥','拉布拉多','伯恩山犬','薩摩耶'];
+const V3 = (x,z)=>new THREE.Vector3(x,0,z);
+const DOG_SPOTS = [
+  {n:'台三線', say:'「台三線」在牛欄河的南邊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
+  {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'', u:''},
+  {n:'東安橋', say:'「東安橋」橫跨在牛欄河上', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
+  {n:'池塘', say:'「池塘」裡有魚在游', st:()=>V3(15.5,-3), lk:()=>V3(24,-3), ly:0.5, photo:'', u:''},
+  {n:'田', say:'「田」在島的北邊', st:()=>V3(30,-13.4), lk:()=>V3(20,-22), ly:0.4, photo:'', u:''},
+  {n:'樹林', say:'「樹林」在島的後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
+  {n:'半山區', say:'「半山區」在島的後面，一座座山丘', st:()=>V3(19,-32.5), lk:()=>V3(10,-54), ly:6.0, photo:'', u:''},
+];
+const escH = t=>String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function dogSay(txt, sp){
+  let h = '';
+  if(sp && sp.photo){ const im = `<img src="${escH(sp.photo)}" alt="" style="display:block;max-height:110px;max-width:100%;margin:0 auto 6px;border-radius:12px">`; h += sp.u ? `<a href="${escH(sp.u)}" target="_blank" rel="noopener">${im}</a>` : im; }
+  h += escH(txt);
+  $tourCap.innerHTML = h; $tourCap.hidden = !txt;
+}
+let dogTour = null, pendingLimits = null;
+function dogTourStart(){
+  if(reduce || !dogApi || !dogApi.tourAcquire) return;
+  const d = dogApi.tourAcquire(); if(!d) return;
+  setMode('dog');
+  const a = Math.floor(Math.random()*DOG_SPOTS.length); let b; do{ b = Math.floor(Math.random()*DOG_SPOTS.length); }while(b===a);
+  dogTour = {d, spots:[DOG_SPOTS[a], DOG_SPOTS[b]], k:0, phase:'cut', t:0, cyaw:d.yaw, pit:0, ready:false,
+    saved:{fov:camera.fov, minD:controls.minDistance, maxD:controls.maxDistance, maxP:controls.maxPolarAngle, minP:controls.minPolarAngle}};
+  pendingLimits = null; tween = null;
+  d.g.visible = false; d.bub.visible = false;
+  camera.fov = 66; camera.updateProjectionMatrix();
+  controls.minDistance = 0.3; controls.maxDistance = 400; controls.maxPolarAngle = Math.PI; controls.minPolarAngle = 0;
+  $dogCam.hidden = false; $('#hint').hidden = true;
+  $dogFade.style.opacity = 1;
+  dogSay(`這次由「${DOG_NAMES[d.idx]}」帶路`);
+}
+function dogTourStop(){
+  if(!dogTour) return;
+  const T = dogTour; dogTour = null;
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir); controls.target.copy(camera.position).addScaledVector(dir, 12.5);
+  dogApi.tourRelease(T.d);
+  camera.fov = T.saved.fov; camera.updateProjectionMatrix();
+  pendingLimits = T.saved; /* the old limits come back after the camera has flown home */
+  $dogCam.hidden = true; $dogFade.style.opacity = 0; dogSay('');
+}
+function updateDogTour(dt){
+  if(pendingLimits && !tween && !dogTour){ controls.minDistance = pendingLimits.minD; controls.maxDistance = pendingLimits.maxD; controls.maxPolarAngle = pendingLimits.maxP; controls.minPolarAngle = pendingLimits.minP; pendingLimits = null; }
+  if(!dogTour) return;
+  const T = dogTour, d = T.d; T.t += dt;
+  const sp = T.spots[T.k];
+  const finish = ()=>{ dogTourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); };
+  if(T.phase==='cut'){
+    if(T.t>=0.45){
+      const st = sp.st(), lk = sp.lk();
+      if(!dogApi.tourPlace(d, st.x, st.z, lk.x, sp.ly, lk.z)){ if(T.k===0){ finish(); return; } T.phase = 'end'; T.t = 0; $dogFade.style.opacity = 1; return; }
+      T.cyaw = d.yaw; T.pit = 0; T.ready = true; T.phase = 'walk'; T.t = 0; $dogFade.style.opacity = 0;
+      if(T.k===1) dogSay(`接著去「${sp.n}」`);
+    }
+  } else if(T.phase==='walk'){
+    if(d.arrived || T.t>10){ T.phase = 'look'; T.t = 0; dogSay(sp.say, sp); }
+  } else if(T.phase==='look'){
+    if(T.t>=(sp.photo?5.5:3.8)){ if(T.k===0){ T.k = 1; T.phase = 'cut'; T.t = 0; $dogFade.style.opacity = 1; } else { T.phase = 'end'; T.t = 0; $dogFade.style.opacity = 1; } }
+  } else if(T.phase==='end'){
+    if(T.t>=0.5){ finish(); return; }
+  }
+  if(!T.ready) return;
+  let da = d.yaw - T.cyaw; da = Math.atan2(Math.sin(da), Math.cos(da)); T.cyaw += da*Math.min(1, 5*dt);
+  const eye = (d.gy||0) + d.eyeH*0.92 + (d.sp>0.5 ? Math.sin(d.ph*2)*0.02 : 0);
+  let tp = -0.08;
+  if(T.phase==='look' || d.arrived){ const lx = d.look.x-d.x, lz = d.look.z-d.z; tp = Math.max(-0.3, Math.min(0.55, Math.atan2(d.look.y-eye, Math.hypot(lx,lz)||1))); }
+  T.pit += (tp-T.pit)*Math.min(1, 3*dt);
+  const cy = Math.cos(T.pit), sy = Math.sin(T.pit), fx = Math.sin(T.cyaw), fz = Math.cos(T.cyaw);
+  camera.position.set(d.x+fx*0.3, eye, d.z+fz*0.3);
+  controls.target.set(camera.position.x+fx*cy, eye+sy, camera.position.z+fz*cy);
+}
+$('#btnDog').addEventListener('click', ()=>{
+  if(dogTour){ dogTourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); return; }
+  dogTourStart();
+});
+
 /* 「回到全景」和「關聯線」二選一：全景沒有線，關聯線才有線；預設是全景 */
 function setMode(m){
   if(m!=='tour') tourStop();
+  if(m!=='dog') dogTourStop();
   $tourDlg.hidden = true;
   linksOn = (m==='links');
   $('#btnLinks').setAttribute('aria-pressed', String(linksOn));
   $('#btnReset').setAttribute('aria-pressed', String(m==='panorama'));
   $('#btnTour').setAttribute('aria-pressed', String(m==='tour'));
+  $('#btnDog').setAttribute('aria-pressed', String(m==='dog'));
   refreshLinks();
 }
 $('#btnLinks').addEventListener('click', ()=>{
@@ -2257,7 +2373,7 @@ $('#btnLinks').addEventListener('click', ()=>{
   if(selected && selected!=='hub') onSelect3D(selected); else flyTo(LINKVIEW.pos.clone(), LINKVIEW.target.clone());
 });
 $('#btnReset').addEventListener('click', ()=>{ setMode('panorama'); setTab('units'); onSelect3D(null); });
-controls.addEventListener('start', ()=>{ tween = null; $('#hint').hidden = true; if(tour){ tourStop(); setMode('panorama'); } });
+controls.addEventListener('start', ()=>{ tween = null; $('#hint').hidden = true; if(tour){ tourStop(); setMode('panorama'); } if(dogTour){ dogTourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); } });
 
 if(UNITS.some(u=>u.id===initial)) onSelect3D(initial);
 
@@ -2289,6 +2405,7 @@ renderer.setAnimationLoop(()=>{
     for(const w of walkers) placeWalker(w, 0);
   }
   updateTour(dt);
+  updateDogTour(dt);
   controls.update();
   renderer.render(scene, camera);
   labelR.render(scene, camera);
