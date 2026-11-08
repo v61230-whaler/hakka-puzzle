@@ -495,6 +495,7 @@ const critters = [], crabPickables = [];
 const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.position.set(x,y,z); me.scale.set(sx,sy,sz); me.castShadow = false; return me; };
 const whiteM = new THREE.MeshStandardMaterial({color:0xFFFFFF, flatShading:true}), blackM = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
 /* Fish feeding (teacher 2026-11-08): click on river or right pond water drops pellets; nearby fish swim over and eat. */
+const RK = 0.8; /* riverside creatures scaled to 80% (teacher 11-08) */
 const FEED = {pond:[], river:[], koi:[]};
 function riverFeedFor(t){ let b = null, bd = 1e9; for(const m of FEED.river){ const d = Math.abs(m.u-t)*riverLen; if(d<18 && d<bd){ bd = d; b = m; } } return b; }
 function makeFish(col){
@@ -503,7 +504,7 @@ function makeFish(col){
   f.add(S(new THREE.ConeGeometry(0.4,0.7,4).rotateX(Math.PI/2).rotateZ(Math.PI/2),0,0.35,-0.85,0.25,1.2,1,body));
   f.add(S(new THREE.ConeGeometry(0.2,0.4,4),0,0.85,-0.05,0.4,1,1,body));
   for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
-  f.scale.setScalar(1.09); return f;
+  f.scale.setScalar(1.09*RK); return f;
 }
 function makeCrab(col=0xFF7B6B, sc=0.96){
   const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
@@ -513,7 +514,7 @@ function makeCrab(col=0xFF7B6B, sc=0.96){
     c.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.85,0.42,0.45,1.1,0.8,1,red)); c.add(S(new THREE.BoxGeometry(0.28,0.1,0.1),sx*0.55,0.36,0.3,1,1,1,red));
     for(let i=0;i<3;i++) c.add(S(new THREE.CylinderGeometry(0.04,0.04,0.5,5).rotateZ(Math.PI/2),sx*0.75,0.12,-0.3+i*0.22,1,1,1,red));
   }
-  c.scale.setScalar(sc); return c;
+  c.scale.setScalar(sc*RK); return c;
 }
 function makeDragonfly(col){
   const g = new THREE.Group(), body = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.5}), dark = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
@@ -528,7 +529,7 @@ function makeDragonfly(col){
     const w = new THREE.Group(); w.position.set(sx*0.07,0.1,z); w.userData.sx = sx; w.userData.z = z;
     w.add(S(new THREE.BoxGeometry(len,0.01,wid),sx*len/2,0,0,1,1,1,wm)); g.add(w); g.userData.wings.push(w);
   }
-  return g;
+  g.scale.setScalar(RK); return g;
 }
 function dflyGoal(c){
   const r = Math.random();
@@ -564,7 +565,7 @@ function makeFrog(){
     g.add(S(new THREE.SphereGeometry(0.17,8,6),sx*0.26,0.82,0.42,1,1,1,gr)); g.add(S(new THREE.SphereGeometry(0.1,8,6),sx*0.27,0.86,0.52,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.05,6,5),sx*0.27,0.87,0.6,1,1,1,blackM));
     g.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.5,0.2,-0.3,0.7,0.8,1.4,gr)); g.add(S(new THREE.SphereGeometry(0.12,6,5),sx*0.28,0.1,0.7,1.4,0.5,1.4,gr));
   }
-  g.scale.setScalar(1.22); return g;
+  g.scale.setScalar(1.22*RK); return g;
 }
 function makeShrimp(){
   const g = new THREE.Group(), pk = new THREE.MeshStandardMaterial({color:0xFFB08A, flatShading:true, roughness:0.6});
@@ -572,7 +573,7 @@ function makeShrimp(){
   g.add(S(new THREE.ConeGeometry(0.16,0.3,4).rotateX(-Math.PI/2),0,0.15,-0.82,1.4,1,1,pk));
   for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.14,0.62,0.7,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.04,6,5),sx*0.14,0.63,0.77,1,1,1,blackM));
     g.add(S(new THREE.CylinderGeometry(0.015,0.015,0.9,4).rotateX(Math.PI/2.4),sx*0.15,0.72,1.0,1,1,1,pk)); }
-  g.scale.setScalar(1.09); return g;
+  g.scale.setScalar(1.09*RK); return g;
 }
 const rockTops = [];
 function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r,0), new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.95}));
