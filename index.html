@@ -983,7 +983,7 @@ let dogApi = null, mouseNav = null;
     const g = new THREE.Group(), fur = mat(o.fur), acc = mat(o.acc||o.fur), dark = mat(0x1B1B20), pink = mat(0xF2A2AE), legs = [];
     const bl = o.bl||1, bw = o.bw||1, L = o.legL||0.34, by = L+0.12*bw, hs = o.hs||1, sl = o.sl||1, sw = o.sw||1;
     g.add(S(new THREE.CapsuleGeometry(0.17*bw,0.46*bl,4,10).rotateX(Math.PI/2),0,by,0,1,0.95,1,fur));
-    if(o.chest) g.add(S(new THREE.SphereGeometry(0.17*bw,8,6),0,by-0.01,0.2*bl,1,0.95,0.9,mat(o.chest)));
+    if(o.chest){ const ck = o.chestK||1; g.add(S(new THREE.SphereGeometry(0.17*bw,8,6),0,by-0.01-(ck-1)*0.06,0.2*bl+(ck-1)*0.12,ck,0.95*ck,0.9*ck,mat(o.chest))); }
     if(o.belly){ g.add(S(new THREE.SphereGeometry(1,8,6),0,by-0.1,0.02,0.19*bw*(o.bellyK||1),0.1*(o.bellyK||1),0.38*bl,mat(0xFFFFFF))); if(!o.bellyK) g.add(S(new THREE.SphereGeometry(1,8,6),0,by+0.05,0.3*bl,0.19*bw,0.17,0.15,mat(0xFFFFFF))); }
     if(o.chestPatch){ for(const sx of [-1,1]) g.add(S(new THREE.SphereGeometry(0.05,6,5),sx*0.07,by-0.03,0.34*bl,1,1.3,0.6,acc)); }
     const lm = mat(o.leg||o.fur);
@@ -1028,7 +1028,7 @@ let dogApi = null, mouseNav = null;
     {fur:0x1F1F25, chest:0xFFFFFF, belly:true, ruff:true, leg:0xFFFFFF, snout:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'semi', earC:0x1F1F25, tail:'fluff', tip:0xFFFFFF, sl:1.1, sc:1.82},                                     /* 邊牧 */
     {fur:0xDCC39C, snout:0xC9AC82, ear:'bat', earC:0xDCC39C, tail:'stub', bl:0.72, bw:1.18, legL:0.22, hs:1.15, sl:0.4, sw:1.1, sc:1.49, shy:true},                              /* 法鬥 */
     {fur:0xEBD8AA, ear:'flop', earC:0xD6BC88, tail:'thick', sw:1.05, sc:1.89},                                                                                         /* 拉布拉多 */
-    {fur:0x1C1A1C, acc:0xB5611F, leg:0xB5611F, belly:true, bellyK:1.5, brow:true, chest:0xFFFFFF, blaze:true, paw:0xFFFFFF, ear:'flop', earC:0x1C1A1C, tail:'fluff', bw:1.2, bl:1.05, hs:1.08, sw:1.05, sc:2.0},  /* 伯恩山犬：黑底、鏽褐臉頰與眉點、白胸白掌 */
+    {fur:0x1C1A1C, acc:0xB5611F, leg:0xB5611F, brow:true, chest:0xFFFFFF, chestK:1.45, blaze:true, paw:0xFFFFFF, ear:'flop', earC:0x1C1A1C, tail:'fluff', bw:1.2, bl:1.05, hs:1.08, sw:1.05, sc:2.0},  /* 伯恩山犬：黑底、鏽褐臉頰與眉點、白胸白掌 */
     {fur:0xFFFFFF, fluffy:true, curl:true, ruff:true, chest:0xFFFFFF, snout:0xFFFFFF, ear:'semi', earC:0xFFFFFF, tail:'fluff', bw:1.15, hs:1.06, sl:0.95, sc:1.95}  /* 薩摩耶：全白蓬鬆、豎耳、尾巴捲在背上 */
   ];
   /* ── 障礙地圖 ── */
