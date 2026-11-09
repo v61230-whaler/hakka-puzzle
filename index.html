@@ -640,8 +640,11 @@ const chase = { z0:-22.4, cats:[], mouse:null };
 {
   [1.4,0.85,0.74].forEach(sc=>{ const c = makeWildCat(sc); scene.add(c); chase.cats.push(c); });
   chase.mouse = makeMouse(); scene.add(chase.mouse);
+  /* 第二隻田鼠（質數：2 隻，教師 2026-11-09）：不能拖，跟在第一隻旁邊，比石虎更靠前 */
+  chase.mouse2 = makeMouse(); chase.mouse2.scale.setScalar(1.15); scene.add(chase.mouse2);
   const mk = (x,z)=>({x,z,yaw:Math.PI/2,sp:0,ph:0,h:[]});
   chase.m = Object.assign(mk(-30,chase.z0), {sp:5.8, mode:'run', dirx:1, pause:0, tgt:null, boost:0});
+  chase.m2 = mk(-27,chase.z0+1.4);
   chase.c = [0,1,2].map(i=>Object.assign(mk(-38-i*2.5,chase.z0), {wp:null, wt:0}));
   chase.phase = 'chase'; chase.pt = 0; chase.dur = 30; chase.ax = 0;
 }
@@ -698,6 +701,12 @@ function updateChase(dt, tm){
     c.sp = chApproach(c.sp, spd, 10, dt); chSteer(c, dt, tx, tz, 4.5);
   });
   [m, ...cs].forEach(e=>{ e.h.push([tm,e.x,e.z]); while(e.h.length && tm-e.h[0][0]>14) e.h.shift(); });
+  /* 第二隻田鼠：沿著第一隻走過的路，晚約 0.8 秒、偏一側跟上 */
+  { const m2 = S.m2, side = Math.sin(tm*0.2)>0 ? 1 : -1, [hx,hz] = chHist(m.h, tm-0.8, m.x, m.z);
+    const tx = hx+Math.cos(m.yaw)*1.4*side, tz = hz-Math.sin(m.yaw)*1.4*side, dd = Math.hypot(tx-m2.x, tz-m2.z);
+    m2.sp = chApproach(m2.sp, Math.min(9, dd*3), 10, dt); if(dd>0.15) chSteer(m2, dt, tx, tz, 5); else m2.sp = chApproach(m2.sp, 0, 10, dt);
+    m2.ph += m2.sp*dt*1.6; const k2 = Math.min(1, m2.sp/3);
+    S.mouse2.position.set(m2.x, 0.14+Math.abs(Math.sin(m2.ph))*0.12*k2, m2.z); S.mouse2.rotation.y = m2.yaw; S.mouse2.rotation.z = Math.sin(tm*18+1)*0.05*k2; }
   m.ph += m.sp*dt*1.6; const g = S.mouse, k = Math.min(1, m.sp/3);
   m.fy = m.mode==='held' ? 1.3 : Math.max(0, (m.fy||0)-dt*5);
   g.position.set(m.x, 0.14+m.fy+Math.abs(Math.sin(m.ph))*0.12*k, m.z); g.rotation.y = m.yaw; g.rotation.z = m.mode==='held' ? Math.sin(tm*22)*0.3 : Math.sin(tm*18)*0.05*k;
@@ -2167,7 +2176,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
     const r = el.getBoundingClientRect(); pF.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rcF.setFromCamera(pF, camera);
     if(!rcF.ray.intersectPlane(plane, hit)) return;
     const x = hit.x, z = hit.z, d0 = rcF.ray.origin.distanceTo(hit);
-    const blockers = [...pickables, ...damPickables, ...chase.cats, chase.mouse, ...(dogApi ? dogApi.groups : [])];
+    const blockers = [...pickables, ...damPickables, ...chase.cats, chase.mouse, chase.mouse2, ...(dogApi ? dogApi.groups : [])];
     const hb = rcF.intersectObjects(blockers, true)[0]; if(hb && hb.distance < d0-0.05) return;
     const bf = bridgeFrame; if(bf){ const dx = x-bf.x, dz = z-bf.z, a = dx*bf.tx+dz*bf.tz, p = dx*bf.tz-dz*bf.tx; if(Math.abs(a)<1.7 && Math.abs(p)<8) return; }
     let kind = null, u = 0, off = 0;
