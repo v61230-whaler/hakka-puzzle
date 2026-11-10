@@ -19,6 +19,14 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.30.woff2) format('woff2');
+  unicode-range: U+9530, U+9535, U+953a-953b, U+9540-9542, U+9547, U+9549-954a, U+954d, U+9550-9551, U+9554-9556, U+955c, U+956c-956d, U+956f-9570, U+9573, U+9576, U+9578, U+9582, U+9586, U+9588, U+958e-958f, U+9599, U+959c, U+959e-959f, U+95a1-95a2, U+95a4, U+95a6-95a7, U+95aa-95ae, U+95b0, U+95b2, U+95b6, U+95b9-95bf, U+95c2-95c4, U+95c7-95c9, U+95cb-95cd, U+95d0, U+95d3-95d5, U+95d7-95d8, U+95da, U+95de, U+95e0-95e1, U+95e4-95e5, U+95ea-95eb, U+95ef-95f0, U+95f2-95f3, U+95f5, U+95f7-95fa, U+95fd, U+9600-9602, U+9607-9609, U+960e, U+9610-9611, U+9614, U+9616, U+9619-961a, U+961c-961d, U+961f, U+9621, U+9624, U+9628, U+962f, U+9633-9636, U+963c, U+9641-9643, U+9645, U+9647-9648, U+964e-964f, U+9651, U+9653-9655, U+9658, U+965b-965f, U+9661, U+9665, U+9668-9669, U+966c;
+}
+@font-face {
+  font-family: 'Huninn';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
   src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.42.woff2) format('woff2');
   unicode-range: U+8621-8622, U+8627, U+8629-862a, U+8634-8636, U+8638, U+863a, U+863c, U+8640, U+8642, U+8646, U+864c-864d, U+864f, U+8651-8654, U+8657, U+8659-865a, U+865c, U+8662, U+866b-866c, U+866f-8671, U+8673, U+8677, U+867a-867b, U+867d-867e, U+8680-8682, U+868b-868d, U+8693-8696, U+869a, U+869c-869d, U+86a1, U+86a3-86a4, U+86a7-86aa, U+86af-86b1, U+86b3-86b4, U+86b6, U+86b9-86ba, U+86c0-86c2, U+86c4, U+86c6, U+86c9-86ca, U+86cc-86ce, U+86d0, U+86d3-86d4, U+86de-86df, U+86e9, U+86ed-86f0, U+86f3, U+86f8-86fc, U+86fe, U+8703, U+8706-870a, U+870d-870e, U+8711-8712, U+8715, U+8717, U+8719-871a, U+871e, U+8721-8723, U+8725, U+8728-8729, U+872e, U+8731, U+8734, U+8737, U+873a, U+873e-8740, U+8742, U+8747, U+8749, U+874b-874c, U+874e-874f, U+8753, U+8757-8758, U+875d, U+875f, U+8761-8762;
 }
@@ -29,6 +37,14 @@
   font-display: swap;
   src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.44.woff2) format('woff2');
   unicode-range: U+8380, U+8383, U+8385-8386, U+8392, U+8394-8395, U+8398-8399, U+839b-839c, U+83a0, U+83a2, U+83a4, U+83a7-83aa, U+83af-83b5, U+83b7, U+83b9-83ba, U+83bc-83c0, U+83c2, U+83c4-83c5, U+83c8-83c9, U+83cb, U+83ce-83cf, U+83d1, U+83d4-83d6, U+83d8, U+83dd, U+83df, U+83e1-83e2, U+83e5, U+83ea-83eb, U+83f0, U+83f3-83f4, U+83f9, U+83fb-83fe, U+8406-8407, U+840b, U+840f, U+8411, U+8413, U+8418, U+841b-841d, U+8420-8421, U+8423-8424, U+8426-8429, U+842b, U+842d-842e, U+8432-8433, U+8435, U+8437-8439, U+843b-843c, U+843e, U+8445-8447, U+844e, U+8451-8452, U+8456, U+8459-845a, U+845c, U+845f, U+8462, U+8466-8467, U+846d, U+846f-8471, U+8473-8474, U+8476-8478, U+847a, U+8484, U+848b, U+848d-848e, U+8493-8494, U+8497, U+849d, U+849f, U+84a1, U+84a8, U+84af, U+84b1, U+84b4, U+84b9-84bb, U+84bd-84bf;
+}
+@font-face {
+  font-family: 'Huninn';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.46.woff2) format('woff2');
+  unicode-range: U+811b, U+811e, U+8121-8127, U+8129, U+812c, U+812f-8134, U+8137-8138, U+813a, U+813d, U+8144, U+8146, U+8148, U+814a, U+814c-814d, U+8151, U+8153, U+8156, U+8158, U+815a, U+8160, U+8167, U+8169, U+816d, U+816f, U+8171, U+8174, U+817b-817c, U+817e, U+8182, U+8188, U+818a, U+8194-8195, U+8198, U+819b, U+819e, U+81a3, U+81a6-81a7, U+81ab, U+81af-81b0, U+81b5-81b6, U+81b8, U+81ba-81bb, U+81be-81bf, U+81c3, U+81c6, U+81ca, U+81cc, U+81cf, U+81d1-81d3, U+81d6-81d7, U+81d9-81da, U+81dd-81de, U+81e0-81e2, U+81e7, U+81ec, U+81ef, U+81fc, U+81fe, U+8200-8202, U+8204-8206, U+820b, U+820e, U+8210, U+8215, U+8217-8218, U+821b, U+821d, U+8221-8222, U+8224, U+8228-8229, U+822b, U+822f-8234, U+8236-8238, U+823a, U+823e, U+8240, U+8244-8245, U+8249, U+824b, U+824e-824f, U+8257, U+825a, U+825f, U+8264, U+8268, U+826b, U+826e, U+8270, U+8273, U+8276, U+8278-8279;
 }
 @font-face {
   font-family: 'Huninn';
