@@ -993,7 +993,7 @@ const pondTick = [];
 /* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
 /* 豬圈（教師 2026-11-10）：稻田東緣，三面磚牆、南面鐵柵欄加一道敞開的鐵門，沒有屋頂；養一隻大豬、兩隻小豬（3 是質數）。
-   豬圈後牆立一塊標題牌「我長大後要當神豬」。神豬是死後才稱，所以大豬不披綢帶，點豬也不出文字。 */
+   豬圈後牆立一塊標題牌「等𠊎大咧要做神豬」。神豬是死後才稱，所以大豬不披綢帶，點豬也不出文字。 */
 const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半寬、半深、門寬 */
 (function pigsty(){
   const {cx, cz, hw, hd, gate} = PIG, zS = cz+hd, zN = cz-hd;
@@ -1010,7 +1010,7 @@ const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半
   const wall = (w,d,x,z)=>{ const b = new THREE.Mesh(new THREE.BoxGeometry(w,0.7,d), brickM(Math.max(w,d),0.7)); b.position.set(x,0.38,z); g.add(b);
     const cp = new THREE.Mesh(new THREE.BoxGeometry(w+0.08,0.08,d+0.08), capM); cp.position.set(x,0.77,z); g.add(cp); };
   wall(hw*2+0.3, 0.3, cx, zN-0.15); wall(0.3, hd*2, cx-hw-0.15, cz); wall(0.3, hd*2, cx+hw+0.15, cz);
-  /* 南面鐵柵欄：左右各一段，中間留出門口；門板敞開向外 */
+  /* 南面鐵柵欄：左右各一段，中間留出門口（教師 2026-11-10 指定不裝門板） */
   const gx0 = cx-gate/2, gx1 = cx+gate/2;
   const bars = (xa, xb)=>{ const n = Math.max(2, Math.round((xb-xa)/0.34)); 
     for(let i=0;i<=n;i++){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.95,6), iron); b.position.set(xa+(xb-xa)*i/n, 0.5, zS); g.add(b); }
@@ -1018,9 +1018,6 @@ const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半
   bars(cx-hw, gx0); bars(gx1, cx+hw);
   for(const x of [cx-hw, gx0, gx1, cx+hw]){ const p = new THREE.Mesh(new THREE.BoxGeometry(0.16,1.15,0.16), iron); p.position.set(x,0.6,zS); g.add(p);
     const k = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6), iron); k.position.set(x,1.22,zS); g.add(k); }
-  { const leaf = new THREE.Group(); leaf.position.set(gx1, 0, zS); leaf.rotation.y = Math.PI*0.42; g.add(leaf); /* 以右門柱為軸向外打開 */
-    for(let i=0;i<=5;i++){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.95,6), iron); b.position.set(-0.1-i*(gate-0.2)/5, 0.5, 0); leaf.add(b); }
-    for(const y of [0.18,0.86]){ const r = new THREE.Mesh(new THREE.BoxGeometry(gate-0.1,0.05,0.05), iron); r.position.set(-gate/2, y, 0); leaf.add(r); } }
   /* 水槽（西北角）、乾草、泥巴灘（東側） */
   const trough = new THREE.Group(); trough.position.set(cx-hw+1.0, 0, zN+0.6); g.add(trough);
   { const tb = new THREE.Mesh(new THREE.BoxGeometry(1.7,0.26,0.55), woodM); tb.position.y = 0.16; trough.add(tb);
@@ -1030,7 +1027,7 @@ const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半
   /* 標題牌：立在後牆上方，面向南（鏡頭這一側） */
   const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 256; const tx = cv.getContext('2d');
   const drawT = ()=>{ tx.fillStyle = '#FFF1C9'; tx.fillRect(0,0,1280,256); tx.strokeStyle = '#B9824F'; tx.lineWidth = 14; tx.strokeRect(7,7,1266,242);
-    tx.textAlign = 'center'; tx.textBaseline = 'middle'; tx.fillStyle = '#7A4A2A'; tx.font = 'bold 150px Huninn, "Noto Sans TC", sans-serif'; tx.fillText('我長大後要當神豬', 640, 134); };
+    tx.textAlign = 'center'; tx.textBaseline = 'middle'; tx.fillStyle = '#7A4A2A'; tx.font = 'bold 150px Huninn, "Noto Sans TC", sans-serif'; tx.fillText('等𠊎大咧要做神豬', 640, 134); };
   drawT(); const tt = new THREE.CanvasTexture(cv); tt.colorSpace = THREE.SRGBColorSpace; tt.anisotropy = 4;
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ drawT(); tt.needsUpdate = true; });
   const sign = new THREE.Mesh(new THREE.BoxGeometry(5.0,1.0,0.1), [woodL,woodL,woodL,woodL,new THREE.MeshBasicMaterial({map:tt}),woodL]); sign.position.set(cx, 2.25, zN-0.2); g.add(sign);
@@ -2398,6 +2395,7 @@ const DOG_SPOTS = [
   {n:'田', say:'「田」在島的北邊', st:()=>V3(30,-13.4), lk:()=>V3(20,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在島的後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
   {n:'半山區', say:'「半山區」在島的後面，一座座山丘', st:()=>V3(19,-32.5), lk:()=>V3(10,-54), ly:6.0, photo:'', u:''},
+  {n:'豬圈', say:'「豬圈」裡住著三隻豬，一大兩小', st:()=>V3(25,-8.6), lk:()=>V3(25,-12.8), ly:1.0, photo:'', u:''},
 ];
 const escH = t=>String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function dogSay(txt, sp){
