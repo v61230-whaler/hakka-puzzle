@@ -811,7 +811,8 @@ function grove(cx, cz, n, radius){
   for(let i=0;i<n*8 && placed.length<n;i++){
     const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
     if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
-    placed.push([x,z]); groundTree(x,z,1.3+rnd()*0.9);
+    placed.push([x,z]); const tr = groundTree(x,z,1.3+rnd()*0.9);
+    if(x>20&&x<30.5&&z>-16&&z<-8){ scene.remove(tr); treeSpots.pop(); } /* 豬圈周圍的空地：樹照常產生（亂數不變）再拿掉 */
   }
 }
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
@@ -991,6 +992,105 @@ const pondTick = [];
 
 /* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
+/* 豬圈（教師 2026-11-10）：稻田東緣，三面磚牆、南面鐵柵欄加一道敞開的鐵門，沒有屋頂；養一隻大豬、兩隻小豬（3 是質數）。
+   豬圈後牆立一塊標題牌「我長大後要當神豬」。神豬是死後才稱，所以大豬不披綢帶，點豬也不出文字。 */
+const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半寬、半深、門寬 */
+(function pigsty(){
+  const {cx, cz, hw, hd, gate} = PIG, zS = cz+hd, zN = cz-hd;
+  const g = new THREE.Group(); scene.add(g);
+  const brickTex = (()=>{ const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d');
+    x.fillStyle = '#EFE3D0'; x.fillRect(0,0,128,64);
+    for(let r=0;r<4;r++){ for(let k=-1;k<3;k++){ const ox = (r%2?32:0)+k*64; x.fillStyle = ['#D9826B','#CF7660','#E08D74'][(r+k+3)%3]; x.fillRect(ox+2, r*16+2, 60, 12); } }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  const brickM = (w,h)=>{ const t = brickTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1,Math.round(w/1.0)), Math.max(1,Math.round(h/0.5))); return new THREE.MeshStandardMaterial({map:t, flatShading:true, roughness:0.9}); };
+  const capM = mat(0xF3D9BE), iron = mat(0x55607A, {metalness:0.3}), woodM = mat(C.wood), woodL = mat(0xD9A774);
+  /* 地面：泥土地 */
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(hw*2, 0.05, hd*2), mat(0xCDAE80)); floor.position.set(cx, 0.03, cz); g.add(floor);
+  /* 磚牆（北、西、東）：牆身 0.7 高，上面一條淺色壓頂 */
+  const wall = (w,d,x,z)=>{ const b = new THREE.Mesh(new THREE.BoxGeometry(w,0.7,d), brickM(Math.max(w,d),0.7)); b.position.set(x,0.38,z); g.add(b);
+    const cp = new THREE.Mesh(new THREE.BoxGeometry(w+0.08,0.08,d+0.08), capM); cp.position.set(x,0.77,z); g.add(cp); };
+  wall(hw*2+0.3, 0.3, cx, zN-0.15); wall(0.3, hd*2, cx-hw-0.15, cz); wall(0.3, hd*2, cx+hw+0.15, cz);
+  /* 南面鐵柵欄：左右各一段，中間留出門口；門板敞開向外 */
+  const gx0 = cx-gate/2, gx1 = cx+gate/2;
+  const bars = (xa, xb)=>{ const n = Math.max(2, Math.round((xb-xa)/0.34)); 
+    for(let i=0;i<=n;i++){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.95,6), iron); b.position.set(xa+(xb-xa)*i/n, 0.5, zS); g.add(b); }
+    for(const y of [0.18,0.86]){ const r = new THREE.Mesh(new THREE.BoxGeometry(xb-xa,0.05,0.05), iron); r.position.set((xa+xb)/2, y, zS); g.add(r); } };
+  bars(cx-hw, gx0); bars(gx1, cx+hw);
+  for(const x of [cx-hw, gx0, gx1, cx+hw]){ const p = new THREE.Mesh(new THREE.BoxGeometry(0.16,1.15,0.16), iron); p.position.set(x,0.6,zS); g.add(p);
+    const k = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6), iron); k.position.set(x,1.22,zS); g.add(k); }
+  { const leaf = new THREE.Group(); leaf.position.set(gx1, 0, zS); leaf.rotation.y = Math.PI*0.42; g.add(leaf); /* 以右門柱為軸向外打開 */
+    for(let i=0;i<=5;i++){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.95,6), iron); b.position.set(-0.1-i*(gate-0.2)/5, 0.5, 0); leaf.add(b); }
+    for(const y of [0.18,0.86]){ const r = new THREE.Mesh(new THREE.BoxGeometry(gate-0.1,0.05,0.05), iron); r.position.set(-gate/2, y, 0); leaf.add(r); } }
+  /* 水槽（西北角）、乾草、泥巴灘（東側） */
+  const trough = new THREE.Group(); trough.position.set(cx-hw+1.0, 0, zN+0.6); g.add(trough);
+  { const tb = new THREE.Mesh(new THREE.BoxGeometry(1.7,0.26,0.55), woodM); tb.position.y = 0.16; trough.add(tb);
+    const tw = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.04,0.38), riverMat); tw.position.y = 0.3; trough.add(tw); }
+  for(let i=0;i<6;i++){ const h = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.07,0.1), mat(i%2?0xF2D872:0xE6BC3C)); h.position.set(cx-hw+0.6+(i%3)*0.35, 0.07+Math.floor(i/3)*0.06, cz+0.2+(i%2)*0.2); h.rotation.y = i*0.9; g.add(h); }
+  const mud = new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.03,20), mat(0x8E6B4B)); mud.scale.set(1.7,1,1.05); mud.position.set(cx+hw-1.5, 0.065, cz-0.3); g.add(mud);
+  /* 標題牌：立在後牆上方，面向南（鏡頭這一側） */
+  const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 256; const tx = cv.getContext('2d');
+  const drawT = ()=>{ tx.fillStyle = '#FFF1C9'; tx.fillRect(0,0,1280,256); tx.strokeStyle = '#B9824F'; tx.lineWidth = 14; tx.strokeRect(7,7,1266,242);
+    tx.textAlign = 'center'; tx.textBaseline = 'middle'; tx.fillStyle = '#7A4A2A'; tx.font = 'bold 150px Huninn, "Noto Sans TC", sans-serif'; tx.fillText('我長大後要當神豬', 640, 134); };
+  drawT(); const tt = new THREE.CanvasTexture(cv); tt.colorSpace = THREE.SRGBColorSpace; tt.anisotropy = 4;
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ drawT(); tt.needsUpdate = true; });
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(5.0,1.0,0.1), [woodL,woodL,woodL,woodL,new THREE.MeshBasicMaterial({map:tt}),woodL]); sign.position.set(cx, 2.25, zN-0.2); g.add(sign);
+  for(const x of [cx-2.2, cx+2.2]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.1,2.2,6), woodM); p.position.set(x,1.1,zN-0.25); g.add(p); }
+
+  /* 豬 */
+  const PINK = 0xFFB5C2, DEEP = 0xF59DB0, SNOUT = 0xFF93A8;
+  function makePig(sc){
+    const g2 = new THREE.Group(), b = new THREE.Group(); g2.add(b); const legs = [];
+    const body = S(new THREE.SphereGeometry(1,14,10), 0,0.56,0, 0.46,0.42,0.78, mat(PINK)); b.add(body);
+    for(const sx of [-1,1]) for(const lz of [0.42,-0.42]){ const l = new THREE.Group(); l.position.set(sx*0.22, 0.3, lz); g2.add(l);
+      l.add(S(new THREE.CylinderGeometry(0.075,0.065,0.3,6).translate(0,-0.15,0), 0,0,0,1,1,1,mat(DEEP))); legs.push({m:l, ph:(sx*lz>0?0:Math.PI)}); }
+    const hd = new THREE.Group(); hd.position.set(0,0.62,0.6); b.add(hd);
+    hd.add(S(new THREE.SphereGeometry(0.29,12,10), 0,0,0.2,1,0.95,1,mat(PINK)));
+    hd.add(S(new THREE.CylinderGeometry(0.15,0.17,0.16,10).rotateX(Math.PI/2), 0,-0.04,0.5,1,1,1,mat(SNOUT)));
+    for(const sx of [-1,1]){ hd.add(S(new THREE.SphereGeometry(0.022,6,5), sx*0.05,-0.03,0.585,1,1,1,blackM));
+      hd.add(S(new THREE.SphereGeometry(0.038,6,5), sx*0.13,0.1,0.44,1,1,1,blackM));
+      const ear = S(new THREE.ConeGeometry(0.11,0.22,4), sx*0.18,0.26,0.1,1,0.6,1,mat(DEEP)); ear.rotation.set(0.5,0,-sx*0.55); hd.add(ear); }
+    const tail = S(new THREE.TorusGeometry(0.07,0.022,6,12,Math.PI*1.5), 0,0.68,-0.77,1,1,1,mat(DEEP)); b.add(tail);
+    g2.scale.setScalar(sc); g2.userData = {b, hd, legs, tail}; return g2;
+  }
+  const spots = { eat:[cx-hw+1.0, zN+1.35], mud:[cx+hw-1.5, cz-0.2] };
+  const rin = ()=>[cx-hw+0.8+Math.random()*(hw*2-1.6), zN+0.8+Math.random()*(hd*2-1.6)];
+  const outPt = ()=>[cx-1.4+Math.random()*2.8, zS+0.8+Math.random()*0.7];
+  const pigs = [[1.0,true],[0.5,false],[0.5,false]].map(([sc,big],i)=>{
+    const m = makePig(sc), e = {g:m, big, sc, x:cx-1+i*1.2, z:cz+(i-1)*0.5, yaw:Math.PI*0.5*(i?1:-1), sp:0, ph:i*2, st:'idle', wait:1+i, path:[], lie:0, rad:0.55*sc+0.2, out:false};
+    scene.add(m); return e; });
+  const pick = (e)=>{
+    const r = Math.random();
+    if(e.out){ e.st = 'go'; e.path = [[cx, zS+0.7],[cx, zS-0.9], rin()]; e.out = false; return; }
+    if(!e.big && r<0.28){ e.path = [[cx, zS-0.9],[cx, zS+0.7], outPt()]; e.out = true; e.st = 'go'; return; }
+    if(r<0.5){ e.st = 'go'; e.path = [spots.eat.slice()]; e.after = 'eat'; }
+    else if(r<0.75 || (e.big && r<0.85)){ e.st = 'go'; e.path = [spots.mud.slice()]; e.after = e.big ? 'lie' : 'idle'; }
+    else { e.st = 'go'; e.path = [rin()]; e.after = 'idle'; }
+  };
+  pondTick.push((dt,t)=>{
+    dt = Math.min(dt,0.1);
+    for(const e of pigs){
+      const u = e.g.userData; let moving = false;
+      if(e.st==='idle' || e.st==='eat' || e.st==='lie'){
+        e.sp = chApproach(e.sp, 0, 6, dt); e.wait -= dt;
+        if(e.wait<=0){ e.lie = 0; pick(e); e.wait = 0; }
+      } else if(e.st==='go'){
+        const w = e.path[0];
+        if(!w){ e.st = e.after || 'idle'; e.after = null; e.wait = e.st==='eat' ? 3+Math.random()*3 : e.st==='lie' ? 8+Math.random()*8 : 2+Math.random()*4; }
+        else { e.sp = chApproach(e.sp, e.big ? 0.9 : 1.5, 4, dt); chSteer(e, dt, w[0], w[1], 3.2); moving = true;
+          if(Math.hypot(w[0]-e.x, w[1]-e.z) < 0.25) e.path.shift(); }
+      }
+      /* 不要疊在一起：兩隻太近就互相推開 */
+      for(const o of pigs){ if(o===e) continue; const dx = e.x-o.x, dz = e.z-o.z, d = Math.hypot(dx,dz), lim = e.rad+o.rad; if(d>0.001 && d<lim){ const p = (lim-d)*0.5*Math.min(1,dt*6); e.x += dx/d*p; e.z += dz/d*p; } }
+      e.ph += e.sp*dt*5.5;
+      e.g.position.set(e.x, 0, e.z); e.g.rotation.y = e.yaw;
+      const lieT = e.st==='lie' ? 1 : 0; e.lie += (lieT-e.lie)*Math.min(1,dt*3);
+      u.b.position.y = -0.2*e.lie + (moving ? Math.abs(Math.sin(e.ph))*0.03 : 0);
+      u.legs.forEach(l=>{ l.m.rotation.x = moving ? Math.sin(e.ph+l.ph)*0.55 : 0; l.m.scale.y = 1-0.55*e.lie; });
+      const eating = e.st==='eat'; u.hd.rotation.x = (eating ? 0.55+Math.sin(t*5+e.ph)*0.1 : Math.sin(t*0.8+e.ph)*0.04 + (moving?0.05:0)); u.hd.rotation.y = !moving && !eating ? Math.sin(t*0.5+e.ph*2)*0.25 : 0;
+      u.tail.rotation.z = Math.sin(t*4+e.ph)*0.35;
+    }
+  });
+})();
 let dogApi = null, mouseNav = null;
 (function dogs(){
   const matBase = mat, FLUFF = new THREE.MeshStandardMaterial({color:0xFFFFFF, emissive:0x787878, flatShading:true, roughness:1});
@@ -1067,6 +1167,7 @@ let dogApi = null, mouseNav = null;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
     if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,24,-3,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
     if(x>-26.5&&x<-21.5&&z>-1&&z<riverZ(x)-5.4) return false;
+    if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
     for(const q of treeSpots){ const r = 0.1*q[2]+0.2; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/(q.r*1.0+0.5))**2+((z-q.z)/(q.zr*1.0+0.5))**2 < 1) return false; }
@@ -1094,6 +1195,7 @@ let dogApi = null, mouseNav = null;
     if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
     if(ell(x,z,-24,-5,6.9,5.9) || ell(x,z,24,-3,5.1,4.3)) return false;
     if(x>-26&&x<-22&&z>-1) return false;
+    if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false;
     if(x>-29&&x<-25.5&&z>-17&&z<-8.5) return false;
     for(const q of treeSpots){ const r = 0.3*q[2]+0.25; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2 < 1) return false; }
