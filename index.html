@@ -39,6 +39,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tag.bridge{pointer-events:auto;text-decoration:none;cursor:pointer;background:#2F7CC4;color:#fff;border-color:#fff;padding:3px 14px}
 .tag.bridge b{font-size:15px}
 .tag.on{border-color:var(--persimmon);box-shadow:0 0 0 2px var(--persimmon)}
+.tag.spot{padding:3px 11px 3px 8px;gap:5px;border-color:#2FA38B}
+.tag.spot::before{content:'';width:9px;height:9px;border-radius:50%;background:#2FA38B;flex:none}
+.tag.spot b{font-size:13px}
+#stage.spotview .tag{display:none}
+.spotback{margin-left:8px;font:inherit;border:2px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:2px 12px;cursor:pointer}
 .pin{pointer-events:auto;font:500 12px/1.2 var(--f-body);background:var(--persimmon);color:#fff;border:0;border-radius:999px;padding:3px 7px;cursor:pointer;white-space:nowrap}
 .pin:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
@@ -2531,7 +2536,9 @@ $('#btnDog').addEventListener('click', ()=>{
 });
 
 /* 「回到全景」和「關聯線」二選一：全景沒有線，關聯線才有線；預設是全景 */
+let spotView = null, spotBusy = false;
 function setMode(m){
+  if(spotView && !spotBusy) spotLeave();
   if(m!=='tour') tourStop();
   if(m!=='dog') dogTourStop();
   $tourDlg.hidden = true;
@@ -2542,6 +2549,39 @@ function setMode(m){
   $('#btnDog').setAttribute('aria-pressed', String(m==='dog'));
   refreshLinks();
 }
+
+/* ── 地塊以外的景點（教師 2026-11-10）：點一下標記，鏡頭飛進去，用低角度的平面視角看；可拖曳繞著看，按「回到全景」離開 ── */
+const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.Vector3(x,y,z); const r1 = rp(0.62,6.5), r2 = rp(0.468,9.5);
+  const at = (p,y)=>V(p.x,y,p.z);
+  return [
+  {n:'池塘', say:'「池塘」裡有魚在游', mk:V(30.5,1.8,0.5), cam:V(30.5,2.3,10.5), tg:V(30.5,0.7,0.5)},
+  {n:'水車', say:'「水車」把池水送到稻田去', mk:V(-24,3.3,-9.1), cam:V(-17,3.2,-0.5), tg:V(-24,1.4,-9)},
+  {n:'河邊', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
+  {n:'橋邊', say:'「東安橋」橫跨在牛欄河上', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
+  {n:'豬圈', say:'「豬圈」裡住著三隻豬，一大兩小', mk:V(30.5,2.6,-9.0), cam:V(30.5,2.4,-3.0), tg:V(30.5,1.0,-12.6)},
+  {n:'田邊', say:'「田」在島的北邊，這裡友善耕作，歡迎石虎', mk:V(12,1.6,-15.0), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
+]; })();
+SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
+function spotLeave(){
+  if(!spotView) return;
+  pendingLimits = spotView.saved; spotView = null; stage.classList.remove('spotview');
+  SPOTS.forEach(sp=>sp.el.classList.remove('on'));
+  const c = $('#tourCap'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
+}
+function spotGo(i){
+  const sp = SPOTS[i], keep = spotView ? spotView.saved : null;
+  spotBusy = true; setMode('panorama'); spotBusy = false;
+  if(selected && labelEls[selected]) labelEls[selected].classList.remove('on');
+  selected = null; flagLabels.forEach(o=>o.visible = false); refreshLinks(); setTab('units');
+  $('#btnReset').setAttribute('aria-pressed','false');
+  const saved = keep || {minD:controls.minDistance, maxD:controls.maxDistance, maxP:controls.maxPolarAngle, minP:controls.minPolarAngle};
+  spotView = {i, saved}; pendingLimits = null;
+  controls.minDistance = 2.5; controls.maxDistance = 70; controls.maxPolarAngle = Math.PI/2-0.03; controls.minPolarAngle = 0.2;
+  stage.classList.add('spotview'); SPOTS.forEach((o,j)=>o.el.classList.toggle('on', j===i));
+  const c = $('#tourCap'); c.innerHTML = `<span>${escH(sp.say)}</span><button type="button" class="spotback">回到全景</button>`; c.dataset.spot = '1'; c.hidden = false;
+  c.querySelector('.spotback').addEventListener('click', ()=>$('#btnReset').click());
+  flyTo(sp.cam.clone(), sp.tg.clone());
+}
 $('#btnLinks').addEventListener('click', ()=>{
   if(linksOn) return;
   setMode('links');
@@ -2550,6 +2590,7 @@ $('#btnLinks').addEventListener('click', ()=>{
 $('#btnReset').addEventListener('click', ()=>{ setMode('panorama'); setTab('units'); onSelect3D(null); });
 controls.addEventListener('start', ()=>{ tween = null; $('#hint').hidden = true; if(tour){ tourStop(); setMode('panorama'); } if(dogTour){ dogTourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); } });
 
+{ const _os = onSelect3D; onSelect3D = (...a)=>{ if(spotView) spotLeave(); return _os(...a); }; }
 if(UNITS.some(u=>u.id===initial)) onSelect3D(initial);
 
 /* 動畫 */
