@@ -812,7 +812,7 @@ function grove(cx, cz, n, radius){
     const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
     if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
     placed.push([x,z]); const tr = groundTree(x,z,1.3+rnd()*0.9);
-    if(x>20&&x<30.5&&z>-16&&z<-8){ scene.remove(tr); treeSpots.pop(); } /* 豬圈周圍的空地：樹照常產生（亂數不變）再拿掉 */
+    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5)){ scene.remove(tr); treeSpots.pop(); } /* 豬圈、右池塘與水牛東側通道的空地：樹照常產生（亂數不變）再拿掉 */
   }
 }
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
@@ -903,7 +903,7 @@ const pondTick = [];
   stream.scale.y = end.y-0.15; stream.position.set(end.x,(end.y+0.15)/2,end.z-0.15); scene.add(stream);
   pondTick.push((dt,t)=>{ dashAll.forEach(o=>{ o.d.position.z = ((o.i*o.L/o.n + t*1.6) % o.L); }); stream.material.opacity = 0.65+0.1*Math.sin(t*9); });
   /* 右邊池塘 + 兩尾錦鯉 */
-  const RX = 24, RZ = -3, RRX = 4.2, RRZ = 3.4; /* 右池上移 5，南邊空出一塊「狗狗集合」的空地 */
+  const RX = 30.5, RZ = 0.5, RRX = 4.2, RRZ = 3.4; /* 右池原在 (24,-3)；教師 2026-11-10 要求往右下移（讓出豬圈的位置）；南邊「狗狗集合」空地不動 */
   pond(RX, RZ, RRX, RRZ);
   for(let i=0;i<2;i++){
     const k = new THREE.Group(), body = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,6), mat(i?0xFFFFFF:0xFF8A3D)); body.scale.set(1.9,0.55,0.8); k.add(body);
@@ -962,7 +962,7 @@ const pondTick = [];
   const bwR = makeBuffalo(BS); scene.add(bwR);
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
-  const WP = [DRK, [31,2.5],[34,-4],[33,-11],[31,-15.5],[29,-19.6],[20,-19.6],[8,-19.6],[-5,-19.6],[-18,-19.6],[-30,-19.6],[-36,-20.3],[-38.5,-22.4],[-36,-24.6],[-30,-25.2],[-18,-25.2],[-5,-25.2],[8,-25.2],[20,-25.2],[32,-25.2],[38.5,-23.6],[38.5,-21.2],[35,-19.7],[32,-17.5],[31,-14],[32,-8],[32,-1],[28,3],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
+  const WP = [DRK, [34,6.6],[38,5],[38.2,-2],[38,-9],[37.5,-15.3],[33,-18.6],[29,-19.6],[20,-19.6],[8,-19.6],[-5,-19.6],[-18,-19.6],[-30,-19.6],[-36,-20.3],[-38.5,-22.4],[-36,-24.6],[-30,-25.2],[-18,-25.2],[-5,-25.2],[8,-25.2],[20,-25.2],[32,-25.2],[38.5,-23.6],[38.5,-21.2],[38.5,-16.8],[38.2,-9],[38.4,-2],[38,5],[34,6.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
   const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.3,0.45,0.6,0.75].map(f=>f*LL);
   const ease = x=>x*x*(3-2*x), bs = {yaw:Math.PI, wph:0, last:0, sp:0}, bm = {mode:'drink', tm:0, s:0, gi:0};
   const drinkRing = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); drinkRing.position.set(DRK.x,0.15,RZ+RRZ-0.2); scene.add(drinkRing);
@@ -992,39 +992,37 @@ const pondTick = [];
 
 /* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
-/* 豬圈（教師 2026-11-10）：稻田東緣，三面磚牆、南面鐵柵欄加一道敞開的鐵門，沒有屋頂；養一隻大豬、兩隻小豬（3 是質數）。
-   豬圈後牆立一塊標題牌「等𠊎大咧要做神豬」。神豬是死後才稱，所以大豬不披綢帶，點豬也不出文字。 */
-const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半寬、半深、門寬 */
+/* 豬圈（教師 2026-11-10）：稻田東緣，三面磚牆、南面鐵柵欄（中間留出入口、不裝門板），沒有屋頂；養一隻大豬、兩隻小豬（3 是質數）。
+   後牆立標題牌「等𠊎大咧要做神豬」。神豬是死後才稱，所以大豬不披綢帶。整組以圍欄中心放大 K 倍（教師 2026-11-10 放大 20%）。
+   玩法：①趕豬回圈（按小豬後方，小豬往前跑；狗靠近也會嚇到小豬；兩隻小豬都回圈有慶祝）②大豬趴著打呼冒 Zzz，點牠會醒、伸懶腰、哼一聲；點小豬有哼叫。 */
+const PIG = { cx:30.5, cz:-12.6, K:1.2, hw:3.0*1.2, hd:2.3*1.2, gate:2.0*1.2 }; /* hw、hd、gate 已含放大倍率（世界座標） */
+let pigApi = null;
 (function pigsty(){
-  const {cx, cz, hw, hd, gate} = PIG, zS = cz+hd, zN = cz-hd;
-  const g = new THREE.Group(); scene.add(g);
+  const {cx, cz, K} = PIG, hw = PIG.hw/K, hd = PIG.hd/K, gate = PIG.gate/K, zS = cz+hd, zN = cz-hd; /* 建模用（放大前）座標 */
+  const HW = PIG.hw, HD = PIG.hd, GT = PIG.gate, ZS = cz+HD, ZN = cz-HD; /* 邏輯用（世界）座標 */
+  const g = new THREE.Group(); g.position.set(cx-K*cx, 0, cz-K*cz); g.scale.setScalar(K); scene.add(g); /* 以 (cx,cz) 為中心放大 */
   const brickTex = (()=>{ const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d');
     x.fillStyle = '#EFE3D0'; x.fillRect(0,0,128,64);
     for(let r=0;r<4;r++){ for(let k=-1;k<3;k++){ const ox = (r%2?32:0)+k*64; x.fillStyle = ['#D9826B','#CF7660','#E08D74'][(r+k+3)%3]; x.fillRect(ox+2, r*16+2, 60, 12); } }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
   const brickM = (w,h)=>{ const t = brickTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1,Math.round(w/1.0)), Math.max(1,Math.round(h/0.5))); return new THREE.MeshStandardMaterial({map:t, flatShading:true, roughness:0.9}); };
   const capM = mat(0xF3D9BE), iron = mat(0x55607A, {metalness:0.3}), woodM = mat(C.wood), woodL = mat(0xD9A774);
-  /* 地面：泥土地 */
   const floor = new THREE.Mesh(new THREE.BoxGeometry(hw*2, 0.05, hd*2), mat(0xCDAE80)); floor.position.set(cx, 0.03, cz); g.add(floor);
-  /* 磚牆（北、西、東）：牆身 0.7 高，上面一條淺色壓頂 */
   const wall = (w,d,x,z)=>{ const b = new THREE.Mesh(new THREE.BoxGeometry(w,0.7,d), brickM(Math.max(w,d),0.7)); b.position.set(x,0.38,z); g.add(b);
     const cp = new THREE.Mesh(new THREE.BoxGeometry(w+0.08,0.08,d+0.08), capM); cp.position.set(x,0.77,z); g.add(cp); };
   wall(hw*2+0.3, 0.3, cx, zN-0.15); wall(0.3, hd*2, cx-hw-0.15, cz); wall(0.3, hd*2, cx+hw+0.15, cz);
-  /* 南面鐵柵欄：左右各一段，中間留出門口（教師 2026-11-10 指定不裝門板） */
   const gx0 = cx-gate/2, gx1 = cx+gate/2;
-  const bars = (xa, xb)=>{ const n = Math.max(2, Math.round((xb-xa)/0.34)); 
+  const bars = (xa, xb)=>{ const n = Math.max(2, Math.round((xb-xa)/0.34));
     for(let i=0;i<=n;i++){ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.95,6), iron); b.position.set(xa+(xb-xa)*i/n, 0.5, zS); g.add(b); }
     for(const y of [0.18,0.86]){ const r = new THREE.Mesh(new THREE.BoxGeometry(xb-xa,0.05,0.05), iron); r.position.set((xa+xb)/2, y, zS); g.add(r); } };
   bars(cx-hw, gx0); bars(gx1, cx+hw);
   for(const x of [cx-hw, gx0, gx1, cx+hw]){ const p = new THREE.Mesh(new THREE.BoxGeometry(0.16,1.15,0.16), iron); p.position.set(x,0.6,zS); g.add(p);
     const k = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6), iron); k.position.set(x,1.22,zS); g.add(k); }
-  /* 水槽（西北角）、乾草、泥巴灘（東側） */
   const trough = new THREE.Group(); trough.position.set(cx-hw+1.0, 0, zN+0.6); g.add(trough);
   { const tb = new THREE.Mesh(new THREE.BoxGeometry(1.7,0.26,0.55), woodM); tb.position.y = 0.16; trough.add(tb);
     const tw = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.04,0.38), riverMat); tw.position.y = 0.3; trough.add(tw); }
   for(let i=0;i<6;i++){ const h = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.07,0.1), mat(i%2?0xF2D872:0xE6BC3C)); h.position.set(cx-hw+0.6+(i%3)*0.35, 0.07+Math.floor(i/3)*0.06, cz+0.2+(i%2)*0.2); h.rotation.y = i*0.9; g.add(h); }
   const mud = new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.03,20), mat(0x8E6B4B)); mud.scale.set(1.7,1,1.05); mud.position.set(cx+hw-1.5, 0.065, cz-0.3); g.add(mud);
-  /* 標題牌：立在後牆上方，面向南（鏡頭這一側） */
   const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 256; const tx = cv.getContext('2d');
   const drawT = ()=>{ tx.fillStyle = '#FFF1C9'; tx.fillRect(0,0,1280,256); tx.strokeStyle = '#B9824F'; tx.lineWidth = 14; tx.strokeRect(7,7,1266,242);
     tx.textAlign = 'center'; tx.textBaseline = 'middle'; tx.fillStyle = '#7A4A2A'; tx.font = 'bold 150px Huninn, "Noto Sans TC", sans-serif'; tx.fillText('等𠊎大咧要做神豬', 640, 134); };
@@ -1033,59 +1031,127 @@ const PIG = { cx:25, cz:-12.6, hw:3.0, hd:2.3, gate:2.0 }; /* 圍欄中心、半
   const sign = new THREE.Mesh(new THREE.BoxGeometry(5.0,1.0,0.1), [woodL,woodL,woodL,woodL,new THREE.MeshBasicMaterial({map:tt}),woodL]); sign.position.set(cx, 2.25, zN-0.2); g.add(sign);
   for(const x of [cx-2.2, cx+2.2]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.1,2.2,6), woodM); p.position.set(x,1.1,zN-0.25); g.add(p); }
 
-  /* 豬 */
+  /* 豬（不放進 g，邏輯用世界座標；大小乘 K） */
   const PINK = 0xFFB5C2, DEEP = 0xF59DB0, SNOUT = 0xFF93A8;
   function makePig(sc){
     const g2 = new THREE.Group(), b = new THREE.Group(); g2.add(b); const legs = [];
-    const body = S(new THREE.SphereGeometry(1,14,10), 0,0.56,0, 0.46,0.42,0.78, mat(PINK)); b.add(body);
+    b.add(S(new THREE.SphereGeometry(1,14,10), 0,0.56,0, 0.46,0.42,0.78, mat(PINK)));
     for(const sx of [-1,1]) for(const lz of [0.42,-0.42]){ const l = new THREE.Group(); l.position.set(sx*0.22, 0.3, lz); g2.add(l);
       l.add(S(new THREE.CylinderGeometry(0.075,0.065,0.3,6).translate(0,-0.15,0), 0,0,0,1,1,1,mat(DEEP))); legs.push({m:l, ph:(sx*lz>0?0:Math.PI)}); }
-    const hd = new THREE.Group(); hd.position.set(0,0.62,0.6); b.add(hd);
-    hd.add(S(new THREE.SphereGeometry(0.29,12,10), 0,0,0.2,1,0.95,1,mat(PINK)));
-    hd.add(S(new THREE.CylinderGeometry(0.15,0.17,0.16,10).rotateX(Math.PI/2), 0,-0.04,0.5,1,1,1,mat(SNOUT)));
-    for(const sx of [-1,1]){ hd.add(S(new THREE.SphereGeometry(0.022,6,5), sx*0.05,-0.03,0.585,1,1,1,blackM));
-      hd.add(S(new THREE.SphereGeometry(0.038,6,5), sx*0.13,0.1,0.44,1,1,1,blackM));
-      const ear = S(new THREE.ConeGeometry(0.11,0.22,4), sx*0.18,0.26,0.1,1,0.6,1,mat(DEEP)); ear.rotation.set(0.5,0,-sx*0.55); hd.add(ear); }
+    const hd2 = new THREE.Group(); hd2.position.set(0,0.62,0.6); b.add(hd2);
+    hd2.add(S(new THREE.SphereGeometry(0.29,12,10), 0,0,0.2,1,0.95,1,mat(PINK)));
+    hd2.add(S(new THREE.CylinderGeometry(0.15,0.17,0.16,10).rotateX(Math.PI/2), 0,-0.04,0.5,1,1,1,mat(SNOUT)));
+    for(const sx of [-1,1]){ hd2.add(S(new THREE.SphereGeometry(0.022,6,5), sx*0.05,-0.03,0.585,1,1,1,blackM));
+      hd2.add(S(new THREE.SphereGeometry(0.038,6,5), sx*0.13,0.1,0.44,1,1,1,blackM));
+      const ear = S(new THREE.ConeGeometry(0.11,0.22,4), sx*0.18,0.26,0.1,1,0.6,1,mat(DEEP)); ear.rotation.set(0.5,0,-sx*0.55); hd2.add(ear); }
     const tail = S(new THREE.TorusGeometry(0.07,0.022,6,12,Math.PI*1.5), 0,0.68,-0.77,1,1,1,mat(DEEP)); b.add(tail);
-    g2.scale.setScalar(sc); g2.userData = {b, hd, legs, tail}; return g2;
+    g2.scale.setScalar(sc); g2.userData = {b, hd:hd2, legs, tail}; return g2;
   }
-  const spots = { eat:[cx-hw+1.0, zN+1.35], mud:[cx+hw-1.5, cz-0.2] };
-  const rin = ()=>[cx-hw+0.8+Math.random()*(hw*2-1.6), zN+0.8+Math.random()*(hd*2-1.6)];
-  const outPt = ()=>[cx-1.4+Math.random()*2.8, zS+0.8+Math.random()*0.7];
+  const spots = { eat:[cx-HW+1.3, ZN+1.75], mud:[cx+HW-1.8, cz-0.36] };
+  const rin = ()=>[cx-HW+0.9+Math.random()*(HW*2-1.8), ZN+0.9+Math.random()*(HD*2-1.8)];
+  const outPt = ()=>[cx-1.8+Math.random()*3.6, ZS+1.0+Math.random()*1.0];
   const pigs = [[1.0,true],[0.5,false],[0.5,false]].map(([sc,big],i)=>{
-    const m = makePig(sc), e = {g:m, big, sc, x:cx-1+i*1.2, z:cz+(i-1)*0.5, yaw:Math.PI*0.5*(i?1:-1), sp:0, ph:i*2, st:'idle', wait:1+i, path:[], lie:0, rad:0.55*sc+0.2, out:false};
+    const m = makePig(sc*K), e = {g:m, big, sc, x:cx-1+i*1.3, z:cz+(i-1)*0.6, yaw:Math.PI*0.5*(i?1:-1), sp:0, ph:i*2, st:'idle', wait:1+i, path:[], lie:0, rad:(0.55*sc+0.2)*K, out:false,
+      sd:-1, wasOut:false, fl:0, fx:0, fz:1, dogCd:0, lastFlee:-99, hop:0, hopD:1, hopH:0, str:0};
     scene.add(m); return e; });
   const pick = (e)=>{
     const r = Math.random();
-    if(e.out){ e.st = 'go'; e.path = [[cx, zS+0.7],[cx, zS-0.9], rin()]; e.out = false; return; }
-    if(!e.big && r<0.28){ e.path = [[cx, zS-0.9],[cx, zS+0.7], outPt()]; e.out = true; e.st = 'go'; return; }
+    if(e.out){ e.st = 'go'; e.path = [[cx, ZS+0.9],[cx, ZS-1.1], rin()]; e.out = false; return; }
+    if(!e.big && r<0.3){ e.path = [[cx, ZS-1.1],[cx, ZS+0.9], outPt()]; e.out = true; e.st = 'go'; return; }
     if(r<0.5){ e.st = 'go'; e.path = [spots.eat.slice()]; e.after = 'eat'; }
     else if(r<0.75 || (e.big && r<0.85)){ e.st = 'go'; e.path = [spots.mud.slice()]; e.after = e.big ? 'lie' : 'idle'; }
     else { e.st = 'go'; e.path = [rin()]; e.after = 'idle'; }
   };
+  const nowS = ()=>performance.now()/1000;
+  /* 聲音：用程式合成哼叫（不需要音檔），第一次點擊時才建立 AudioContext */
+  let ac = null;
+  const initA = ()=>{ try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(_){} };
+  function oink(p=1, dur=0.28, vol=0.35){ try{ if(!ac || ac.state!=='running') return;
+    const t0 = ac.currentTime, o = ac.createOscillator(), f = ac.createBiquadFilter(), gn = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(230*p,t0); o.frequency.linearRampToValueAtTime(150*p,t0+dur*0.45); o.frequency.linearRampToValueAtTime(200*p,t0+dur);
+    lfo.frequency.value = 28; lg.gain.value = 14*p; lfo.connect(lg); lg.connect(o.frequency);
+    f.type = 'bandpass'; f.frequency.value = 650*Math.sqrt(p); f.Q.value = 2.2;
+    gn.gain.setValueAtTime(0.0001,t0); gn.gain.exponentialRampToValueAtTime(vol,t0+0.03); gn.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(f); f.connect(gn); gn.connect(ac.destination); o.start(t0); lfo.start(t0); o.stop(t0+dur+0.05); lfo.stop(t0+dur+0.05); }catch(_){} }
+  const hopP = (e, dur, h)=>{ e.hop = dur; e.hopD = dur; e.hopH = h; };
+  /* 打呼的 Zzz 與慶祝的閃光 */
+  const zc = document.createElement('canvas'); zc.width = zc.height = 128; { const zx = zc.getContext('2d'); zx.font = 'bold 100px sans-serif'; zx.textAlign = 'center'; zx.textBaseline = 'middle'; zx.lineWidth = 12; zx.strokeStyle = '#5B7FBF'; zx.strokeText('Z',64,70); zx.fillStyle = '#FFFFFF'; zx.fillText('Z',64,70); }
+  const zTex = new THREE.CanvasTexture(zc); zTex.colorSpace = THREE.SRGBColorSpace;
+  const zzz = [0,1,2].map(()=>{ const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:zTex, transparent:true, depthTest:false, depthWrite:false})); sp.visible = false; sp.renderOrder = 9; scene.add(sp); return sp; });
+  const sparks = Array.from({length:12}, (_,i)=>{ const m = new THREE.Mesh(new THREE.SphereGeometry(0.13,6,5), new THREE.MeshBasicMaterial({color:i%2?0xFFE066:0xFF9DB0, transparent:true, opacity:0})); m.visible = false; scene.add(m); return {m, t:0, vx:0, vy:0, vz:0}; });
+  let herdFlag = false, herdT = 0;
+  function celebrate(){ initA(); for(const e of pigs) hopP(e, 1.1, 0.4);
+    oink(1.6,0.18,0.35); setTimeout(()=>oink(1.4,0.18,0.3),230); setTimeout(()=>oink(0.65,0.3,0.4),470);
+    sparks.forEach(s=>{ s.t = 1.3+Math.random()*0.3; s.m.position.set(cx+(Math.random()-0.5)*HW*1.4, 0.8, cz+(Math.random()-0.5)*HD*1.2); s.vx = (Math.random()-0.5)*1.2; s.vy = 1.6+Math.random()*1.6; s.vz = (Math.random()-0.5)*1.2; s.m.visible = true; }); }
+  const flee = (e, dx, dz, d, dur)=>{ let fx, fz; if(d<0.15){ fx = Math.sin(e.yaw); fz = Math.cos(e.yaw); } else { fx = dx/d; fz = dz/d; }
+    if(e.z>ZS && fz<0) fx += (cx-e.x)*0.3; /* 往北跑時，朝入口微微靠攏 */
+    const l = Math.hypot(fx,fz)||1; e.fx = fx/l; e.fz = fz/l; e.fl = dur; e.st = 'flee'; e.path = []; e.after = null; e.lastFlee = nowS(); };
+  pigApi = { groups: pigs.map(p=>p.g) };
+  function poke(x, z, hit){
+    initA();
+    if(hit){
+      if(hit.big){ if(hit.st==='lie'){ hit.st = 'idle'; hit.wait = 2.5+Math.random()*2; hit.path = []; hit.str = 1.4; oink(0.55,0.5,0.45); setTimeout(()=>oink(0.5,0.35,0.35),420); }
+        else { oink(0.6,0.3,0.4); hopP(hit, 0.4, 0.07); } }
+      else { oink(1.5+Math.random()*0.2,0.2,0.35); hopP(hit, 0.45, 0.16); } }
+    for(const e of pigs){ if(e.big) continue; const dx = e.x-x, dz = e.z-z, d = Math.hypot(dx,dz); if(d>4.6) continue; if((z>ZS)!==(e.z>ZS)) continue; flee(e, dx, dz, d, 1.0); }
+  }
+  /* 點擊：沒有拖動的按下與放開才算（拖曳是轉視角）；點到狗、狗狗視角中都不處理 */
+  { const el = renderer.domElement, rcP = new THREE.Raycaster(), pp = new THREE.Vector2(), gpl = new THREE.Plane(new THREE.Vector3(0,1,0),0), gv = new THREE.Vector3(); let dn = null;
+    el.addEventListener('pointerdown', e=>{ dn = {x:e.clientX, y:e.clientY, t:performance.now()}; });
+    el.addEventListener('pointerup', e=>{
+      if(!dn) return; const d0 = dn; dn = null; if(Math.hypot(e.clientX-d0.x, e.clientY-d0.y)>6 || performance.now()-d0.t>600) return;
+      if(typeof dogTour!=='undefined' && dogTour) return;
+      const r = el.getBoundingClientRect(); pp.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rcP.setFromCamera(pp, camera);
+      if(dogApi && rcP.intersectObjects(dogApi.groups, true).length) return;
+      const h = rcP.intersectObjects(pigs.map(p=>p.g), true)[0]; let hit = null;
+      if(h){ let o = h.object; while(o && !pigs.some(p=>p.g===o)) o = o.parent; hit = pigs.find(p=>p.g===o) || null; }
+      if(!rcP.ray.intersectPlane(gpl, gv)) return;
+      poke(gv.x, gv.z, hit); });
+  }
+  const GW = GT/2-0.3;
   pondTick.push((dt,t)=>{
     dt = Math.min(dt,0.1);
     for(const e of pigs){
-      const u = e.g.userData; let moving = false;
+      const u = e.g.userData; let moving = false; e.dogCd -= dt;
+      /* 狗走近圍欄外的小豬，小豬會被嚇得跑開 */
+      if(!e.big && e.z>ZS && e.dogCd<=0 && dogApi){ for(const dg of dogApi.groups){ if(!dg.visible) continue; const dx = e.x-dg.position.x, dz = e.z-dg.position.z, d = Math.hypot(dx,dz); if(d<2.4){ flee(e,dx,dz,d,0.9); e.dogCd = 1.8; break; } } }
       if(e.st==='idle' || e.st==='eat' || e.st==='lie'){
         e.sp = chApproach(e.sp, 0, 6, dt); e.wait -= dt;
         if(e.wait<=0){ e.lie = 0; pick(e); e.wait = 0; }
       } else if(e.st==='go'){
         const w = e.path[0];
-        if(!w){ e.st = e.after || 'idle'; e.after = null; e.wait = e.st==='eat' ? 3+Math.random()*3 : e.st==='lie' ? 8+Math.random()*8 : 2+Math.random()*4; }
+        if(!w){ e.st = e.after || 'idle'; e.after = null; e.wait = e.st==='eat' ? 3+Math.random()*3 : e.st==='lie' ? 8+Math.random()*8 : 2+Math.random()*4; if(e.out && e.st==='idle') e.wait = 12+Math.random()*8; }
         else { e.sp = chApproach(e.sp, e.big ? 0.9 : 1.5, 4, dt); chSteer(e, dt, w[0], w[1], 3.2); moving = true;
           if(Math.hypot(w[0]-e.x, w[1]-e.z) < 0.25) e.path.shift(); }
+      } else if(e.st==='flee'){
+        e.fl -= dt; e.sp = chApproach(e.sp, 4.2, 14, dt); chSteer(e, dt, e.x+e.fx*3, e.z+e.fz*3, 9); moving = true;
+        if(e.fl<=0){ e.st = 'idle'; e.out = e.z>ZS; e.wait = e.out ? 12+Math.random()*8 : 2+Math.random()*3; }
       }
       /* 不要疊在一起：兩隻太近就互相推開 */
       for(const o of pigs){ if(o===e) continue; const dx = e.x-o.x, dz = e.z-o.z, d = Math.hypot(dx,dz), lim = e.rad+o.rad; if(d>0.001 && d<lim){ const p = (lim-d)*0.5*Math.min(1,dt*6); e.x += dx/d*p; e.z += dz/d*p; } }
+      /* 圍欄：只有從入口能進出；圈內、圈外各有活動範圍 */
+      if(Math.abs(e.x-cx) < GW) e.sd = e.z>ZS ? 1 : -1;
+      else { if(e.sd>0) e.z = Math.max(e.z, ZS+0.3); else e.z = Math.min(e.z, ZS-0.3); }
+      if(e.z>ZS){ e.x = Math.min(cx+5.2, Math.max(cx-5.2, e.x)); e.z = Math.min(ZS+2.4, e.z); }
+      else { e.x = Math.min(cx+HW-0.5, Math.max(cx-HW+0.5, e.x)); e.z = Math.max(ZN+0.5, e.z); }
+      if(e.z>ZS+0.4) e.wasOut = true;
+      if(e.wasOut && e.z<ZS-0.5){ e.wasOut = false; e.out = false; if(!e.big && nowS()-e.lastFlee<4){ herdFlag = true; herdT = 0; } if(e.st==='flee'){ e.fl = 0; e.st = 'idle'; e.wait = 2+Math.random()*2; } }
       e.ph += e.sp*dt*5.5;
-      e.g.position.set(e.x, 0, e.z); e.g.rotation.y = e.yaw;
+      if(e.hop>0) e.hop -= dt; if(e.str>0) e.str -= dt;
+      const hy = e.hop>0 ? Math.abs(Math.sin((1-e.hop/e.hopD)*Math.PI*(e.hopD>0.8?3:1)))*e.hopH : 0;
+      e.g.position.set(e.x, hy, e.z); e.g.rotation.y = e.yaw;
       const lieT = e.st==='lie' ? 1 : 0; e.lie += (lieT-e.lie)*Math.min(1,dt*3);
-      u.b.position.y = -0.2*e.lie + (moving ? Math.abs(Math.sin(e.ph))*0.03 : 0);
+      const sb = e.str>0 ? Math.sin(Math.PI*(1-e.str/1.4)) : 0;
+      u.b.position.y = -0.2*e.lie + (moving ? Math.abs(Math.sin(e.ph))*0.03 : 0); u.b.scale.z = 1+0.08*sb;
       u.legs.forEach(l=>{ l.m.rotation.x = moving ? Math.sin(e.ph+l.ph)*0.55 : 0; l.m.scale.y = 1-0.55*e.lie; });
-      const eating = e.st==='eat'; u.hd.rotation.x = (eating ? 0.55+Math.sin(t*5+e.ph)*0.1 : Math.sin(t*0.8+e.ph)*0.04 + (moving?0.05:0)); u.hd.rotation.y = !moving && !eating ? Math.sin(t*0.5+e.ph*2)*0.25 : 0;
+      const eating = e.st==='eat'; u.hd.rotation.x = (eating ? 0.55+Math.sin(t*5+e.ph)*0.1 : Math.sin(t*0.8+e.ph)*0.04 + (moving?0.05:0)) - 0.5*sb; u.hd.rotation.y = !moving && !eating ? Math.sin(t*0.5+e.ph*2)*0.25 : 0;
       u.tail.rotation.z = Math.sin(t*4+e.ph)*0.35;
+      if(e.big){ const hx = e.x+Math.sin(e.yaw)*0.95*K, hz = e.z+Math.cos(e.yaw)*0.95*K;
+        zzz.forEach((sp,i)=>{ if(e.lie>0.7){ const ph = (t*0.45+i/3)%1; sp.visible = true; sp.material.opacity = Math.sin(Math.PI*ph); const s = 0.35+0.4*ph; sp.scale.set(s,s,1); sp.position.set(hx+ph*0.4, 0.75*K+0.2+ph*1.1, hz); } else sp.visible = false; }); }
     }
+    /* 趕豬回圈成功：兩隻小豬都在圈裡 */
+    if(herdFlag){ herdT += dt; if(!pigs.some(p=>!p.big && p.z>ZS+0.2)){ herdFlag = false; celebrate(); } else if(herdT>25) herdFlag = false; }
+    for(const s of sparks){ if(s.t>0){ s.t -= dt; s.m.position.x += s.vx*dt; s.m.position.y += s.vy*dt; s.m.position.z += s.vz*dt; s.vy -= 2.2*dt; s.m.material.opacity = Math.min(1,s.t/0.5); if(s.t<=0) s.m.visible = false; } }
   });
 })();
 let dogApi = null, mouseNav = null;
@@ -1162,7 +1228,7 @@ let dogApi = null, mouseNav = null;
   const baseFree = (x,z)=>{
     if(x<-50||x>50||z<-46.5||z>40) return false;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
-    if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,24,-3,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
+    if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,30.5,0.5,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
     if(x>-26.5&&x<-21.5&&z>-1&&z<riverZ(x)-5.4) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
@@ -1190,7 +1256,7 @@ let dogApi = null, mouseNav = null;
     if(x<-50||x>50||z<-46.5||z>riverZ(x)-4.9) return false;
     if(x*x+z*z < 213) return false;
     if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
-    if(ell(x,z,-24,-5,6.9,5.9) || ell(x,z,24,-3,5.1,4.3)) return false;
+    if(ell(x,z,-24,-5,6.9,5.9) || ell(x,z,30.5,0.5,5.1,4.3)) return false;
     if(x>-26&&x<-22&&z>-1) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false;
     if(x>-29&&x<-25.5&&z>-17&&z<-8.5) return false;
@@ -2391,11 +2457,11 @@ const DOG_SPOTS = [
   {n:'台三線', say:'「台三線」在牛欄河的南邊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
   {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'', u:''},
   {n:'東安橋', say:'「東安橋」橫跨在牛欄河上', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
-  {n:'池塘', say:'「池塘」裡有魚在游', st:()=>V3(15.5,-3), lk:()=>V3(24,-3), ly:0.5, photo:'', u:''},
-  {n:'田', say:'「田」在島的北邊', st:()=>V3(30,-13.4), lk:()=>V3(20,-22), ly:0.4, photo:'', u:''},
+  {n:'池塘', say:'「池塘」裡有魚在游', st:()=>V3(23,-1.5), lk:()=>V3(30.5,0.5), ly:0.5, photo:'', u:''},
+  {n:'田', say:'「田」在島的北邊', st:()=>V3(22.5,-13.4), lk:()=>V3(10,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在島的後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
   {n:'半山區', say:'「半山區」在島的後面，一座座山丘', st:()=>V3(19,-32.5), lk:()=>V3(10,-54), ly:6.0, photo:'', u:''},
-  {n:'豬圈', say:'「豬圈」裡住著三隻豬，一大兩小', st:()=>V3(25,-8.6), lk:()=>V3(25,-12.8), ly:1.0, photo:'', u:''},
+  {n:'豬圈', say:'「豬圈」裡住著三隻豬，一大兩小', st:()=>V3(30.5,-7.4), lk:()=>V3(30.5,-13.0), ly:1.0, photo:'', u:''},
 ];
 const escH = t=>String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function dogSay(txt, sp){
