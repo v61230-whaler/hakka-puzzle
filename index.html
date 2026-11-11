@@ -75,6 +75,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 @keyframes eCheek{0%{transform:scale(1)}25%,30%{transform:scale(1.25)}35%,40%{transform:scale(1)}45%,50%{transform:scale(1.25)}55%,60%{transform:scale(1)}65%,70%{transform:scale(1.3)}80%,100%{transform:scale(1)}}
 @keyframes eFood{0%{transform:translateY(-100px) scale(1);opacity:1}12%{transform:translateY(-4px) scale(1);opacity:1}22%{transform:translateY(0px) scale(1);opacity:1}24%{transform:translateY(0px) scale(1);opacity:0}31%{transform:translateY(0px) scale(0.66);opacity:0}34%{transform:translateY(0px) scale(0.66);opacity:1}42%{transform:translateY(0px) scale(0.66);opacity:1}44%{transform:translateY(0px) scale(0.66);opacity:0}51%{transform:translateY(0px) scale(0.33);opacity:0}54%{transform:translateY(0px) scale(0.33);opacity:1}62%{transform:translateY(0px) scale(0.33);opacity:1}64%{transform:translateY(0px) scale(0.33);opacity:0}65%{transform:translateY(0px) scale(0);opacity:0}100%{transform:translateY(0px) scale(0);opacity:0}}
 @media (prefers-reduced-motion: reduce){#eat,#eat.on{transition:none}#eat.sprig .sw{animation:none}}
+.notes{margin:0 0 8px;padding-left:1.3em;font-size:14px;line-height:1.7}
 .hint{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 12px;max-width:calc(100% - 28px);line-height:1.5}
 .tour-dialog{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:2000000;width:min(88%,380px);box-sizing:border-box;text-align:center;
   background:var(--card);color:var(--fg);border:3px solid var(--sun);border-radius:26px;padding:20px 20px 18px;box-shadow:0 8px 0 rgba(42,63,99,.16),0 0 0 100vmax rgba(30,50,90,.32)}
@@ -202,7 +203,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
     <div class="eyebrow">仙平先生个教室 · 海陸腔</div>
     <h1>課程拼圖</h1>
     <p class="lede">這係一門講話个課——共下來講古</p>
-    <p class="meta">7 個單元 · 9 個課文地點 · 5W1H 課程地圖</p>
+    <p class="meta">7 個單元 · 10 個課文地點 · 5W1H 課程地圖</p>
     <div class="search"><input id="q" type="search" placeholder="搜尋單元、課文、地點⋯" aria-label="搜尋"></div>
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-units" aria-selected="true">單元</button>
@@ -274,6 +275,13 @@ const LESSONS = [
   { id:'L7', code:'',    title:'關西鎮', place:'新竹縣關西鎮' },
   { id:'L8', code:'8-10', title:'海洋客家文化', place:'桃園市新屋區' },
   { id:'L9', code:'五上一', title:'社區服務 同老人家共下食飯', place:'新竹縣竹東鎮中央市場' },
+  { id:'L10', code:'5-10', title:'遠方來个朋友', place:'新竹縣關西鎮',
+    noteTitle:'為什麼是台三線', noteSrc:'整理自教師網站 3-1 頁面「腦補台三線：從「黑歷史」到浪漫公路」圖（NotebookLM 製作）；內容尚未另外查證。',
+    notes:['以前是國家級的圍牆：土牛溝、隘勇線，是漢人與原住民防禦森嚴的邊界。',
+           '全球軍火商的幕後夥伴：這一帶是全球樟腦產量最高的地區，樟腦是 19 世紀無煙火藥與塑膠的原料。',
+           '茶金之路：關西、北埔是外銷茶重鎮，靠紅茶與東方美人茶打造。',
+           '古代的山道賽車場：鳴鳳古道上，客家挑夫挑著百斤物資奔馳運送。',
+           '地形限制下的生存選擇：客家庄沿著丘陵與平原交界開墾，自然的地理走廊，演變成今日的台三線。'] },
 ];
 
 const READING = [
@@ -365,7 +373,7 @@ function renderUnit(id){
   const u = unitById(id);
   const related = LINKS.filter(l=>l[0]===id||l[1]===id).map(l=>{const o=l[0]===id?l[1]:l[0];return {o,why:l[2]};});
   let extra = '';
-  if(u.lessons) extra += '<h3>課文地點（9）</h3><ul class="list">' + LESSONS.map(lessonRow).join('') + '</ul>';
+  if(u.lessons) extra += '<h3>課文地點（'+LESSONS.length+'）</h3><ul class="list">' + LESSONS.map(lessonRow).join('') + '</ul>';
   if(u.reading) extra += '<h3>客家力・延伸閱讀</h3>' + linkList(READING);
   if(id==='u5'){ const l=LESSONS.find(x=>x.rel==='u5'); extra += '<h3>相關課文</h3><ul class="list">'+lessonRow(l)+'</ul>'; }
   view.innerHTML = `<div class="detail">
@@ -388,6 +396,7 @@ function renderLesson(id){
     <h2>${esc(l.title)}</h2>
     <p class="q">${esc(l.place)}</p>
     <h3>連結</h3>${linkList([{t:'在 Google 地圖打開這個地點',u:maps(l.place)}].concat(l.extra?[l.extra]:[]))}
+    ${l.notes?`<h3>${esc(l.noteTitle)}</h3><ol class="notes">${l.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ol><p class="note">${esc(l.noteSrc)}</p>`:''}
     ${l.rel?`<h3>相關單元</h3><div class="chips"><button class="chip" data-unit="${l.rel}">${esc(unitById(l.rel).no)} ${esc(unitById(l.rel).title)}</button></div>`:''}
   </div>`;
 }
@@ -2695,7 +2704,7 @@ const $dogCam = $('#dogCam'), $dogFade = $('#dogFade');
 const DOG_NAMES = ['羅威那','黃金獵犬','邊牧','法鬥','拉布拉多','伯恩山犬','薩摩耶'];
 const V3 = (x,z)=>new THREE.Vector3(x,0,z);
 const DOG_SPOTS = [
-  {n:'台三線', say:'「台三線」在牛欄河的南邊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
+  {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
   {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'', u:''},
   {n:'東安橋', say:'「東安橋」橫跨在牛欄河上', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
   {n:'陂塘', say:'「陂塘」裡有魚在游', st:()=>V3(23,-1.5), lk:()=>V3(30.5,0.5), ly:0.5, photo:'', u:''},
@@ -2790,6 +2799,7 @@ function setMode(m){
 const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.Vector3(x,y,z); const r1 = rp(0.62,6.5), r2 = rp(0.468,9.5);
   const at = (p,y)=>V(p.x,y,p.z);
   return [
+  {n:'台三線', say:'「遠方來个朋友」走的就是台三線：從前是防禦邊界（土牛溝、隘勇線），也是樟腦與茶葉的產業走廊。客家庄沿著丘陵與平原交界開墾，自然的地理走廊，就成了今日的台三線。', mk:at(rp(0.42,10.2),1.8), cam:at(rp(0.27,12.5),2.2), tg:at(rp(0.45,10.2),0.4)},
   {n:'陂塘', say:'「陂塘」裡有魚在游', mk:V(30.5,1.8,0.5), cam:V(30.5,2.3,10.5), tg:V(30.5,0.7,0.5)},
   {n:'水車', say:'「水車」把池水送到稻田去', mk:V(-24,3.3,-9.1), cam:V(-17,3.2,-0.5), tg:V(-24,1.4,-9)},
   {n:'河壩脣', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
