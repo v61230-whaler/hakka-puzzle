@@ -39,9 +39,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tag.bridge{pointer-events:auto;text-decoration:none;cursor:pointer;background:#2F7CC4;color:#fff;border-color:#fff;padding:3px 14px}
 .tag.bridge b{font-size:15px}
 .tag.on{border-color:var(--persimmon);box-shadow:0 0 0 2px var(--persimmon)}
-.tag.spot{padding:3px 11px 3px 8px;gap:5px;border-color:#2FA38B}
-.tag.spot::before{content:'';width:9px;height:9px;border-radius:50%;background:#2FA38B;flex:none}
-.tag.spot b{font-size:13px}
+.tag.spot{padding:3px 11px 3px 8px;gap:5px;background:#1B7F6B;color:#fff;border-color:#fff}
+.tag.spot::before{content:'';width:9px;height:9px;border-radius:50%;background:#fff;flex:none}
+.tag.spot b{font-size:13px;color:#fff}
+.tag.spot.on{border-color:var(--persimmon);background:#146654}
 #stage.spotview .tag{display:none}
 .spotback{margin-left:8px;font:inherit;border:2px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:2px 12px;cursor:pointer}
 .pin{pointer-events:auto;font:500 12px/1.2 var(--f-body);background:var(--persimmon);color:#fff;border:0;border-radius:999px;padding:3px 7px;cursor:pointer;white-space:nowrap}
@@ -830,15 +831,52 @@ function grove(cx, cz, n, radius){
   const cols = 12, w = 5.6, gap = 0.5, depth = 4.6;
   for(let r=0;r<2;r++) for(let c=0;c<cols;c++){
     const cx = -((cols*(w+gap))-gap)/2 + w/2 + c*(w+gap), cz = r===0 ? -19.6 : -25.2;
-    const ki = Math.floor(rnd()*4), k = kinds[ki];
-    const pd = new THREE.Mesh(new THREE.BoxGeometry(w*(0.96+rnd()*0.04), 0.1, depth*(0.94+rnd()*0.06)), hillMat(k.c)); pd.position.set(cx, 0.08, cz); scene.add(pd);
+    const ki = Math.floor(rnd()*4), k = kinds[ki], SP = (c<2 || c>=cols-2); /* 左 2 欄換仙草、右 2 欄換草莓（下方另畫）；亂數照舊消耗 */
+    const pd = new THREE.Mesh(new THREE.BoxGeometry(w*(0.96+rnd()*0.04), 0.1, depth*(0.94+rnd()*0.06)), hillMat(k.c)); pd.position.set(cx, 0.08, cz); if(!SP) scene.add(pd);
     const nx = 8, nz = 4;
     for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){
       const px = cx - w/2 + 0.45 + i*(w-0.9)/(nx-1) + (rnd()-0.5)*0.12, pz = cz - depth/2 + 0.55 + j*(depth-1.1)/(nz-1) + (rnd()-0.5)*0.12;
-      dummy.position.set(px, ki===3?0.22:0.3, pz); dummy.scale.set(1, ki===3?0.8:1.5, 1); dummy.rotation.y = rnd()*3; dummy.updateMatrix(); buckets[ki].push(dummy.matrix.clone());
+      dummy.position.set(px, ki===3?0.22:0.3, pz); dummy.scale.set(1, ki===3?0.8:1.5, 1); dummy.rotation.y = rnd()*3; dummy.updateMatrix(); if(!SP) buckets[ki].push(dummy.matrix.clone());
     }
   }
   buckets.forEach((list,i)=>{ if(!list.length) return; const im = new THREE.InstancedMesh(clumpGeo, hillMat(kinds[i].rice), list.length); list.forEach((m,j)=>im.setMatrixAt(j,m)); scene.add(im); });
+
+  /* 仙草田（左）與草莓田（右）：取代原本最左、最右各 2 欄稻田（教師 2026-11-11）。
+     仙草：唇形科，莖方形、葉對生，花冠淡紫色，輪生花序在莖頂排成穗狀（農業部〈仙草〉藥用植物主題館），所以畫成頂著淡紫色穗的草叢；
+     草莓：以紅色果實辨認（葉叢上掛紅果、偶有白花）。花與果都刻意畫大，遠看才認得出來。用自己的亂數，不動全場亂數順序。 */
+  const sr = (sd=>()=>(sd = (sd*1664525 + 1013904223) >>> 0) / 4294967296)(1111);
+  const mk4 = (x,y,z,sx,sy,sz,ry)=>{ dummy.position.set(x,y,z); dummy.scale.set(sx,sy,sz); dummy.rotation.set(0,ry||0,0); dummy.updateMatrix(); return dummy.matrix.clone(); };
+  const inst = (geo,color,list)=>{ if(!list.length) return; const im = new THREE.InstancedMesh(geo, hillMat(color), list.length); list.forEach((m,j)=>im.setMatrixAt(j,m)); scene.add(im); };
+  const colX = c=>-((cols*(w+gap))-gap)/2 + w/2 + c*(w+gap);
+  const unit = new THREE.SphereGeometry(1,7,5), cone = new THREE.ConeGeometry(1,1,6), cyl = new THREE.CylinderGeometry(1,1,1,6), berryG = new THREE.ConeGeometry(0.13,0.28,7).rotateX(Math.PI), leafG = new THREE.IcosahedronGeometry(1,0);
+  /* 仙草田 */
+  { const soil = [], stem = [], leaf = [], leaf2 = [], whorl = [], whorl2 = [], tip = [];
+    for(const cz of [-19.6,-25.2]) for(const c of [0,1]){
+      const cx = colX(c), bed = new THREE.Mesh(new THREE.BoxGeometry(w*0.98,0.1,depth*0.97), hillMat(0xC9B27C)); bed.position.set(cx,0.08,cz); scene.add(bed);
+      for(let i=0;i<6;i++) for(let j=0;j<4;j++){
+        const px = cx - w/2 + 0.55 + i*(w-1.1)/5 + (sr()-0.5)*0.25, pz = cz - depth/2 + 0.6 + j*(depth-1.2)/3 + (sr()-0.5)*0.25, ry = sr()*3;
+        leaf.push(mk4(px,0.3,pz,0.34,0.26,0.34,ry)); leaf2.push(mk4(px+0.1,0.42,pz-0.06,0.24,0.2,0.24,ry+1));
+        for(const [dx,dz,hh] of [[0,0,1.25],[0.14,0.08,1.05],[-0.14,-0.06,1.12],[0.05,-0.15,0.92],[-0.08,0.14,0.98]]){
+          stem.push(mk4(px+dx,hh/2,pz+dz,0.022,hh,0.022,0));
+          for(let k=0;k<6;k++){ const yy = hh-0.5+k*0.095, rr = 0.105-k*0.012; (k%2?whorl2:whorl).push(mk4(px+dx,yy,pz+dz,rr,0.06,rr,ry+k)); }
+          tip.push(mk4(px+dx,hh+0.07,pz+dz,0.045,0.16,0.045,0));
+        }
+      } }
+    inst(cyl,0x3F8A47,stem); inst(leafG,0x4F9A4A,leaf); inst(leafG,0x3F8A47,leaf2); inst(unit,0xB693E6,whorl); inst(unit,0xCDB5F2,whorl2); inst(cone,0xD8C6F6,tip);
+  }
+  /* 草莓田：第一排前緣讓出 0.6 給水牛通道 */
+  { const ridge = [], bush = [], berry = [], capL = [], petal = [], center = [];
+    for(const [cz,dp] of [[-19.9,4.0],[-25.2,4.6]]) for(const c of [cols-2,cols-1]){
+      const cx = colX(c), bed = new THREE.Mesh(new THREE.BoxGeometry(w*0.98,0.1,dp*0.97), hillMat(0xA67C52)); bed.position.set(cx,0.08,cz); scene.add(bed);
+      for(let j=0;j<3;j++){ const rz = cz - dp/2 + dp*(0.2+0.3*j);
+        ridge.push(mk4(cx,0.17,rz,w*0.46,0.14,0.55,0));
+        for(let i=0;i<6;i++){ const px = cx - w/2 + 0.55 + i*(w-1.1)/5 + (sr()-0.5)*0.15, ry = sr()*3;
+          bush.push(mk4(px,0.4,rz,0.3,0.2,0.3,ry));
+          for(let k=0;k<3;k++){ const a = sr()*6.28, rr = 0.26 + sr()*0.08; berry.push(mk4(px+Math.cos(a)*rr,0.3,rz+Math.sin(a)*rr*0.9,1.15,1.15,1.15,a)); capL.push(mk4(px+Math.cos(a)*rr,0.46,rz+Math.sin(a)*rr*0.9,0.075,0.03,0.075,0)); }
+          if(sr()<0.45){ const a = sr()*6.28; petal.push(mk4(px+Math.cos(a)*0.12,0.62,rz+Math.sin(a)*0.1,0.12,0.03,0.12,0)); center.push(mk4(px+Math.cos(a)*0.12,0.65,rz+Math.sin(a)*0.1,0.045,0.03,0.045,0)); }
+        } } }
+    inst(cyl,0x7B5236,ridge); inst(leafG,0x3FA84A,bush); inst(berryG,0xE5233A,berry); inst(unit,0x2E8B3A,capL); inst(unit,0xFFFFFF,petal); inst(unit,0xF5C518,center);
+  }
   /* 稻田前緣的橫向灌溉溝渠（水車的水先流進這裡） */
   const ditch = new THREE.Mesh(new THREE.BoxGeometry(84,0.04,0.8), new THREE.MeshStandardMaterial({color:0x7EC8E0, roughness:0.35, flatShading:true})); ditch.position.set(0,0.14,-16.3); scene.add(ditch);
   /* 稻草人 */
@@ -967,7 +1005,7 @@ const pondTick = [];
   const bwR = makeBuffalo(BS); scene.add(bwR);
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
-  const WP = [DRK, [34,6.6],[38,5],[38.2,-2],[38,-9],[37.5,-15.3],[33,-18.6],[29,-19.6],[20,-19.6],[8,-19.6],[-5,-19.6],[-18,-19.6],[-30,-19.6],[-36,-20.3],[-38.5,-22.4],[-36,-24.6],[-30,-25.2],[-18,-25.2],[-5,-25.2],[8,-25.2],[20,-25.2],[32,-25.2],[38.5,-23.6],[38.5,-21.2],[38.5,-16.8],[38.2,-9],[38.4,-2],[38,5],[34,6.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
+  const WP = [DRK, [34,6.6],[38,5],[38.2,-2],[38,-9],[37.3,-15.4],[34,-16.9],[28,-16.9],[23,-18.4],[19,-19.6],[8,-19.6],[-5,-19.6],[-17,-19.6],[-21.5,-20.3],[-23.7,-22.4],[-21.5,-24.6],[-17,-25.2],[-5,-25.2],[8,-25.2],[19,-25.2],[22.5,-24.4],[23.7,-22.4],[23.5,-19.2],[25.5,-16.9],[30,-16.9],[37,-16.2],[38.2,-9],[38.4,-2],[38,5],[34,6.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
   const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.3,0.45,0.6,0.75].map(f=>f*LL);
   const ease = x=>x*x*(3-2*x), bs = {yaw:Math.PI, wph:0, last:0, sp:0}, bm = {mode:'drink', tm:0, s:0, gi:0};
   const drinkRing = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); drinkRing.position.set(DRK.x,0.15,RZ+RRZ-0.2); scene.add(drinkRing);
@@ -2559,6 +2597,8 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'河壩脣', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」橫跨在牛欄河上', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
   {n:'豬欄', say:'「豬欄」培育著神豬候選豬', mk:V(30.5,2.6,-9.0), cam:V(30.5,2.4,-3.0), tg:V(30.5,1.0,-12.6)},
+  {n:'仙草', say:'「仙草」開淡紫色的花，花穗長在莖的頂端', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
+  {n:'草莓', say:'「草莓」結紅色的果實，掛在葉叢邊', mk:V(30,2.2,-22.4), cam:V(44,2.2,-21.5), tg:V(30,0.5,-22.5)},
   {n:'田脣', say:'「田」在島的北邊，這裡友善耕作，歡迎石虎', mk:V(12,1.6,-15.0), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
