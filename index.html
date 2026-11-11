@@ -52,6 +52,28 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tools button{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
 .tools button[aria-pressed="true"]{background:var(--indigo);color:var(--card);border-color:var(--indigo)}
 .tools button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* 摘草莓、仙草凍：摘下後畫面中央跳出嘴巴把它吃掉，3 秒後消失 */
+#eat{position:absolute;left:50%;top:42%;width:min(300px,68vw);transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;z-index:3000000;transition:opacity .25s,transform .25s}
+#eat.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#eat svg{width:100%;height:auto;display:block;overflow:visible}
+#eat::before{content:'';position:absolute;left:2%;right:2%;top:2%;bottom:2%;border-radius:50%;background:rgba(255,255,255,.86);box-shadow:0 6px 24px rgba(42,63,99,.25)}
+#eat svg{position:relative}
+#eat .it,#eat .mouth{display:none}
+#eat.sprig .it.sprig{display:block}
+#eat.eat.berry .it.berry,#eat.eat.jelly .it.jelly{display:block}
+#eat.eat .mouth{display:block}
+#eat .food,#eat .sw{transform-box:fill-box;transform-origin:center}
+#eat.sprig .sw{animation:eSway .5s ease-in-out infinite alternate}
+#eat .jaw{animation-duration:3s;animation-timing-function:ease-in-out;animation-fill-mode:forwards;animation-play-state:paused}
+#eat.eat .jaw,#eat.eat .food{animation-play-state:running}
+#eat .jaw.up{animation-name:eUp}#eat .jaw.dn{animation-name:eDn}
+#eat .food{animation:eFood 3s linear forwards;animation-play-state:paused}
+#eat.rst .jaw,#eat.rst .food{animation:none}
+@keyframes eSway{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+@keyframes eUp{0%{transform:translateY(0)}10%,20%{transform:translateY(-26px)}25%,30%{transform:translateY(0)}35%,40%{transform:translateY(-26px)}45%,50%{transform:translateY(0)}55%,60%{transform:translateY(-26px)}65%,70%{transform:translateY(0)}78%,84%{transform:translateY(-24px)}92%,100%{transform:translateY(0)}}
+@keyframes eDn{0%{transform:translateY(0)}10%,20%{transform:translateY(26px)}25%,30%{transform:translateY(0)}35%,40%{transform:translateY(26px)}45%,50%{transform:translateY(0)}55%,60%{transform:translateY(26px)}65%,70%{transform:translateY(0)}78%,84%{transform:translateY(24px)}92%,100%{transform:translateY(0)}}
+@keyframes eFood{0%{transform:translateY(-100px) scale(1)}12%{transform:translateY(-4px) scale(1)}22%{transform:translateY(0) scale(1)}25%,40%{transform:translateY(0) scale(.66)}45%,58%{transform:translateY(0) scale(.33)}65%,100%{transform:translateY(0) scale(0)}}
+@media (prefers-reduced-motion: reduce){#eat,#eat.on{transition:none}#eat.sprig .sw{animation:none}}
 .hint{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 12px;max-width:calc(100% - 28px);line-height:1.5}
 .tour-dialog{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:2000000;width:min(88%,380px);box-sizing:border-box;text-align:center;
   background:var(--card);color:var(--fg);border:3px solid var(--sun);border-radius:26px;padding:20px 20px 18px;box-shadow:0 8px 0 rgba(42,63,99,.16),0 0 0 100vmax rgba(30,50,90,.32)}
@@ -151,7 +173,28 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <div class="tour-btns"><button id="tourGo" type="button">好，出發！</button><button id="tourNo" type="button">我自己逛</button></div>
     </div>
     <div class="tour-cap" id="tourCap" role="status" aria-live="polite" hidden></div>
-    <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元・點水面投食・仙平先生講：「做毋得捉毛蟹來搞哦！」</div>
+    <div id="eat" aria-hidden="true"><svg viewBox="0 0 240 260">
+      <g class="it sprig" transform="translate(120,120)"><g class="sw">
+        <rect x="-2.5" y="-36" width="5" height="76" fill="#3F8A47"/>
+        <ellipse cx="-16" cy="26" rx="16" ry="6" fill="#4F9A4A" transform="rotate(-35 -16 26)"/><ellipse cx="16" cy="26" rx="16" ry="6" fill="#4F9A4A" transform="rotate(35 16 26)"/>
+        <ellipse cx="-14" cy="10" rx="14" ry="5" fill="#3F8A47" transform="rotate(-30 -14 10)"/><ellipse cx="14" cy="10" rx="14" ry="5" fill="#3F8A47" transform="rotate(30 14 10)"/>
+        <ellipse cx="0" cy="-8" rx="13" ry="6" fill="#B693E6"/><ellipse cx="0" cy="-17" rx="12" ry="6" fill="#CDB5F2"/><ellipse cx="0" cy="-26" rx="11" ry="6" fill="#B693E6"/><ellipse cx="0" cy="-35" rx="9" ry="6" fill="#CDB5F2"/><ellipse cx="0" cy="-45" rx="5" ry="8" fill="#D8C6F6"/>
+      </g></g>
+      <g class="mouth" transform="translate(120,172)">
+        <ellipse cx="0" cy="0" rx="76" ry="34" fill="#5A1620"/>
+      <g class="food it berry">
+        <path d="M0 38C-34 26-40-8-30-22C-20-34-6-28 0-22C6-28 20-34 30-22C40-8 34 26 0 38Z" fill="#E5233A" stroke="#B3122A" stroke-width="3"/>
+        <g fill="#F7D96B"><ellipse cx="-14" cy="-6" rx="2.2" ry="3.2"/><ellipse cx="6" cy="-10" rx="2.2" ry="3.2"/><ellipse cx="18" cy="2" rx="2.2" ry="3.2"/><ellipse cx="-4" cy="8" rx="2.2" ry="3.2"/><ellipse cx="-20" cy="10" rx="2.2" ry="3.2"/><ellipse cx="10" cy="18" rx="2.2" ry="3.2"/><ellipse cx="-6" cy="24" rx="2.2" ry="3.2"/></g>
+        <path d="M0-22L-18-34L-8-26L-10-42L0-30L10-42L8-26L18-34Z" fill="#2E8B3A"/></g>
+        <g class="food it jelly">
+        <path d="M-46 6Q-46 44 0 44Q46 44 46 6Z" fill="#F7F1E6" stroke="#C9B9A0" stroke-width="3"/>
+        <g fill="#2B2B33"><rect x="-38" y="-18" width="26" height="26" rx="5" transform="rotate(-10 -25 -5)"/><rect x="-6" y="-26" width="26" height="26" rx="5" transform="rotate(8 7 -13)"/><rect x="14" y="-12" width="26" height="26" rx="5" transform="rotate(-6 27 1)"/><rect x="-22" y="-6" width="26" height="26" rx="5" transform="rotate(5 -9 7)"/></g>
+        <g fill="#fff" opacity=".6"><rect x="-34" y="-14" width="8" height="4" rx="2"/><rect x="-2" y="-22" width="8" height="4" rx="2"/><rect x="18" y="-8" width="8" height="4" rx="2"/><rect x="-18" y="-2" width="8" height="4" rx="2"/></g></g>
+        <g class="jaw up"><path d="M-80 0C-80-52 80-52 80 0Z" fill="#E5484D" stroke="#B3262E" stroke-width="3"/><rect x="-58" y="-16" width="116" height="16" rx="4" fill="#fff"/></g>
+        <g class="jaw dn"><path d="M-80 0C-80 54 80 54 80 0Z" fill="#E5484D" stroke="#B3262E" stroke-width="3"/><ellipse cx="0" cy="26" rx="34" ry="13" fill="#F28C9B"/><rect x="-52" y="0" width="104" height="13" rx="4" fill="#fff"/></g>
+      </g>
+    </svg></div>
+    <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元・點水面投食・點水牛、草莓、仙草看看・仙平先生講：「做毋得捉毛蟹來搞哦！」</div>
   </div>
 
   <aside id="panel">
@@ -824,6 +867,7 @@ function grove(cx, cz, n, radius){
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
 [[-40,-6,5,4],[-37,8,4,3.5],[38,-3,5,4],[36,10,4,3.5],
  [-36,-33,8,5],[-24,-37,9,5],[-12,-33,8,4.5],[0,-38,9,5.5],[12,-34,8,5],[24,-38,9,5],[36,-33,8,4.5],[-45,-28,6,4],[46,-28,6,4]].forEach(([x,z,n,r])=>grove(x,z,n,r));
+const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields 填入 */
 (function paddyFields(){
   const base = new THREE.Mesh(new THREE.BoxGeometry(84,0.06,14.5), hillMat(0xD9C08A)); base.position.set(0,0.02,-22.3); scene.add(base);
   const kinds = [ {c:0xB9E27A, rice:0x6FBF4A}, {c:0xA7D96A, rice:0x59B04A}, {c:0xF2D872, rice:0xE6BC3C}, {c:0x9ED6C8, rice:0x78C257} ];
@@ -846,15 +890,16 @@ function grove(cx, cz, n, radius){
      草莓：以紅色果實辨認（葉叢上掛紅果、偶有白花）。花與果都刻意畫大，遠看才認得出來。用自己的亂數，不動全場亂數順序。 */
   const sr = (sd=>()=>(sd = (sd*1664525 + 1013904223) >>> 0) / 4294967296)(1111);
   const mk4 = (x,y,z,sx,sy,sz,ry)=>{ dummy.position.set(x,y,z); dummy.scale.set(sx,sy,sz); dummy.rotation.set(0,ry||0,0); dummy.updateMatrix(); return dummy.matrix.clone(); };
-  const inst = (geo,color,list)=>{ if(!list.length) return; const im = new THREE.InstancedMesh(geo, hillMat(color), list.length); list.forEach((m,j)=>im.setMatrixAt(j,m)); scene.add(im); };
+  const inst = (geo,color,list)=>{ if(!list.length) return null; const im = new THREE.InstancedMesh(geo, hillMat(color), list.length); list.forEach((m,j)=>im.setMatrixAt(j,m)); scene.add(im); return im; };
   const colX = c=>-((cols*(w+gap))-gap)/2 + w/2 + c*(w+gap);
   const unit = new THREE.SphereGeometry(1,7,5), cone = new THREE.ConeGeometry(1,1,6), cyl = new THREE.CylinderGeometry(1,1,1,6), berryG = new THREE.ConeGeometry(0.13,0.28,7).rotateX(Math.PI), leafG = new THREE.IcosahedronGeometry(1,0);
   /* 仙草田 */
-  { const soil = [], stem = [], leaf = [], leaf2 = [], whorl = [], whorl2 = [], tip = [];
+  { const soil = [], stem = [], leaf = [], leaf2 = [], whorl = [], whorl2 = [], tip = [], clumps = [];
     for(const cz of [-19.6,-25.2]) for(const c of [0,1]){
       const cx = colX(c), bed = new THREE.Mesh(new THREE.BoxGeometry(w*0.98,0.1,depth*0.97), hillMat(0xC9B27C)); bed.position.set(cx,0.08,cz); scene.add(bed);
       for(let i=0;i<6;i++) for(let j=0;j<4;j++){
         const px = cx - w/2 + 0.55 + i*(w-1.1)/5 + (sr()-0.5)*0.25, pz = cz - depth/2 + 0.6 + j*(depth-1.2)/3 + (sr()-0.5)*0.25, ry = sr()*3;
+        clumps.push({x:px, z:pz, n:clumps.length, st:0, t:0});
         leaf.push(mk4(px,0.3,pz,0.34,0.26,0.34,ry)); leaf2.push(mk4(px+0.1,0.42,pz-0.06,0.24,0.2,0.24,ry+1));
         for(const [dx,dz,hh] of [[0,0,1.25],[0.14,0.08,1.05],[-0.14,-0.06,1.12],[0.05,-0.15,0.92],[-0.08,0.14,0.98]]){
           stem.push(mk4(px+dx,hh/2,pz+dz,0.022,hh,0.022,0));
@@ -862,7 +907,9 @@ function grove(cx, cz, n, radius){
           tip.push(mk4(px+dx,hh+0.07,pz+dz,0.045,0.16,0.045,0));
         }
       } }
-    inst(cyl,0x3F8A47,stem); inst(leafG,0x4F9A4A,leaf); inst(leafG,0x3F8A47,leaf2); inst(unit,0xB693E6,whorl); inst(unit,0xCDB5F2,whorl2); inst(cone,0xD8C6F6,tip);
+    const imS = inst(cyl,0x3F8A47,stem); inst(leafG,0x4F9A4A,leaf); inst(leafG,0x3F8A47,leaf2); const imW = inst(unit,0xB693E6,whorl), imW2 = inst(unit,0xCDB5F2,whorl2), imT = inst(cone,0xD8C6F6,tip);
+    /* 每叢 5 莖、15+15 輪花、5 穗尖，依序排列，所以可由叢號算出實例編號 */
+    CROP.clumps = clumps; CROP.parts = [{im:imS,list:stem,per:5},{im:imW,list:whorl,per:15},{im:imW2,list:whorl2,per:15},{im:imT,list:tip,per:5}];
   }
   /* 草莓田：第一排前緣讓出 0.6 給水牛通道 */
   { const ridge = [], bush = [], berry = [], capL = [], petal = [], center = [];
@@ -875,7 +922,8 @@ function grove(cx, cz, n, radius){
           for(let k=0;k<3;k++){ const a = sr()*6.28, rr = 0.26 + sr()*0.08; berry.push(mk4(px+Math.cos(a)*rr,0.3,rz+Math.sin(a)*rr*0.9,1.15,1.15,1.15,a)); capL.push(mk4(px+Math.cos(a)*rr,0.46,rz+Math.sin(a)*rr*0.9,0.075,0.03,0.075,0)); }
           if(sr()<0.45){ const a = sr()*6.28; petal.push(mk4(px+Math.cos(a)*0.12,0.62,rz+Math.sin(a)*0.1,0.12,0.03,0.12,0)); center.push(mk4(px+Math.cos(a)*0.12,0.65,rz+Math.sin(a)*0.1,0.045,0.03,0.045,0)); }
         } } }
-    inst(cyl,0x7B5236,ridge); inst(leafG,0x3FA84A,bush); inst(berryG,0xE5233A,berry); inst(unit,0x2E8B3A,capL); inst(unit,0xFFFFFF,petal); inst(unit,0xF5C518,center);
+    inst(cyl,0x7B5236,ridge); inst(leafG,0x3FA84A,bush); const imB = inst(berryG,0xE5233A,berry), imC = inst(unit,0x2E8B3A,capL); inst(unit,0xFFFFFF,petal); inst(unit,0xF5C518,center);
+    CROP.berries = berry.map((m,i)=>({i, pos:new THREE.Vector3().setFromMatrixPosition(m), st:0, t:0})); CROP.berryParts = [{im:imB,list:berry},{im:imC,list:capL}];
   }
   /* 稻田前緣的橫向灌溉溝渠（水車的水先流進這裡） */
   const ditch = new THREE.Mesh(new THREE.BoxGeometry(84,0.04,0.8), new THREE.MeshStandardMaterial({color:0x7EC8E0, roughness:0.35, flatShading:true})); ditch.position.set(0,0.14,-16.3); scene.add(ditch);
@@ -892,6 +940,7 @@ function grove(cx, cz, n, radius){
 })();
 /* 兩側空地的池塘：左邊那塊有灌溉用水車，把池水吸起來、沿木引水槽送到上方稻田；右邊那塊養兩尾錦鯉 */
 const pondTick = [];
+let buffApi = null;
 (function ponds(){
   const sandM = bankMat, waterM = riverMat, wood = mat(C.wood), woodL = mat(0xD9A774), padM = mat(0x8FD16A), pinkM = mat(C.pink);
   function pond(cx, cz, rx, rz){
@@ -984,15 +1033,50 @@ const pondTick = [];
     g.scale.setScalar(sc); g.userData = {legs, head, ears, tail, body};
     return g;
   }
+  /* 牛背鷺（教師 2026-11-11）：站在牛背上；點牛 → 牛抖一抖，鷺鷥飛走，繞一圈後回來停在牛背上 */
+  const egBeak = mat(0xF2B21E), egLeg = mat(0x3A3A3A), egEye = mat(0x222222);
+  function makeEgret(){
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); g.rotation.order = 'YXZ';
+    body.add(S(new THREE.SphereGeometry(1,10,8),0,0,0,0.13,0.14,0.32,whiteM));
+    body.add(S(new THREE.ConeGeometry(0.09,0.3,6).rotateX(-Math.PI/2),0,0,-0.4,1,1,1,whiteM));
+    const neck = S(new THREE.CylinderGeometry(0.035,0.05,0.32,6),0,0.2,0.3,1,1,1,whiteM); neck.rotation.x = 0.35; body.add(neck);
+    body.add(S(new THREE.SphereGeometry(1,8,6),0,0.38,0.37,0.065,0.065,0.07,whiteM));
+    body.add(S(new THREE.ConeGeometry(0.024,0.2,5).rotateX(Math.PI/2),0,0.375,0.52,1,1,1,egBeak));
+    for(const sx of [-1,1]){ body.add(S(new THREE.SphereGeometry(0.014,5,4),sx*0.05,0.4,0.4,1,1,1,egEye)); body.add(S(new THREE.CylinderGeometry(0.012,0.012,0.24,4),sx*0.06,-0.2,0.02,1,1,1,egLeg)); }
+    const wings = []; for(const sx of [-1,1]){ const pv = new THREE.Group(); pv.position.set(sx*0.11,0.07,0.02); body.add(pv); pv.add(S(new THREE.SphereGeometry(1,8,6),sx*0.3,0,0,0.34,0.025,0.16,whiteM)); wings.push({pv,sx}); }
+    return {g, body, wings, mode:'perch', t:0, fold:1, flap:0};
+  }
+  const EG_LOCAL = new THREE.Vector3(0,1.95,-0.15);
+  const egretFold = (e,fold)=>{ for(const w of e.wings) w.pv.rotation.y = w.sx*Math.PI/2*fold; };
+  function perchEgret(b){ const e = b.userData.egret; b.add(e.g); e.g.position.copy(EG_LOCAL); e.g.rotation.set(0,0,0); e.g.scale.setScalar(1); e.body.rotation.set(0,0,0); e.mode = 'perch'; e.fold = 1; egretFold(e,1); }
+  function flyOff(b){ const e = b.userData.egret; if(e.mode!=='perch') return;
+    const wp = new THREE.Vector3(); e.g.getWorldPosition(wp); scene.add(e.g); e.g.position.copy(wp); e.g.scale.setScalar(b.scale.x); e.mode = 'fly'; e.t = 0; e.p0 = wp.clone(); e.prev = wp.clone(); e.fold = 0; egretFold(e,0);
+    const a = Math.random()*Math.PI*2; e.dir = new THREE.Vector3(Math.cos(a),0,Math.sin(a)); e.side = (Math.random()<0.5?-1:1); }
+  function egretTick(b,dt,t){ const e = b.userData.egret; if(e.mode!=='fly') return; e.t += dt;
+    const T1 = 3.5, T2 = 12, p = e.g.position; let u = 0;
+    if(e.t<T1){ const k = e.t; p.set(e.p0.x+e.dir.x*(k*3.4+0.6*k*k), e.p0.y+5.2*(1-Math.exp(-k*0.9)), e.p0.z+e.dir.z*(k*3.4+0.6*k*k)); e.p1 = p.clone(); }
+    else { u = Math.min(1,(e.t-T1)/(T2-T1)); const uu = u*u*(3-2*u), P2 = new THREE.Vector3(); P2.copy(EG_LOCAL); b.localToWorld(P2);
+      const C = e.p1.clone().add(P2).multiplyScalar(0.5); C.x += -e.dir.z*e.side*9; C.z += e.dir.x*e.side*9; C.y += 4;
+      const a0 = (1-uu)*(1-uu), a1 = 2*(1-uu)*uu, a2 = uu*uu; p.set(a0*e.p1.x+a1*C.x+a2*P2.x, a0*e.p1.y+a1*C.y+a2*P2.y, a0*e.p1.z+a1*C.z+a2*P2.z); }
+    const vx = p.x-e.prev.x, vy = p.y-e.prev.y, vz = p.z-e.prev.z, hv = Math.hypot(vx,vz); if(hv>1e-4 && dt>0){ const ty = Math.atan2(vx,vz); let d = ty-e.g.rotation.y; d = ((d+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; e.g.rotation.y += d*Math.min(1,6*dt); e.g.rotation.x = -Math.max(-0.7,Math.min(0.7,vy/hv))*0.9; }
+    e.prev.copy(p);
+    const amp = 0.85*(u>0.9 ? (1-u)/0.1*0.6+0.4 : 1);
+    for(const w of e.wings) w.pv.rotation.z = w.sx*Math.sin(t*17)*amp;
+    if(u>=1){ perchEgret(b); } }
   const bump = (t,per,off,dur)=>{ const x = (((t-off)%per)+per)%per; return x<dur ? Math.pow(Math.sin(Math.PI*x/dur),2) : 0; };
   function buffaloIdle(bw, t, tailF){
     const u = bw.userData;
     u.tail.rotation.z = 0.25*Math.sin(t*tailF) + 0.5*bump(t,6.1,1.7,0.9)*Math.sin(t*14);
     for(const e of u.ears) e.g.rotation.z = e.sx*(-0.15 + 0.4*bump(t,5.3+e.sx*0.7,2.1,0.45));
     u.body.scale.y = 0.6*(1+0.012*Math.sin(t*1.7));
+    if(u.poke){ u.poke = false; u.pokeT = t; }
+    const k = u.pokeT===undefined ? 0 : Math.max(0,1-(t-u.pokeT)/1.3), ph = u.pokeT===undefined ? 0 : (t-u.pokeT);
+    bw.rotation.z = 0.09*k*Math.sin(ph*38); u.head.rotation.z = 0.22*k*Math.sin(ph*31+1); u.body.rotation.x = 0.03*k*Math.sin(ph*45);
+    if(k>0) for(const e of u.ears) e.g.rotation.z += e.sx*0.5*k;
   }
+  const BS0 = 1.4;
   /* 左池：泡澡的水牛，身體沉在水裡，只露出背、頭和角；偶爾慢慢轉頭，水面有一圈圈漣漪 */
-  const BS = 1.4, bwL = makeBuffalo(BS); bwL.position.set(LX-1.0,-0.94,LZ+0.6); bwL.rotation.y = 0.6; scene.add(bwL);
+  const BS = BS0, bwL = makeBuffalo(BS); bwL.position.set(LX-1.0,-0.94,LZ+0.6); bwL.rotation.y = 0.6; scene.add(bwL);
   const rings = [0,1].map(()=>{ const r = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); r.position.set(LX-1.0,0.15,LZ+0.6); r.rotation.y = 0.6; scene.add(r); return r; });
   pondTick.push((dt,t)=>{
     const u = bwL.userData, a = bump(t,11,1,3.4), b = bump(t,11,6.5,3.4);
@@ -1003,6 +1087,9 @@ const pondTick = [];
   });
   /* 右池：每 17 秒一輪——低頭喝水約 5 秒，抬頭離開，走到附近一處停下來吃草，再繞另一條路走回池邊 */
   const bwR = makeBuffalo(BS); scene.add(bwR);
+  for(const b of [bwL,bwR]){ b.userData.egret = makeEgret(); perchEgret(b); }
+  buffApi = { groups:[bwL,bwR], poke(b){ b.userData.poke = true; flyOff(b); } };
+  pondTick.push((dt,t)=>{ egretTick(bwL,dt,t); egretTick(bwR,dt,t); });
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
   const WP = [DRK, [34,6.6],[38,5],[38.2,-2],[38,-9],[37.3,-15.4],[34,-16.9],[28,-16.9],[23,-18.4],[19,-19.6],[8,-19.6],[-5,-19.6],[-17,-19.6],[-21.5,-20.3],[-23.7,-22.4],[-21.5,-24.6],[-17,-25.2],[-5,-25.2],[8,-25.2],[19,-25.2],[22.5,-24.4],[23.7,-22.4],[23.5,-19.2],[25.5,-16.9],[30,-16.9],[37,-16.2],[38.2,-9],[38.4,-2],[38,5],[34,6.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
@@ -2408,6 +2495,47 @@ renderer.domElement.addEventListener('pointermove', e=>{
     }
   });
 }
+/* 點水牛（牛抖一抖、牛背鷺飛走）、摘草莓與仙草（教師 2026-11-11）：摘下後畫面中央跳出嘴巴吃掉，約 3 秒消失；仙草先變成仙草凍；田裡的果與花約 20 秒後長回來 */
+{
+  const el = renderer.domElement, rc = new THREE.Raycaster(), p2 = new THREE.Vector2(), v = new THREE.Vector3();
+  const ZERO = new THREE.Matrix4().makeScale(0,0,0), tA = new THREE.Matrix4(), tB = new THREE.Matrix4(), tC = new THREE.Matrix4(), tD = new THREE.Matrix4();
+  const setAbout = (im,i,orig,bx,by,bz,k)=>{ tA.makeTranslation(bx,by,bz); tB.makeScale(k,k,k); tC.makeTranslation(-bx,-by,-bz); tD.copy(tA).multiply(tB).multiply(tC).multiply(orig); im.setMatrixAt(i,tD); };
+  const eatEl = $('#eat'); let busy = false, dn = null;
+  function eatShow(kind){
+    busy = true; eatEl.className = 'rst'; void eatEl.offsetWidth; eatEl.className = '';
+    const done = (ms)=>setTimeout(()=>{ eatEl.classList.remove('on'); setTimeout(()=>{ eatEl.className = ''; busy = false; }, 350); }, ms);
+    if(kind==='berry'){ eatEl.classList.add('berry','eat','on'); done(2800); }
+    else { eatEl.classList.add('jelly','sprig','on'); setTimeout(()=>{ eatEl.classList.remove('sprig'); eatEl.classList.add('eat'); }, 800); done(3600); }
+  }
+  const hide = (parts,idx,per)=>{ for(const pt of parts){ for(let k=0;k<(per?pt.per:1);k++) pt.im.setMatrixAt((per?idx*pt.per:idx)+k, ZERO); pt.im.instanceMatrix.needsUpdate = true; } };
+  el.addEventListener('pointerdown', e=>{ dn = {x:e.clientX, y:e.clientY}; });
+  el.addEventListener('pointerup', e=>{
+    if(!dn || Math.hypot(e.clientX-dn.x, e.clientY-dn.y)>6){ dn = null; return; } dn = null;
+    const r = el.getBoundingClientRect(); p2.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(p2, camera);
+    const hp = rc.intersectObjects(pickables,false)[0], hd = hp ? hp.distance : 1e9;
+    if(buffApi && !reduce){ const hb = rc.intersectObjects(buffApi.groups,true)[0]; if(hb && hb.distance<hd){ let o = hb.object; while(o && !buffApi.groups.includes(o)) o = o.parent; if(o) buffApi.poke(o); return; } }
+    if(hp || busy) return;
+    const pxPer = (len,dist)=>len*r.height/(2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));
+    const scr = (pos)=>{ v.copy(pos).project(camera); return (v.z>1||v.z<-1) ? null : {x:r.left+(v.x+1)/2*r.width, y:r.top+(1-v.y)/2*r.height}; };
+    let best = null, bd = 1e9; const q = new THREE.Vector3();
+    if(CROP.berries) for(const b of CROP.berries){ if(b.st) continue; const dist = camera.position.distanceTo(b.pos); if(dist>30) continue; const sp = scr(b.pos); if(!sp) continue;
+      const d = Math.hypot(e.clientX-sp.x, e.clientY-sp.y)/Math.max(26, pxPer(0.2,dist)*2.2); if(d<1 && d<bd){ bd = d; best = {kind:'berry', o:b}; } }
+    if(CROP.clumps) for(const c of CROP.clumps){ if(c.st) continue; q.set(c.x,0.85,c.z); const dist = camera.position.distanceTo(q); if(dist>30) continue; const sp = scr(q); if(!sp) continue;
+      const d = Math.hypot(e.clientX-sp.x, e.clientY-sp.y)/Math.max(32, pxPer(0.6,dist)); if(d<1 && d<bd){ bd = d; best = {kind:'clump', o:c}; } }
+    if(!best) return;
+    best.o.st = 1; best.o.t = 0;
+    if(best.kind==='berry'){ hide(CROP.berryParts, best.o.i, false); eatShow('berry'); }
+    else { hide(CROP.parts, best.o.n, true); eatShow('jelly'); }
+  });
+  pondTick.push(dt=>{
+    if(CROP.berries) for(const b of CROP.berries){ if(!b.st) continue; b.t += dt; if(b.t<20) continue; const k = Math.min(1,(b.t-20)/1.5);
+      for(const pt of CROP.berryParts){ if(k>=1) pt.im.setMatrixAt(b.i, pt.list[b.i]); else setAbout(pt.im,b.i,pt.list[b.i],b.pos.x,b.pos.y,b.pos.z,Math.max(0.02,k)); pt.im.instanceMatrix.needsUpdate = true; }
+      if(k>=1) b.st = 0; }
+    if(CROP.clumps) for(const c of CROP.clumps){ if(!c.st) continue; c.t += dt; if(c.t<20) continue; const k = Math.min(1,(c.t-20)/1.5);
+      for(const pt of CROP.parts){ for(let j=0;j<pt.per;j++){ const i = c.n*pt.per+j; if(k>=1) pt.im.setMatrixAt(i, pt.list[i]); else setAbout(pt.im,i,pt.list[i],c.x,0,c.z,Math.max(0.02,k)); } pt.im.instanceMatrix.needsUpdate = true; }
+      if(k>=1) c.st = 0; }
+  });
+}
 renderer.domElement.addEventListener('keydown', e=>{
   const step = 0.08;
   if(e.key==='ArrowLeft'){ rotate(step); } else if(e.key==='ArrowRight'){ rotate(-step); }
@@ -2597,8 +2725,8 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'河壩脣', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」橫跨在牛欄河上', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
   {n:'豬欄', say:'「豬欄」培育著神豬候選豬', mk:V(30.5,2.6,-9.0), cam:V(30.5,2.4,-3.0), tg:V(30.5,1.0,-12.6)},
-  {n:'仙草', say:'「仙草」開淡紫色的花，花穗長在莖的頂端', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
-  {n:'草莓', say:'「草莓」結紅色的果實，掛在葉叢邊', mk:V(30,2.2,-22.4), cam:V(44,2.2,-21.5), tg:V(30,0.5,-22.5)},
+  {n:'仙草', say:'「仙草」開淡紫色的花，花穗長在莖的頂端；點花穗摘一枝試試', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
+  {n:'草莓', say:'「草莓」結紅色的果實，掛在葉叢邊；點紅果摘來食', mk:V(30,2.2,-22.4), cam:V(44,2.2,-21.5), tg:V(30,0.5,-22.5)},
   {n:'田脣', say:'「田」在島的北邊，這裡友善耕作，歡迎石虎', mk:V(12,1.6,-15.0), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
