@@ -58,6 +58,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 #eat svg{width:100%;height:auto;display:block;overflow:visible}
 #eat::before{content:'';position:absolute;left:2%;right:2%;top:2%;bottom:2%;border-radius:50%;background:rgba(255,255,255,.86);box-shadow:0 6px 24px rgba(42,63,99,.25)}
 #eat svg{position:relative}
+#eat .etx{position:relative;display:none;text-align:center;font-size:15px;font-weight:700;color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:4px 12px;margin-top:-6px}
+#eat.eat .etx{display:block}
 #eat .it,#eat .mouth{display:none}
 #eat.sprig .it.sprig{display:block}
 #eat.eat.berry .it.berry,#eat.eat.jelly .it.jelly{display:block}
@@ -193,7 +195,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
         <g class="jaw up"><path d="M-80 0C-80-52 80-52 80 0Z" fill="#E5484D" stroke="#B3262E" stroke-width="3"/><rect x="-58" y="-16" width="116" height="16" rx="4" fill="#fff"/></g>
         <g class="jaw dn"><path d="M-80 0C-80 54 80 54 80 0Z" fill="#E5484D" stroke="#B3262E" stroke-width="3"/><ellipse cx="0" cy="26" rx="34" ry="13" fill="#F28C9B"/><rect x="-52" y="0" width="104" height="13" rx="4" fill="#fff"/></g>
       </g>
-    </svg></div>
+    </svg><div class="etx" id="eatTxt"></div></div>
     <div class="hint" id="hint">拖曳旋轉・滾輪或雙指縮放・點地塊看單元・點水面投食・點水牛、稻草人、草莓、仙草看看・仙平先生講：「做毋得捉毛蟹來搞哦！」</div>
   </div>
 
@@ -538,7 +540,7 @@ const riverCurve = new THREE.CatmullRomCurve3([[-70,18.5],[-52,16.5],[-36,20.5],
 const riverMat = new THREE.MeshStandardMaterial({color:0x6EC6E8, roughness:0.35, metalness:0.05, flatShading:true});
 function ribbon(curve, width, y, material, n=240){
   const pts = curve.getSpacedPoints(n), pos = [], idx = [];
-  pts.forEach((p,i)=>{ const t = curve.getTangent(i/n); const nx = -t.z, nz = t.x; const l = Math.hypot(nx,nz)||1;
+  pts.forEach((p,i)=>{ const t = curve.getTangentAt(i/n); const nx = -t.z, nz = t.x; const l = Math.hypot(nx,nz)||1;
     pos.push(p.x+nx/l*width/2, y, p.z+nz/l*width/2, p.x-nx/l*width/2, y, p.z-nz/l*width/2);
     if(i<n){ const a=i*2; idx.push(a,a+2,a+1, a+1,a+2,a+3); } });
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
@@ -553,6 +555,7 @@ const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.posi
 const whiteM = new THREE.MeshStandardMaterial({color:0xFFFFFF, flatShading:true}), blackM = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
 /* Fish feeding (teacher 2026-11-08): click on river or right pond water drops pellets; nearby fish swim over and eat. */
 const RK = 0.8; /* riverside creatures scaled to 80% (teacher 11-08) */
+const RKS = RK*0.8; /* 魚、蝦、青蛙再小 20%（教師 2026-11-11）；螃蟹、蜻蜓維持 RK */
 const FEED = {pond:[], river:[], koi:[]};
 function riverFeedFor(t){ let b = null, bd = 1e9; for(const m of FEED.river){ const d = Math.abs(m.u-t)*riverLen; if(d<18 && d<bd){ bd = d; b = m; } } return b; }
 function makeFish(col){
@@ -561,7 +564,7 @@ function makeFish(col){
   f.add(S(new THREE.ConeGeometry(0.4,0.7,4).rotateX(Math.PI/2).rotateZ(Math.PI/2),0,0.35,-0.85,0.25,1.2,1,body));
   f.add(S(new THREE.ConeGeometry(0.2,0.4,4),0,0.85,-0.05,0.4,1,1,body));
   for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
-  f.scale.setScalar(1.09*RK); return f;
+  f.scale.setScalar(1.09*RKS); return f;
 }
 function makeCrab(col=0xFF7B6B, sc=0.96){
   const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
@@ -622,7 +625,7 @@ function makeFrog(){
     g.add(S(new THREE.SphereGeometry(0.17,8,6),sx*0.26,0.82,0.42,1,1,1,gr)); g.add(S(new THREE.SphereGeometry(0.1,8,6),sx*0.27,0.86,0.52,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.05,6,5),sx*0.27,0.87,0.6,1,1,1,blackM));
     g.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.5,0.2,-0.3,0.7,0.8,1.4,gr)); g.add(S(new THREE.SphereGeometry(0.12,6,5),sx*0.28,0.1,0.7,1.4,0.5,1.4,gr));
   }
-  g.scale.setScalar(1.22*RK); return g;
+  g.scale.setScalar(1.22*RKS); return g;
 }
 function makeShrimp(){
   const g = new THREE.Group(), pk = new THREE.MeshStandardMaterial({color:0xFFB08A, flatShading:true, roughness:0.6});
@@ -630,7 +633,7 @@ function makeShrimp(){
   g.add(S(new THREE.ConeGeometry(0.16,0.3,4).rotateX(-Math.PI/2),0,0.15,-0.82,1.4,1,1,pk));
   for(const sx of [-1,1]){ g.add(S(new THREE.SphereGeometry(0.08,8,6),sx*0.14,0.62,0.7,1,1,1,whiteM)); g.add(S(new THREE.SphereGeometry(0.04,6,5),sx*0.14,0.63,0.77,1,1,1,blackM));
     g.add(S(new THREE.CylinderGeometry(0.015,0.015,0.9,4).rotateX(Math.PI/2.4),sx*0.15,0.72,1.0,1,1,1,pk)); }
-  g.scale.setScalar(1.09*RK); return g;
+  g.scale.setScalar(1.09*RKS); return g;
 }
 const rockTops = [];
 function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r,0), new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.95}));
@@ -2546,6 +2549,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
   function eatShow(kind){
     busy = true; eatEl.className = 'rst'; void eatEl.offsetWidth; eatEl.className = '';
     const done = (ms)=>setTimeout(()=>{ eatEl.classList.remove('on'); setTimeout(()=>{ eatEl.className = ''; busy = false; }, 350); }, ms);
+    $('#eatTxt').textContent = kind==='berry' ? '香香甜甜，當餳人食' : '冰涼个仙草，快樂像神仙';
     if(kind==='berry'){ eatEl.classList.add('berry','eat','on'); done(2800); }
     else { eatEl.classList.add('jelly','sprig','on'); setTimeout(()=>{ eatEl.classList.remove('sprig'); eatEl.classList.add('eat'); }, 800); done(3600); }
   }
@@ -2781,8 +2785,8 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'河壩脣', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」橫跨在牛欄河上', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
   {n:'豬欄', say:'「豬欄」培育著神豬候選豬', mk:V(30.5,2.6,-9.0), cam:V(30.5,2.4,-3.0), tg:V(30.5,1.0,-12.6)},
-  {n:'仙草', say:'「仙草」開淡紫色的花，花穗長在莖的頂端；點花穗摘一枝試試', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
-  {n:'草莓', say:'「草莓」結紅色的果實，掛在葉叢邊；點紅果摘來食', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
+  {n:'仙草', say:'「仙草」（sienˋ coˊ）：桃竹苗个淺山地區種有仙草，像關西地方就當有名。點花穗摘一枝試試', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
+  {n:'草莓', say:'「草莓」（coˊ moi）：草莓色目靚，鼻起來香香甜甜，當餳人食。點紅果摘來食', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
   {n:'田脣', say:'「田」在島的北邊，這裡友善耕作，歡迎石虎', mk:V(12,1.6,-15.0), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
