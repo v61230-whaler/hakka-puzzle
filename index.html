@@ -875,7 +875,7 @@ const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields
   const cols = 12, w = 5.6, gap = 0.5, depth = 4.6;
   for(let r=0;r<2;r++) for(let c=0;c<cols;c++){
     const cx = -((cols*(w+gap))-gap)/2 + w/2 + c*(w+gap), cz = r===0 ? -19.6 : -25.2;
-    const ki = Math.floor(rnd()*4), k = kinds[ki], SP = (c<2 || c>=cols-2); /* 左 2 欄換仙草、右 2 欄換草莓（下方另畫）；亂數照舊消耗 */
+    const ki = Math.floor(rnd()*4), k = kinds[ki], SP = (c<4 || c>=cols-4); /* 左 4 欄換仙草、右 4 欄換草莓（下方另畫）；亂數照舊消耗 */
     const pd = new THREE.Mesh(new THREE.BoxGeometry(w*(0.96+rnd()*0.04), 0.1, depth*(0.94+rnd()*0.06)), hillMat(k.c)); pd.position.set(cx, 0.08, cz); if(!SP) scene.add(pd);
     const nx = 8, nz = 4;
     for(let i=0;i<nx;i++) for(let j=0;j<nz;j++){
@@ -895,7 +895,7 @@ const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields
   const unit = new THREE.SphereGeometry(1,7,5), cone = new THREE.ConeGeometry(1,1,6), cyl = new THREE.CylinderGeometry(1,1,1,6), berryG = new THREE.ConeGeometry(0.13,0.28,7).rotateX(Math.PI), leafG = new THREE.IcosahedronGeometry(1,0);
   /* 仙草田 */
   { const soil = [], stem = [], leaf = [], leaf2 = [], whorl = [], whorl2 = [], tip = [], clumps = [];
-    for(const cz of [-19.6,-25.2]) for(const c of [0,1]){
+    for(const cz of [-19.6,-25.2]) for(const c of [0,1,2,3]){
       const cx = colX(c), bed = new THREE.Mesh(new THREE.BoxGeometry(w*0.98,0.1,depth*0.97), hillMat(0xC9B27C)); bed.position.set(cx,0.08,cz); scene.add(bed);
       for(let i=0;i<6;i++) for(let j=0;j<4;j++){
         const px = cx - w/2 + 0.55 + i*(w-1.1)/5 + (sr()-0.5)*0.25, pz = cz - depth/2 + 0.6 + j*(depth-1.2)/3 + (sr()-0.5)*0.25, ry = sr()*3;
@@ -913,7 +913,7 @@ const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields
   }
   /* 草莓田：第一排前緣讓出 0.6 給水牛通道 */
   { const ridge = [], bush = [], berry = [], capL = [], petal = [], center = [];
-    for(const [cz,dp] of [[-19.9,4.0],[-25.2,4.6]]) for(const c of [cols-2,cols-1]){
+    for(const [cz,dp] of [[-19.9,4.0],[-25.2,4.6]]) for(const c of [cols-4,cols-3,cols-2,cols-1]){
       const cx = colX(c), bed = new THREE.Mesh(new THREE.BoxGeometry(w*0.98,0.1,dp*0.97), hillMat(0xA67C52)); bed.position.set(cx,0.08,cz); scene.add(bed);
       for(let j=0;j<3;j++){ const rz = cz - dp/2 + dp*(0.2+0.3*j);
         ridge.push(mk4(cx,0.17,rz,w*0.46,0.14,0.55,0));
@@ -929,7 +929,7 @@ const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields
   const ditch = new THREE.Mesh(new THREE.BoxGeometry(84,0.04,0.8), new THREE.MeshStandardMaterial({color:0x7EC8E0, roughness:0.35, flatShading:true})); ditch.position.set(0,0.14,-16.3); scene.add(ditch);
   /* 稻草人 */
   CROP.scarecrows = [];
-  for(const [sx,sz] of [[-10,-19.6],[19,-25.2]]){
+  for(const [sx,sz] of [[-5.5,-20.8],[3.5,-23.9]]){
     const g = new THREE.Group(), wood = mat(C.wood);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.2,6), wood); pole.position.y = 1.1; g.add(pole);
     const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.8,6).rotateZ(Math.PI/2), wood); arm.position.y = 1.6; g.add(arm);
@@ -1094,7 +1094,7 @@ let buffApi = null;
   pondTick.push((dt,t)=>{ egretTick(bwL,dt,t); egretTick(bwR,dt,t); });
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
-  const WP = [DRK, [34,6.6],[38,5],[38.2,-2],[38,-9],[37.3,-15.4],[34,-16.9],[28,-16.9],[23,-18.4],[19,-19.6],[8,-19.6],[-5,-19.6],[-17,-19.6],[-21.5,-20.3],[-23.7,-22.4],[-21.5,-24.6],[-17,-25.2],[-5,-25.2],[8,-25.2],[19,-25.2],[22.5,-24.4],[23.7,-22.4],[23.5,-19.2],[25.5,-16.9],[30,-16.9],[37,-16.2],[38.2,-9],[38.4,-2],[38,5],[34,6.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
+  const WP = [DRK, [34,6.6],[38,5],[38.2,-2],[38,-9],[37.3,-15.4],[34,-16.9],[28,-16.9],[17,-16.9],[12.2,-17.7],[10,-19.1],[7,-19.6],[-5,-19.6],[-9.3,-19.7],[-11.2,-20.6],[-11.8,-22.4],[-11.2,-24.2],[-9.3,-25.1],[-5,-25.2],[7,-25.2],[9.5,-25.0],[11.2,-24.0],[11.8,-22.4],[11.5,-20.2],[11.6,-18.5],[14,-17.2],[20,-16.9],[30,-16.9],[37,-16.2],[38.2,-9],[38.4,-2],[38,5],[34,6.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
   const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.3,0.45,0.6,0.75].map(f=>f*LL);
   const ease = x=>x*x*(3-2*x), bs = {yaw:Math.PI, wph:0, last:0, sp:0}, bm = {mode:'drink', tm:0, s:0, gi:0};
   const drinkRing = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); drinkRing.position.set(DRK.x,0.15,RZ+RRZ-0.2); scene.add(drinkRing);
@@ -2550,6 +2550,25 @@ renderer.domElement.addEventListener('pointermove', e=>{
     else { eatEl.classList.add('jelly','sprig','on'); setTimeout(()=>{ eatEl.classList.remove('sprig'); eatEl.classList.add('eat'); }, 800); done(3600); }
   }
   const hide = (parts,idx,per)=>{ for(const pt of parts){ for(let k=0;k<(per?pt.per:1);k++) pt.im.setMatrixAt((per?idx*pt.per:idx)+k, ZERO); pt.im.instanceMatrix.needsUpdate = true; } };
+  const findCrop = (cx,cy,r)=>{
+    const pxPer = (len,dist)=>len*r.height/(2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));
+    const scr = (pos)=>{ v.copy(pos).project(camera); return (v.z>1||v.z<-1) ? null : {x:r.left+(v.x+1)/2*r.width, y:r.top+(1-v.y)/2*r.height}; };
+    let best = null, bd = 1e9; const q = new THREE.Vector3();
+    if(CROP.berries) for(const b of CROP.berries){ if(b.st) continue; const dist = camera.position.distanceTo(b.pos); if(dist>30) continue; const sp = scr(b.pos); if(!sp) continue;
+      const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(26, pxPer(0.2,dist)*2.2); if(d<1 && d<bd){ bd = d; best = {kind:'berry', o:b}; } }
+    if(CROP.clumps) for(const c of CROP.clumps){ if(c.st) continue; q.set(c.x,0.85,c.z); const dist = camera.position.distanceTo(q); if(dist>30) continue; const sp = scr(q); if(!sp) continue;
+      const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(32, pxPer(0.6,dist)); if(d<1 && d<bd){ bd = d; best = {kind:'clump', o:c}; } }
+    return best;
+  };
+  /* 滑鼠移到可點的水牛、稻草人、果實、花穗上時，游標由手掌變成手指 */
+  el.addEventListener('pointermove', e=>{
+    if(e.buttons) return;
+    const r = el.getBoundingClientRect(); p2.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(p2, camera);
+    const hp = rc.intersectObjects(pickables,false)[0], hd = hp ? hp.distance : 1e9; let hot = false;
+    if(!reduce){ const hb = buffApi ? rc.intersectObjects(buffApi.groups,true)[0] : null, hs = rc.intersectObjects(CROP.scarecrows||[],true)[0]; hot = !!((hb && hb.distance<hd) || (hs && hs.distance<hd)); }
+    if(!hot && !hp && !busy) hot = !!findCrop(e.clientX, e.clientY, r);
+    if(hot) el.style.cursor = 'pointer';
+  });
   el.addEventListener('pointerdown', e=>{ dn = {x:e.clientX, y:e.clientY}; });
   el.addEventListener('pointerup', e=>{
     if(!dn || Math.hypot(e.clientX-dn.x, e.clientY-dn.y)>6){ dn = null; return; } dn = null;
@@ -2558,13 +2577,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
     if(buffApi && !reduce){ const hb = rc.intersectObjects(buffApi.groups,true)[0]; if(hb && hb.distance<hd){ let o = hb.object; while(o && !buffApi.groups.includes(o)) o = o.parent; if(o) buffApi.poke(o); return; } }
     if(!reduce && SCARE_OK()){ const hs = rc.intersectObjects(CROP.scarecrows||[],true)[0]; if(hs && hs.distance<hd){ let o = hs.object; while(o && !(CROP.scarecrows||[]).includes(o)) o = o.parent; if(o){ CROP.scare(o); return; } } }
     if(hp || busy) return;
-    const pxPer = (len,dist)=>len*r.height/(2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));
-    const scr = (pos)=>{ v.copy(pos).project(camera); return (v.z>1||v.z<-1) ? null : {x:r.left+(v.x+1)/2*r.width, y:r.top+(1-v.y)/2*r.height}; };
-    let best = null, bd = 1e9; const q = new THREE.Vector3();
-    if(CROP.berries) for(const b of CROP.berries){ if(b.st) continue; const dist = camera.position.distanceTo(b.pos); if(dist>30) continue; const sp = scr(b.pos); if(!sp) continue;
-      const d = Math.hypot(e.clientX-sp.x, e.clientY-sp.y)/Math.max(26, pxPer(0.2,dist)*2.2); if(d<1 && d<bd){ bd = d; best = {kind:'berry', o:b}; } }
-    if(CROP.clumps) for(const c of CROP.clumps){ if(c.st) continue; q.set(c.x,0.85,c.z); const dist = camera.position.distanceTo(q); if(dist>30) continue; const sp = scr(q); if(!sp) continue;
-      const d = Math.hypot(e.clientX-sp.x, e.clientY-sp.y)/Math.max(32, pxPer(0.6,dist)); if(d<1 && d<bd){ bd = d; best = {kind:'clump', o:c}; } }
+    const best = findCrop(e.clientX, e.clientY, r);
     if(!best) return;
     best.o.st = 1; best.o.t = 0;
     if(best.kind==='berry'){ hide(CROP.berryParts, best.o.i, false); eatShow('berry'); }
