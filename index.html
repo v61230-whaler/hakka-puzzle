@@ -574,6 +574,40 @@ function makeFish(col){
   for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
   f.scale.setScalar(1.09*RKS); return f;
 }
+/* 錦鯉（教師 2026-11-12：原本一點都不像）。頭朝 -x（模型前進方向），身體放樣成流線形、紅白斑塊、頭頂一點紅（丹頂）、背鰭、胸鰭、分岔尾鰭、嘴邊兩條鬚。
+   辭典有「紅金鯉」「鯉魚」（海陸 liˋ ng），例句「蓄在廟脣水池肚个紅金鯉」。i=0 紅白，i=1 紅金。 */
+function makeKoi(i){
+  const L = 1.9, N = 14, M = 12, f = u => Math.pow(Math.sin(Math.PI*Math.min(1,u*0.92+0.04)),0.7)*(1-0.55*u*u);
+  const pos = [], idx = [];
+  for(let a=0;a<=N;a++){ const u = a/N, x = -L/2+u*L, w = 0.30*f(u), h = 0.27*f(u);
+    for(let b=0;b<M;b++){ const th = b/M*Math.PI*2, sy = Math.sin(th); pos.push(x, h*sy*(sy<0?0.75:1), w*Math.cos(th)); } }
+  for(let a=0;a<N;a++) for(let b=0;b<M;b++){ const p = a*M+b, q = a*M+(b+1)%M; idx.push(p,p+M,q, q,p+M,q+M); }
+  pos.push(-L/2-0.02,0,0); const nose = pos.length/3-1; for(let b=0;b<M;b++) idx.push(nose,(b+1)%M,b);
+  let g = new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g = g.toNonIndexed();
+  const P = g.attributes.position, cols = new Float32Array(P.count*3), C = new THREE.Color();
+  const white = i?0xFFC93C:0xFFF6EC, red = i?0xF0501C:0xE8431F;
+  for(let v=0;v<P.count;v+=3){
+    const cx = (P.getX(v)+P.getX(v+1)+P.getX(v+2))/3, cy = (P.getY(v)+P.getY(v+1)+P.getY(v+2))/3, cz = (P.getZ(v)+P.getZ(v+1)+P.getZ(v+2))/3;
+    let red_ = false;
+    if(cy>0.02){
+      if(i===0) red_ = (Math.hypot(cx+0.62,cz)<0.17) || (cx>-0.35&&cx<0.05&&cz>-0.02) || (cx>0.3&&cx<0.62&&cz<0.05);
+      else red_ = !(cx>-0.1&&cx<0.18&&cz<-0.02) && !(cx>0.5&&cz>0.0);
+    } else if(i===1) red_ = cx>-0.5&&cx<0.4;
+    C.set(red_?red:white); for(let k2=0;k2<3;k2++){ cols[(v+k2)*3]=C.r; cols[(v+k2)*3+1]=C.g; cols[(v+k2)*3+2]=C.b; }
+  }
+  g.setAttribute('color',new THREE.BufferAttribute(cols,3)); g.computeVertexNormals();
+  const K = new THREE.Group(), body = new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.55})); K.add(body);
+  const finM = new THREE.MeshStandardMaterial({color:i?0xFFB347:0xFFE9DA,flatShading:true,roughness:0.6,side:THREE.DoubleSide,transparent:true,opacity:0.92});
+  const fin = (pts,rx)=>{ const sh = new THREE.Shape(); pts.forEach((q,n)=>n?sh.lineTo(q[0],q[1]):sh.moveTo(q[0],q[1])); const gg = new THREE.ShapeGeometry(sh); if(rx) gg.rotateX(rx); return new THREE.Mesh(gg,finM); };
+  const tail = new THREE.Group(); tail.position.set(L/2-0.06,0,0);
+  tail.add(fin([[0,0.04],[0.5,0.42],[0.34,0.02],[0.5,-0.42],[0,-0.04]],-Math.PI/2)); K.add(tail);
+  const dorsal = fin([[-0.22,0],[0.3,0],[0.2,0.3],[-0.05,0.28]],0); dorsal.position.set(0.0,0.2,0); K.add(dorsal);
+  const pecs = [];
+  for(const sx of [-1,1]){ const pc = new THREE.Group(); pc.position.set(-0.42,-0.04,sx*0.22); const fm = fin([[0,0],[0.36,sx*0.0+0.06],[0.14,0.26]],-Math.PI/2); fm.scale.z = sx; pc.add(fm); pc.rotation.y = -sx*0.5; K.add(pc); pecs.push(pc); }
+  for(const sx of [-1,1]){ K.add(S(new THREE.SphereGeometry(0.075,8,6),-L/2+0.2,0.12,sx*0.17,1,1,1,whiteM)); K.add(S(new THREE.SphereGeometry(0.04,6,5),-L/2+0.16,0.135,sx*0.2,1,1,1,blackM));
+    const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.2,4).rotateZ(Math.PI/2),finM); wh.position.set(-L/2-0.06,-0.04,sx*0.1); wh.rotation.y = sx*0.5; K.add(wh); }
+  K.scale.setScalar(1.05); K.userData = {tail, body, pecs}; return K;
+}
 function makeCrab(col=0xFF7B6B, sc=0.96){
   const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
   c.add(S(new THREE.SphereGeometry(0.5,12,8),0,0.3,0,1.3,0.6,0.95,red));
@@ -1011,12 +1045,12 @@ let buffApi = null;
   const RX = 30.5, RZ = 0.5, RRX = 4.2, RRZ = 3.4; /* 右池原在 (24,-3)；教師 2026-11-10 要求往右下移（讓出豬圈的位置）；南邊「狗狗集合」空地不動 */
   pond(RX, RZ, RRX, RRZ);
   for(let i=0;i<2;i++){
-    const k = new THREE.Group(), body = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,6), mat(i?0xFFFFFF:0xFF8A3D)); body.scale.set(1.9,0.55,0.8); k.add(body);
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.22,0.5,4).rotateZ(Math.PI/2), mat(i?0xFFB38A:0xFFD24D)); tail.position.x = -0.7; k.add(tail);
+    const k = makeKoi(i);
     k.position.y = 0.16; scene.add(k); FEED.koi.push(k);
     k.position.set(RX, 0.16, RZ); let fw = 0, yaw = 0;
     pondTick.push((dt,t)=>{ const a = t*(0.35+i*0.08)*(i?-1:1)+i*3, rx = RRX*0.6, rz = RRZ*0.6, m = FEED.pond[FEED.pond.length-1];
       fw += ((m?1:0)-fw)*Math.min(1,1.6*dt);
+      { const sp = 5.5+fw*5, U = k.userData; U.tail.rotation.y = Math.sin(t*sp+i*2)*0.55; U.body.rotation.y = Math.sin(t*sp+i*2-0.8)*0.07; U.pecs[0].rotation.x = Math.sin(t*3+i)*0.25; U.pecs[1].rotation.x = -Math.sin(t*3+i)*0.25; }
       let tx = RX+Math.cos(a)*rx, tz = RZ+Math.sin(a)*rz;
       if(m && fw>0.001){ const sa = t*2.4+i*Math.PI; tx += (m.x+Math.cos(sa)*0.5-tx)*fw; tz += (m.z+Math.sin(sa)*0.4-tz)*fw; }
       const vx = tx-k.position.x, vz = tz-k.position.z; if(dt>0 && Math.hypot(vx,vz)>0.001){ const ty = Math.atan2(-vz,vx)+Math.PI; yaw += ((ty-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI > 0 ? Math.min(6*dt, ((ty-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI) : Math.max(-6*dt, ((ty-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI); k.rotation.y = yaw; }
