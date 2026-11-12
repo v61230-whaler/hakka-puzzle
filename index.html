@@ -2019,6 +2019,15 @@ const DECOR = {
     /* Apple Studio Display 造型（教師 2026-11-12）：銀色鋁合金機身、細黑邊玻璃、頂端小鏡頭、傾斜的鋁製支架加扁平底座 */
     box(u, 1.5,0.96,0.07, 0xD3D6DA, 0,1.45,-0.25); box(u, 1.44,0.9,0.03, 0x14171C, 0,1.45,-0.205);
     box(u, 0.035,0.035,0.01, 0x3A4048, 0,1.86,-0.188);
+    { /* 背面中央的蘋果標誌（教師 2026-11-12）：用畫布畫成金屬灰的剪影，貼在機身背面，朝向 -z */
+      const lc = document.createElement('canvas'); lc.width = lc.height = 256; const lx = lc.getContext('2d');
+      lx.fillStyle = '#8D9298'; lx.beginPath();
+      lx.moveTo(128,86); lx.bezierCurveTo(112,70,70,66,56,106); lx.bezierCurveTo(44,146,70,208,98,216); lx.bezierCurveTo(112,220,120,210,128,210); lx.bezierCurveTo(136,210,146,220,160,216); lx.bezierCurveTo(176,212,196,184,202,164);
+      lx.bezierCurveTo(176,154,170,114,196,98); lx.bezierCurveTo(176,66,142,70,128,86); lx.fill();
+      lx.beginPath(); lx.moveTo(128,80); lx.bezierCurveTo(124,56,138,38,162,32); lx.bezierCurveTo(166,58,150,76,128,80); lx.fill();
+      const lt = new THREE.CanvasTexture(lc); lt.colorSpace = THREE.SRGBColorSpace; lt.anisotropy = 4;
+      const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.3), new THREE.MeshBasicMaterial({map:lt, transparent:true, side:THREE.DoubleSide}));
+      logo.position.set(0,1.47,-0.2865); logo.rotation.y = Math.PI; u.add(logo); }
     box(u, 0.44,0.5,0.035, 0xC9CCD1, 0,1.0,-0.34, {rx:0.13});
     box(u, 0.72,0.025,0.46, 0xBFC3C8, 0,0.7825,-0.27);
     const screen = new THREE.MeshStandardMaterial({color:0xBFE6FF, emissive:0x66B8FF, emissiveIntensity:0.55, flatShading:true});
