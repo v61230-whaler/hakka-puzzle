@@ -601,7 +601,7 @@ function makeKoi(i){
   for(const sx of [-1,1]){ const pc = new THREE.Group(); pc.position.set(-0.42,-0.04,sx*0.22); const fm = fin([[0,0],[0.36,sx*0.0+0.06],[0.14,0.26]],-Math.PI/2); fm.scale.z = sx; pc.add(fm); pc.rotation.y = -sx*0.5; K.add(pc); pecs.push(pc); }
   for(const sx of [-1,1]){ K.add(S(new THREE.SphereGeometry(0.075,8,6),-L/2+0.2,0.12,sx*0.17,1,1,1,whiteM)); K.add(S(new THREE.SphereGeometry(0.04,6,5),-L/2+0.16,0.135,sx*0.2,1,1,1,blackM));
     const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.2,4).rotateZ(Math.PI/2),finM); wh.position.set(-L/2-0.06,-0.04,sx*0.1); wh.rotation.y = sx*0.5; K.add(wh); }
-  K.scale.setScalar(1.05); K.userData = {tail, body, pecs}; return K;
+  K.scale.setScalar(1.05*0.7); K.userData = {tail, body, pecs}; return K;
 }
 function makeCrab(col=0xFF7B6B, sc=0.96){
   const c = new THREE.Group(), red = new THREE.MeshStandardMaterial({color:col, flatShading:true, roughness:0.6});
@@ -1043,11 +1043,11 @@ let buffApi = null;
     const k = makeKoi(i);
     k.position.y = 0.16; scene.add(k); FEED.koi.push(k);
     k.position.set(RX, 0.16, RZ); let fw = 0, yaw = 0;
-    pondTick.push((dt,t)=>{ const a = t*(0.35+i*0.08)*(i?-1:1)+i*3, rx = RRX*0.6, rz = RRZ*0.6, m = FEED.pond[FEED.pond.length-1];
+    pondTick.push((dt,t)=>{ const a = t*0.36+i*Math.PI, rx = RRX*(i?0.68:0.38), rz = RRZ*(i?0.68:0.38), m = FEED.pond[FEED.pond.length-1];
       fw += ((m?1:0)-fw)*Math.min(1,1.6*dt);
       { const sp = 5.5+fw*5, U = k.userData; U.tail.rotation.y = Math.sin(t*sp+i*2)*0.55; U.body.rotation.y = Math.sin(t*sp+i*2-0.8)*0.07; U.pecs[0].rotation.x = Math.sin(t*3+i)*0.25; U.pecs[1].rotation.x = -Math.sin(t*3+i)*0.25; }
       let tx = RX+Math.cos(a)*rx, tz = RZ+Math.sin(a)*rz;
-      if(m && fw>0.001){ const sa = t*2.4+i*Math.PI; tx += (m.x+Math.cos(sa)*0.5-tx)*fw; tz += (m.z+Math.sin(sa)*0.4-tz)*fw; }
+      if(m && fw>0.001){ const sa = t*2.0+i*Math.PI; const fr = 0.45+i*0.75; tx += (m.x+Math.cos(sa)*fr-tx)*fw; tz += (m.z+Math.sin(sa)*fr*0.8-tz)*fw; }
       const vx = tx-k.position.x, vz = tz-k.position.z; if(dt>0 && Math.hypot(vx,vz)>0.001){ const ty = Math.atan2(-vz,vx)+Math.PI; yaw += ((ty-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI > 0 ? Math.min(6*dt, ((ty-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI) : Math.max(-6*dt, ((ty-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI); k.rotation.y = yaw; }
       k.position.x = tx; k.position.z = tz; });
   }
