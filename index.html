@@ -2513,6 +2513,12 @@ renderer.domElement.addEventListener('pointermove', e=>{
   pondTick.push(dt=>{ for(const s of signs){ if(s.t>0){ s.t -= dt; const e = 2.4-s.t, k = e<0.25 ? 0.4+0.75*Math.sin(Math.PI/2*e/0.25) : (e<0.4 ? 1.15-0.15*(e-0.25)/0.15 : 1), fade = s.t<0.5 ? s.t/0.5 : 1, sc = 2.6*k;
       s.sp.visible = s.t>0; s.sp.material.opacity = fade; s.sp.scale.set(sc,sc,1); s.sp.position.set(s.cat.position.x, s.cat.position.y+s.cat.scale.x*0.95+1.0, s.cat.position.z); } else s.sp.visible = false; } });
 }
+/* 可投食的水面：右池（中心 30.5,0.5；教師 2026-11-10 搬家後這裡曾忘了跟著改）與牛欄河（橋上、橋頭不算）。滑鼠移過去變手指也用它 */
+function feedKindAt(x,z){
+  if(((x-30.5)/4.0)**2+((z-0.5)/3.2)**2 < 1) return 'pond';
+  const bf = bridgeFrame; if(bf){ const dx = x-bf.x, dz = z-bf.z, a = dx*bf.tx+dz*bf.tz, pp = dx*bf.tz-dz*bf.tx; if(Math.abs(a)<1.7 && Math.abs(pp)<8) return null; }
+  const nr = nearestRiver(x,z); return (nr.dist<3.3 && nr.u>0.03 && nr.u<0.97) ? 'river' : null;
+}
 /* Fish feeding: click water -> pellets fall, fish swim over, eat one by one, pellets vanish */
 {
   const el = renderer.domElement, rcF = new THREE.Raycaster(), pF = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0,1,0), -0.1), hit = new THREE.Vector3();
@@ -2529,8 +2535,9 @@ renderer.domElement.addEventListener('pointermove', e=>{
     const hb = rcF.intersectObjects(blockers, true)[0]; if(hb && hb.distance < d0-0.05) return;
     const bf = bridgeFrame; if(bf){ const dx = x-bf.x, dz = z-bf.z, a = dx*bf.tx+dz*bf.tz, p = dx*bf.tz-dz*bf.tx; if(Math.abs(a)<1.7 && Math.abs(p)<8) return; }
     let kind = null, u = 0, off = 0;
-    if(((x-24)/4.0)**2+((z+3)/3.2)**2 < 1) kind = 'pond';
-    else { const nr = nearestRiver(x,z); if(nr.dist<3.3 && nr.u>0.03 && nr.u<0.97){ kind = 'river'; u = nr.u; const p0 = riverPoint(u,0), q = riverPoint(u,1); off = (x-p0.x)*(q.x-p0.x)+(z-p0.z)*(q.z-p0.z); off = Math.max(-2.2,Math.min(2.2,off)); } }
+    const fk = feedKindAt(x,z);
+    if(fk==='pond') kind = 'pond';
+    else if(fk==='river'){ const nr = nearestRiver(x,z); { kind = 'river'; u = nr.u; const p0 = riverPoint(u,0), q = riverPoint(u,1); off = (x-p0.x)*(q.x-p0.x)+(z-p0.z)*(q.z-p0.z); off = Math.max(-2.2,Math.min(2.2,off)); } }
     if(!kind) return;
     const list = FEED[kind]; while(list.length>=2){ const o = list.shift(); o.dead = true; }
     const m = {kind, x, z, u, off, age:0, eatT:0, pel:[], dead:false}; 
@@ -2612,13 +2619,19 @@ renderer.domElement.addEventListener('pointermove', e=>{
       const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(32, pxPer(0.6,dist)); if(d<1 && d<bd){ bd = d; best = {kind:'clump', o:c}; } }
     return best;
   };
+  const wPl = new THREE.Plane(new THREE.Vector3(0,1,0), -0.1), wHit = new THREE.Vector3();
   /* 滑鼠移到可點的水牛、稻草人、果實、花穗上時，游標由手掌變成手指 */
   el.addEventListener('pointermove', e=>{
     if(e.buttons) return;
     const r = el.getBoundingClientRect(); p2.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(p2, camera);
     const hp = rc.intersectObjects(pickables,false)[0], hd = hp ? hp.distance : 1e9; let hot = false;
     if(!reduce){ const hb = buffApi ? rc.intersectObjects(buffApi.groups,true)[0] : null, hs = rc.intersectObjects(CROP.scarecrows||[],true)[0]; hot = !!((hb && hb.distance<hd) || (hs && hs.distance<hd)); }
+    if(!hot && pigApi && !reduce){ const hg = rc.intersectObjects(pigApi.groups,true)[0]; hot = !!(hg && hg.distance<hd); }
     if(!hot && !hp && !busy) hot = !!findCrop(e.clientX, e.clientY, r);
+    if(!hot && !hp && el.style.cursor!=='grabbing' && el.style.cursor!=='ew-resize' && rc.ray.intersectPlane(wPl, wHit) && feedKindAt(wHit.x, wHit.z)){
+      const bl = [...pickables, ...damPickables, ...crabPickables, ...chase.cats, chase.mouse, chase.mouse2, ...(dogApi ? dogApi.groups : []), ...(pigApi ? pigApi.groups : [])];
+      const hb2 = rc.intersectObjects(bl, true)[0]; hot = !(hb2 && hb2.distance < rc.ray.origin.distanceTo(wHit)-0.05);
+    }
     if(hot) el.style.cursor = 'pointer';
   });
   el.addEventListener('pointerdown', e=>{ dn = {x:e.clientX, y:e.clientY}; });
