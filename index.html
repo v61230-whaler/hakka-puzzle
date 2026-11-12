@@ -574,8 +574,8 @@ function makeFish(col){
   for(const sx of [-1,1]){ f.add(S(new THREE.SphereGeometry(0.13,8,6),sx*0.27,0.5,0.55,1,1,1,whiteM)); f.add(S(new THREE.SphereGeometry(0.07,6,5),sx*0.3,0.5,0.66,1,1,1,blackM)); }
   f.scale.setScalar(1.09*RKS); return f;
 }
-/* 錦鯉（教師 2026-11-12：原本一點都不像）。頭朝 -x（模型前進方向），身體放樣成流線形、紅白斑塊、頭頂一點紅（丹頂）、背鰭、胸鰭、分岔尾鰭、嘴邊兩條鬚。
-   辭典有「紅金鯉」「鯉魚」（海陸 liˋ ng），例句「蓄在廟脣水池肚个紅金鯉」。i=0 紅白，i=1 紅金。 */
+/* 紅金鯉（教師 2026-11-12：原本一點都不像）。頭朝 -x（模型前進方向），身體放樣成流線形、紅白斑塊、頭頂一點紅（丹頂）、背鰭、胸鰭、分岔尾鰭、嘴邊兩條鬚。
+   辭典有「紅金鯉」「鯉魚」（海陸 liˋ ng），例句「蓄在廟脣水池肚个紅金鯉」。兩尾都是純紅（辭典釋義「紅色的鯉魚」，教師 2026-11-12 指出紅金鯉不是錦鯉）。 */
 function makeKoi(i){
   const L = 1.9, N = 14, M = 12, f = u => Math.pow(Math.sin(Math.PI*Math.min(1,u*0.92+0.04)),0.7)*(1-0.55*u*u);
   const pos = [], idx = [];
@@ -585,19 +585,14 @@ function makeKoi(i){
   pos.push(-L/2-0.02,0,0); const nose = pos.length/3-1; for(let b=0;b<M;b++) idx.push(nose,(b+1)%M,b);
   let g = new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g = g.toNonIndexed();
   const P = g.attributes.position, cols = new Float32Array(P.count*3), C = new THREE.Color();
-  const white = i?0xFFC93C:0xFFF6EC, red = i?0xF0501C:0xE8431F;
+  const body_ = i?0xE23A18:0xEE4B1E, belly = i?0xF2812F:0xF6A04A;
   for(let v=0;v<P.count;v+=3){
-    const cx = (P.getX(v)+P.getX(v+1)+P.getX(v+2))/3, cy = (P.getY(v)+P.getY(v+1)+P.getY(v+2))/3, cz = (P.getZ(v)+P.getZ(v+1)+P.getZ(v+2))/3;
-    let red_ = false;
-    if(cy>0.02){
-      if(i===0) red_ = (Math.hypot(cx+0.62,cz)<0.17) || (cx>-0.35&&cx<0.05&&cz>-0.02) || (cx>0.3&&cx<0.62&&cz<0.05);
-      else red_ = !(cx>-0.1&&cx<0.18&&cz<-0.02) && !(cx>0.5&&cz>0.0);
-    } else if(i===1) red_ = cx>-0.5&&cx<0.4;
-    C.set(red_?red:white); for(let k2=0;k2<3;k2++){ cols[(v+k2)*3]=C.r; cols[(v+k2)*3+1]=C.g; cols[(v+k2)*3+2]=C.b; }
+    const cy = (P.getY(v)+P.getY(v+1)+P.getY(v+2))/3;
+    C.set(cy>-0.02?body_:belly); for(let k2=0;k2<3;k2++){ cols[(v+k2)*3]=C.r; cols[(v+k2)*3+1]=C.g; cols[(v+k2)*3+2]=C.b; }
   }
   g.setAttribute('color',new THREE.BufferAttribute(cols,3)); g.computeVertexNormals();
   const K = new THREE.Group(), body = new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.55})); K.add(body);
-  const finM = new THREE.MeshStandardMaterial({color:i?0xFFB347:0xFFE9DA,flatShading:true,roughness:0.6,side:THREE.DoubleSide,transparent:true,opacity:0.92});
+  const finM = new THREE.MeshStandardMaterial({color:i?0xF07A2A:0xF58A4B,flatShading:true,roughness:0.6,side:THREE.DoubleSide,transparent:true,opacity:0.92});
   const fin = (pts,rx)=>{ const sh = new THREE.Shape(); pts.forEach((q,n)=>n?sh.lineTo(q[0],q[1]):sh.moveTo(q[0],q[1])); const gg = new THREE.ShapeGeometry(sh); if(rx) gg.rotateX(rx); return new THREE.Mesh(gg,finM); };
   const tail = new THREE.Group(); tail.position.set(L/2-0.06,0,0);
   tail.add(fin([[0,0.04],[0.5,0.42],[0.34,0.02],[0.5,-0.42],[0,-0.04]],-Math.PI/2)); K.add(tail);
@@ -2741,7 +2736,7 @@ const DOG_SPOTS = [
   {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
   {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'', u:''},
   {n:'東安橋', say:'「東安橋」橫跨在牛欄河上', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
-  {n:'陂塘', say:'「陂塘」裡有魚在游', st:()=>V3(23,-1.5), lk:()=>V3(30.5,0.5), ly:0.5, photo:'', u:''},
+  {n:'陂塘', say:'蓄在埤塘肚个紅金鯉，看起來又大又靚', st:()=>V3(23,-1.5), lk:()=>V3(30.5,0.5), ly:0.5, photo:'', u:''},
   {n:'田', say:'「田」在北邊，這裡友善耕作，歡迎石虎', st:()=>V3(22.5,-13.4), lk:()=>V3(10,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
   {n:'半山區', say:'「半山區」在後面，一座座山丘', st:()=>V3(19,-32.5), lk:()=>V3(10,-54), ly:6.0, photo:'', u:''},
@@ -2834,7 +2829,7 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   const at = (p,y)=>V(p.x,y,p.z);
   return [
   {n:'台三線', say:'「遠方來个朋友」走的就是台三線：從前是防禦邊界（土牛溝、隘勇線），也是樟腦與茶葉的產業走廊。客家庄沿著丘陵與平原交界開墾，自然的地理走廊，就成了今日的台三線。', mk:at(rp(0.42,10.2),1.8), cam:at(rp(0.27,12.5),2.2), tg:at(rp(0.45,10.2),0.4)},
-  {n:'陂塘', say:'「陂塘」裡有魚在游', mk:V(30.5,1.8,0.5), cam:V(30.5,2.3,10.5), tg:V(30.5,0.7,0.5)},
+  {n:'陂塘', say:'蓄在埤塘肚个紅金鯉，看起來又大又靚', mk:V(30.5,1.8,0.5), cam:V(30.5,2.3,10.5), tg:V(30.5,0.7,0.5)},
   {n:'水車', say:'「水車」把池水送到稻田去', mk:V(-24,3.3,-9.1), cam:V(-17,3.2,-0.5), tg:V(-24,1.4,-9)},
   {n:'河壩脣', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」橫跨在牛欄河上', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
