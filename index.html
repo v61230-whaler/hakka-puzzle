@@ -42,6 +42,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tag.spot{padding:3px 11px 3px 8px;gap:5px;background:#1B7F6B;color:#fff;border-color:#fff}
 .tag.spot::before{content:'';width:9px;height:9px;border-radius:50%;background:#fff;flex:none}
 .tag.spot b{font-size:13px;color:#fff}
+.tag.spot.lead::before{background:#FF2B2B;width:10px;height:10px;animation:dogblink 1s infinite}
 .tag.spot.on{border-color:var(--persimmon);background:#146654}
 .mkit{display:inline-block;margin:2px 10px 2px 0;white-space:nowrap}
 .mkp{font-size:.82em;opacity:.75}
@@ -2918,7 +2919,7 @@ function dogSay(txt, sp){
   $tourCap.innerHTML = h; $tourCap.hidden = !txt;
 }
 let dogTour = null, pendingLimits = null;
-const dogLead = (()=>{ const g = new THREE.Group(); g.visible = false; scene.add(g); const el = makeLabel('', 'tag spot on', 1.9, g, ()=>{}); return {g, el}; })(); /* 開場時浮在帶路狗頭上的名牌 */
+const dogLead = (()=>{ const g = new THREE.Group(); g.visible = false; scene.add(g); const el = makeLabel('', 'tag spot on lead', 1.9, g, ()=>{}); return {g, el}; })(); /* 開場時浮在帶路狗頭上的名牌 */
 function dogTourStart(){
   if(reduce || !dogApi || !dogApi.tourAcquire) return;
   const d = dogApi.tourAcquire(); if(!d) return;
@@ -2935,7 +2936,7 @@ function dogTourStart(){
   { const gy = d.gy||0, fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
     flyTo(new THREE.Vector3(d.x+fx*4.6+fz*1.6, gy+d.eyeH*4.2, d.z+fz*4.6-fx*1.6), new THREE.Vector3(d.x, gy+d.eyeH*0.5, d.z)); }
   dogSay(`這次由「${DOG_NAMES[d.idx]}」帶路`);
-  dogLead.el.innerHTML = `<b>▼ ${DOG_NAMES[d.idx]}帶路</b>`; dogLead.g.position.set(d.x, d.gy||0, d.z); dogLead.g.visible = true;
+  dogLead.el.innerHTML = `<b>${DOG_NAMES[d.idx]}帶路</b>`; dogLead.g.position.set(d.x, d.gy||0, d.z); dogLead.g.visible = true;
 }
 function dogTourStop(){
   if(!dogTour) return;
