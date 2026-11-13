@@ -55,8 +55,12 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .pin:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
 .tools{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));top:12px;display:flex;gap:6px;flex-wrap:wrap}
-.tools button{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
-.tools button[aria-pressed="true"]{background:var(--indigo);color:var(--card);border-color:var(--indigo)}
+.tools button{display:inline-flex;align-items:center;gap:6px;font:700 13px/1 var(--f-body);color:#fff;background:var(--c);border:2px solid #fff;border-radius:999px;padding:8px 14px 8px 11px;cursor:pointer;box-shadow:0 3px 0 rgba(20,30,50,.28)}
+.tools button svg{width:15px;height:15px;flex:none;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tools button svg .f{fill:#fff;stroke:none}
+.tools button:hover{filter:brightness(1.08)}
+.tools button[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 5px var(--c)} /* 目前所在的模式：外面多一圈同色框 */
+#btnLinks{--c:#6B5BD2}#btnReset{--c:#2F6FD6}#btnTour{--c:#C4521D}#btnDog{--c:#1F8A5B}
 .tools button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 /* 摘草莓、仙草凍：摘下後畫面中央跳出嘴巴把它吃掉，3 秒後消失 */
 #eat{position:absolute;left:50%;top:42%;width:min(300px,68vw);transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;z-index:3000000;transition:opacity .25s,transform .25s}
@@ -169,10 +173,10 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
 <div id="app">
   <div id="stage" aria-label="課程拼圖 3D 地圖：中間是教室主地塊，周圍七個單元地塊；完整內容請用右側清單">
     <div class="tools">
-      <button id="btnLinks" type="button" aria-pressed="false">關聯線</button>
-      <button id="btnReset" type="button" aria-pressed="true">回到全景</button>
-      <button id="btnTour" type="button" aria-pressed="false">探險隊</button>
-      <button id="btnDog" type="button" aria-pressed="false">狗狗視角</button>
+      <button id="btnLinks" type="button" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="3" r="2"/><circle cx="13" cy="13" r="2"/><path d="M5 7.2L11 4M5 8.8L11 12"/></svg>關聯線</button>
+      <button id="btnReset" type="button" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 13.5V7.2L8 2.8l5 4.4v6.3"/></svg>回到全景</button>
+      <button id="btnTour" type="button" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M10.6 5.4L9 9 5.4 10.6 7 7z"/></svg>探險隊</button>
+      <button id="btnDog" type="button" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle class="f" cx="3.6" cy="6.4" r="1.5"/><circle class="f" cx="6.8" cy="3.8" r="1.5"/><circle class="f" cx="10.4" cy="3.8" r="1.5"/><circle class="f" cx="13.2" cy="6.4" r="1.5"/><path class="f" d="M4.6 12.2c0-2.3 1.7-3.8 3.4-3.8s3.4 1.5 3.4 3.8c0 1.7-1.5 1.9-3.4 1.9s-3.4-.2-3.4-1.9z"/></svg>狗狗視角</button>
     </div>
     <div class="dogcam" id="dogCam" hidden>狗狗視角</div>
     <div class="dogfade" id="dogFade"></div>
@@ -2899,7 +2903,7 @@ const V3 = (x,z)=>new THREE.Vector3(x,0,z);
 const DOG_SPOTS = [
   {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
   {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'', u:''},
-  {n:'東安橋', say:'「東安橋」𨃰過牛欄河。北埔「墩仔糯米橋」（雙安橋）係咸豐元年（1851）建造个，先民用糯米、烏糖摎泥土，一隻一隻磚仔黏起來；橋面還有圳溝，做得過水蔭田。', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
+  {n:'東安橋', say:'「東安橋」係五孔石砌拱橋，架在牛欄河頂。北埔「墩仔糯米橋」（雙安橋）係咸豐元年（1851）建造个，先民用糯米、烏糖摎泥土，一隻一隻磚仔黏起來。', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
   {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', st:()=>V3(23,-1.5), lk:()=>V3(30.5,0.5), ly:0.5, photo:'', u:''},
   {n:'田', say:'「田」在北邊，這裡友善耕作，歡迎石虎', st:()=>V3(22.5,-13.4), lk:()=>V3(10,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
@@ -2996,7 +3000,7 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', mk:V(30.5,1.8,0.5), cam:V(30.5,2.3,10.5), tg:V(30.5,0.7,0.5)},
   {n:'水車', say:'「水車」摎陂塘个水送去田坵蔭田。陂塘囤水，除了蔭田，還做得畜魚仔', mk:V(-33,3.3,-9.1), cam:V(-25,3.2,0.5), tg:V(-33,1.4,-9)},
   {n:'河壩脣', say:'「牛欄河」个河壩脣有毛蟹、𧊅仔摎魚仔', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
-  {n:'橋頭', say:'「東安橋」𨃰過牛欄河。北埔「墩仔糯米橋」（雙安橋）係咸豐元年（1851）建造个，先民用糯米、烏糖摎泥土，一隻一隻磚仔黏起來；橋面還有圳溝，做得過水蔭田。', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
+  {n:'橋頭', say:'「東安橋」係五孔石砌拱橋，架在牛欄河頂。北埔「墩仔糯米橋」（雙安橋）係咸豐元年（1851）建造个，先民用糯米、烏糖摎泥土，一隻一隻磚仔黏起來。', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
   {n:'豬欄', say:'「豬欄」培育著神豬候選豬', mk:V(30.5,2.6,-9.0), cam:V(30.5,2.4,-3.0), tg:V(30.5,1.0,-12.6)},
   {n:'仙草', say:'桃竹苗个淺山地區種有仙草，像關西就當有名。', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
   {n:'草莓', say:'草莓色目靚，鼻起來香香甜甜，當餳人食。', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
