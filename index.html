@@ -43,6 +43,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tag.spot::before{content:'';width:9px;height:9px;border-radius:50%;background:#fff;flex:none}
 .tag.spot b{font-size:13px;color:#fff}
 .tag.spot.on{border-color:var(--persimmon);background:#146654}
+.mkit{display:inline-block;margin:2px 10px 2px 0;white-space:nowrap}
+.mkp{font-size:.82em;opacity:.75}
 #stage.spotview .tag{display:none}
 .spotback{margin-left:8px;font:inherit;border:2px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:2px 12px;cursor:pointer}
 .pin{pointer-events:auto;font:500 12px/1.2 var(--f-body);background:var(--persimmon);color:#fff;border:0;border-radius:999px;padding:3px 7px;cursor:pointer;white-space:nowrap}
@@ -232,7 +234,7 @@ const UNITS = [
     desc:'從身邊的客家開始：老屋、地方小招牌、客家人物與地方色彩。先知道客家在哪裡，才知道為什麼要學。',
     links:[{t:'1 客家摎𠊎・客家力',u:page('1-客家摎')},{t:'3-2 客家專題',u:page('3-客家摎你/3-2-客家專題')}],
     reading:true },
-  { id:'u2', no:'二', w:'What', title:'客語拼音', pos:[5.1,8.9], r:3.9, tiers:2, decor:'board',
+  { id:'u2', no:'二', w:'How', title:'客語拼音', pos:[5.1,8.9], r:3.9, tiers:2, decor:'board',
     q:'客語怎麼寫、怎麼讀？',
     desc:'學會海陸腔拼音，能看、能讀、能標音。聽力遊戲以課程主題進行，用 padlet、wordwall、Slido 練習字詞標音。',
     links:[{t:'4-1 拼音',u:page('4-教室/4-1-拼音')}],
@@ -242,8 +244,8 @@ const UNITS = [
     desc:'每一課都有發生的地方。用地圖走讀課文：新埔的柿餅、關西的書院、竹田的藍衫、卓蘭的石虎、新屋的海洋客家。',
     links:[{t:'2 仰般上課・Padlet 課程地圖',u:page('2-仰般上課')}],
     lessons:true },
-  { id:'u4', no:'四', w:'How', title:'客語 AI 應用', pos:[10.3,0], r:3.9, tiers:2, decor:'tower',
-    q:'怎麼用 AI 幫手學客語？',
+  { id:'u4', no:'四', w:'What', title:'客語 AI 應用', pos:[10.3,0], r:3.9, tiers:2, decor:'tower',
+    q:'客語 AI 是什麼、能做什麼？',
     desc:'用客語小幫手與 AI 客語翻譯完成期末報告，同時學會檢查 AI 的翻譯對不對。',
     links:[{t:'4-2 AI摎客家',u:page('4-教室/4-2-ai摎客家')},{t:'4-3 期末報告',u:page('4-教室/4-3-期末報告')}],
     score:'期末報告占總成績 15%' },
@@ -900,7 +902,7 @@ function grove(cx, cz, n, radius){
     const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
     if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
     placed.push([x,z]); const tr = groundTree(x,z,1.3+rnd()*0.9);
-    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5)){ scene.remove(tr); treeSpots.pop(); } /* 豬圈、右池塘與水牛東側通道的空地：樹照常產生（亂數不變）再拿掉 */
+    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5) || (x>-30.8&&x<-16.8&&z>0&&z<12.5) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17)){ scene.remove(tr); treeSpots.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
   }
 }
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
@@ -997,7 +999,7 @@ let buffApi = null;
     return w;
   }
   /* 左邊池塘 + 水車 + 引水槽 */
-  const LX = -24, LZ = -5, LRX = 6, LRZ = 5;
+  const LX = -33, LZ = -5, LRX = 6, LRZ = 5; /* 教師 2026-11-13：左池連同水車、水牛、引水槽整組往西（外側）移 9 單位（原 LX=-24），讓出空間給客家市集 */
   pond(LX, LZ, LRX, LRZ);
   /* 進水渠：從牛欄河筆直引水到左池前緣，池水才不會乾；渠裡的水往池塘流 */
   const rpt = riverCurve.getPoints(600).reduce((b,q)=>Math.abs(q.x-LX)<Math.abs(b.x-LX)?q:b), chZ0 = LZ+LRZ-0.3, chZ1 = rpt.z-2.5, chL = chZ1-chZ0;
@@ -1325,6 +1327,132 @@ let pigApi = null;
     for(const s of sparks){ if(s.t>0){ s.t -= dt; s.m.position.x += s.vx*dt; s.m.position.y += s.vy*dt; s.m.position.z += s.vz*dt; s.vy -= 2.2*dt; s.m.material.opacity = Math.min(1,s.t/0.5); if(s.t<=0) s.m.visible = false; } }
   });
 })();
+/* ── 客家市集（教師 2026-11-13）：島左側的空地，粄條攤、粄攤、青菜攤各一，另留一個空攤位給之後的客家美食；不放聲音、不放會動的人，只有蒸氣與微動。
+   攤名與品名都查過教育部臺灣客語辭典（海陸腔）：粄條 banˊ tiau、粄 banˊ、粢粑 ci baˋ（對應麻糬）、紅粄 fung banˊ、艾粄 ngieˇ banˊ、發粄 fad banˊ、菜包 coiˇ bauˋ、
+   青菜 ciangˋ coiˇ（蔬菜）、蕹菜 vungˇ coiˇ（空心菜）、高麗菜 goˋ li coiˇ、角菜 gog coiˇ（菠菜）、苦蕒 fuˊ mag（萵苣類）、白菜 pagˋ coiˇ（小白菜）、芥菜 gaiˇ coiˇ、苦瓜 fuˊ guaˋ、菜瓜 coiˇ guaˋ（絲瓜） ── */
+(function market(){
+  const SX = -29.1, ZS = [1.9,5.6,9.3], W = 3.2, D = 2.8, FY = 0.07; /* 教師 2026-11-13：三攤改縱向排成一列，背靠引水渠（x≈-33），面向東（島）；東邊的鋪面留空，有一個標好的空攤位 */
+  const wood = mat(0xB98B5A), woodL = mat(0xEED9B0), skinM = mat(0xF5CBA7), hairM = mat(0x2B2B30), eyeM = mat(0x222222);
+  const box = (w,h,d,m,x,y,z,par)=>{ const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m); o.position.set(x,y,z); (par||scene).add(o); return o; };
+  const cylM = (rt,rb,h,m,x,y,z,par,seg=8)=>{ const o = new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m); o.position.set(x,y,z); (par||scene).add(o); return o; };
+  const ball = (r,col,x,y,z,sx,sy,sz,par,det=1)=>{ const o = new THREE.Mesh(new THREE.IcosahedronGeometry(r,det), mat(col)); o.position.set(x,y,z); o.scale.set(sx||1,sy||1,sz||1); (par||scene).add(o); return o; };
+  /* 廣場：淺米色石板，外圈略深 */
+  box(13.0,0.05,12.0,mat(0xD8C7A2),-24.3,0.025,6.0); box(12.5,0.06,11.4,mat(0xEFE3C8),-24.3,0.04,6.0);
+  /* 畫在平面上的字牌（沿用其他地方的做法：字型載入後重畫） */
+  const rr = (x,a,b,w,h,r)=>{ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); };
+  const FONT = px=>`bold ${px}px Huninn, "Noto Sans TC", sans-serif`;
+  const sign = (w,h,main,sub,bg,fg)=>{
+    const cw = 512, ch = Math.round(512*h/w), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const x = cv.getContext('2d');
+    const draw = ()=>{ x.clearRect(0,0,cw,ch); x.fillStyle = bg; rr(x,0,0,cw,ch,ch*0.16); x.fill(); x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.font = FONT(sub ? ch*0.56 : ch*0.62); x.fillText(main, cw/2, sub ? ch*0.4 : ch*0.52); if(sub){ x.font = FONT(ch*0.22); x.fillText(sub, cw/2, ch*0.82); } };
+    draw(); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.needsUpdate = true;
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ draw(); tex.needsUpdate = true; });
+    return new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({map:tex, transparent:true}));
+  };
+  /* 蒸氣：幾顆白色小球往上飄、變大、變淡 */
+  const puffs = [];
+  const steam = (par,x,y,z,n,sc)=>{ for(let i=0;i<n;i++){ const m = new THREE.Mesh(new THREE.SphereGeometry(0.16*sc,8,6), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); par.add(m); puffs.push({m,x,y,z,ph:i/n,sc}); } };
+  pondTick.push((dt,t)=>{ for(const p of puffs){ const f = (t*0.35+p.ph)%1; p.m.position.set(p.x+Math.sin(t*1.3+p.ph*6)*0.08, p.y+f*1.1*p.sc, p.z); p.m.scale.setScalar(0.7+f*1.1); p.m.material.opacity = Math.sin(Math.PI*f)*0.55; } });
+  /* 小人：攤販、客人（靜態，只有手臂與頭微動） */
+  const movers = [];
+  function person(o){
+    const g = new THREE.Group(), dy = o.sit ? -0.58 : 0, b = new THREE.Group(); b.position.y = dy; g.add(b);
+    if(!o.sit) for(const s of [-1,1]) cylM(0.1,0.11,0.58,mat(o.pants||0x4A5A78),s*0.12,0.3,0,b,6);
+    else for(const s of [-1,1]){ const th = cylM(0.1,0.1,0.45,mat(o.pants||0x4A5A78),s*0.12,0.64,0.22,b,6); th.rotation.x = Math.PI/2; cylM(0.09,0.08,0.48,mat(o.pants||0x4A5A78),s*0.12,0.4,0.45,b,6); }
+    cylM(0.24,0.3,0.7,mat(o.shirt),0,0.93,0,b);
+    if(o.apron) box(0.4,0.5,0.04,mat(o.apron),0,0.85,0.27,b);
+    const head = new THREE.Group(); head.position.set(0,1.46,0); b.add(head);
+    head.add(new THREE.Mesh(new THREE.SphereGeometry(0.21,10,8), skinM));
+    for(const s of [-1,1]){ const e = new THREE.Mesh(new THREE.SphereGeometry(0.025,6,5), eyeM); e.position.set(s*0.075,0.02,0.185); head.add(e); }
+    if(o.hat==='cap'){ cylM(0.23,0.23,0.1,mat(0xFFFFFF),0,0.2,0,head,10); cylM(0.2,0.23,0.14,mat(0xFFFFFF),0,0.28,0,head,10); }
+    else if(o.hat==='straw'){ cylM(0.46,0.46,0.04,mat(0xE9CC84),0,0.17,0,head,12); const d = new THREE.Mesh(new THREE.SphereGeometry(0.22,10,6,0,Math.PI*2,0,Math.PI/2), mat(0xE9CC84)); d.position.y = 0.17; head.add(d); }
+    else { const h = new THREE.Mesh(new THREE.SphereGeometry(0.225,10,6,0,Math.PI*2,0,Math.PI*0.55), hairM); h.position.set(0,0.03,-0.02); head.add(h); }
+    const arms = [-1,1].map(s=>{ const a = new THREE.Group(); a.position.set(s*0.33,1.2,0); a.rotation.z = s*0.25; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.065,0.55,6).translate(0,-0.275,0), mat(o.shirt)); a.add(l); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.075,6,5), skinM); hd.position.y = -0.58; a.add(hd); b.add(a); return a; });
+    if(o.arm){ movers.push((t)=>{ arms[1].rotation.x = -0.9+Math.sin(t*2.2+o.ph)*0.35; arms[1].rotation.z = -0.25; }); }
+    movers.push((t)=>{ head.rotation.y = Math.sin(t*0.5+(o.ph||0))*0.3; });
+    return g;
+  }
+  pondTick.push((dt,t)=>{ for(const f of movers) f(t); });
+  /* 攤位骨架：四根柱子、後板、櫃台、紅白（或各色）條紋遮陽棚、立在棚後的字牌 */
+  function stall(zc,o){
+    const g = new THREE.Group(); g.position.set(SX,FY,zc); g.rotation.y = Math.PI/2; scene.add(g);
+    for(const sx of [-1,1]) for(const sz of [-1,1]) cylM(0.07,0.08,sz<0?3.7:2.7,wood,sx*(W/2-0.1),sz<0?1.85:1.35,sz*(D/2-0.1),g,6);
+    box(W-0.1,1.5,0.08,mat(o.back||0xFFF3DC),0,1.05,-D/2+0.1,g);
+    box(W-0.3,0.9,0.95,mat(o.counter),0,0.45,0.75,g); box(W-0.1,0.07,1.1,woodL,0,0.935,0.75,g);
+    const n = 8, sw = W/n, sl = 0.13;
+    for(let i=0;i<n;i++){ const c = i%2 ? 0xFFFFFF : o.awn, x = -W/2+sw*(i+0.5);
+      const s = box(sw,0.05,2.6,mat(c),x,2.65,0.35,g); s.rotation.x = sl; box(sw,0.28,0.04,mat(c),x,2.48-0.14,1.63,g); }
+    box(2.45,1.0,0.06,wood,0,3.2,-0.79,g); for(const sx of [-1,1]) cylM(0.05,0.05,1.1,wood,sx*1.2,3.1,-0.75,g,6);
+    const sg = sign(2.3,0.82,o.name,o.pin,o.signBg,o.signFg); sg.position.set(0,3.2,-0.75); g.add(sg);
+    /* 南側也掛一面（從預設的南邊視角才看得到）：板面朝本地 -x（世界的南） */
+    const sg2 = sign(2.3,0.82,o.name,o.pin,o.signBg,o.signFg); sg2.position.set(-W/2-0.06,3.2,0); sg2.rotation.y = -Math.PI/2; g.add(sg2); box(0.06,1.0,2.45,wood,-W/2-0.02,3.2,0,g); for(const sz of [-1,1]) cylM(0.05,0.05,1.1,wood,-W/2,3.1,sz*1.1,g,6);
+    return g;
+  }
+  /* ① 粄條攤：大鍋、碗、曬著的寬粄條 */
+  { const g = stall(ZS[0],{name:'粄條',pin:'banˊ tiau',awn:0xE8574A,counter:0xD9A774,signBg:'#E8574A',signFg:'#FFFFFF'});
+    cylM(0.5,0.45,0.5,mat(0x9AA3AD),-0.8,1.22,0.6,g,12); cylM(0.42,0.42,0.02,mat(0xF1E3BD),-0.8,1.47,0.6,g,12);
+    { const rimM = new THREE.Mesh(new THREE.TorusGeometry(0.5,0.04,6,16).rotateX(Math.PI/2), mat(0x7E8791)); rimM.position.set(-0.8,1.47,0.6); g.add(rimM); }
+    for(let i=0;i<5;i++) box(0.32,0.012,0.045,mat(0xFFF8E3),-0.9+i*0.05,1.485+i*0.004,0.55+i*0.04,g).rotation.y = i*0.6;
+    steam(g,-0.8,1.6,0.6,3,1.0);
+    for(const [bx,bz] of [[0.1,0.9],[0.55,0.6],[0.0,0.45]]){ cylM(0.22,0.14,0.18,mat(0xFFFFFF),bx,1.07,bz,g,10); cylM(0.19,0.19,0.02,mat(0xFFF1CF),bx,1.16,bz,g,10); ball(0.03,0x5FB04A,bx+0.05,1.19,bz+0.03,1,1,1,g,0); ball(0.03,0xE8574A,bx-0.06,1.19,bz-0.02,1,1,1,g,0); }
+    box(0.06,1.2,0.06,wood,0.6,1.57,0.05,g); box(0.06,1.2,0.06,wood,1.45,1.57,0.05,g); box(0.95,0.05,0.05,wood,1.03,2.12,0.05,g);
+    const strips = []; for(let i=0;i<8;i++){ const pv = new THREE.Group(); pv.position.set(0.66+i*0.106,2.1,0.05); const m = new THREE.Mesh(new THREE.PlaneGeometry(0.08,0.85).translate(0,-0.425,0), new THREE.MeshStandardMaterial({color:0xFFF5D8, side:THREE.DoubleSide, roughness:0.9})); pv.add(m); g.add(pv); strips.push(pv); }
+    pondTick.push((dt,t)=>{ strips.forEach((s,i)=>{ s.rotation.z = Math.sin(t*1.1+i*0.7)*0.06; }); });
+    const v = person({shirt:0xFFFFFF,apron:0xE8574A,hat:'cap',arm:true,ph:0.3}); v.position.set(0,0,-0.45); g.add(v); }
+  /* ② 粄攤：蒸籠、各種粄與粢粑（麻糬），每種前面立一張小字卡 */
+  { const g = stall(ZS[1],{name:'粄',pin:'banˊ',awn:0xFFC93C,counter:0xF2D2A8,signBg:'#FFC93C',signFg:'#5A3B1E'});
+    box(0.8,0.95,0.8,mat(0xB08A62),-1.1,0.475,-0.5,g);
+    for(let i=0;i<3;i++) cylM(0.45,0.45,0.3,mat(0xD9A774),-1.1,1.1+i*0.31,-0.5,g,12);
+    const lid = new THREE.Mesh(new THREE.ConeGeometry(0.5,0.25,12), mat(0xC8975E)); lid.position.set(-1.1,2.1,-0.5); g.add(lid);
+    steam(g,-1.1,2.25,-0.5,3,1.1);
+    const items = [
+      {n:'粢粑', p:'ci baˋ', k:(q)=>{ /* 教師 11-13 給的照片：白碗裡鋪滿黃褐色花生糖粉，橢圓的軟糯米糰裹滿粉，只有一兩處露出白色 */
+        cylM(0.3,0.22,0.12,mat(0xFFFFFF),0,0.06,0,q,14); cylM(0.26,0.26,0.03,mat(0xE5B678),0,0.12,0,q,14);
+        for(let k=0;k<14;k++){ const a = k*2.4, d = 0.05+((k*37)%20)/100; ball(0.014+((k*13)%3)*0.004,k%3?0xF2D3A0:0xFFFFFF,Math.cos(a)*d,0.14,Math.sin(a)*d,1,0.7,1,q,0); }
+        [[-0.1,-0.07,0.5,0],[0.1,-0.02,-0.4,1],[-0.01,0.1,0.15,0]].forEach(([dx,dz,ry,w])=>{ const m = ball(0.1,0xF0CB8C,dx,0.17,dz,1.4,0.7,0.95,q); m.rotation.y = ry; ball(0.085,0xF6DDAA,dx,0.2,dz,1.2,0.5,0.8,q,0).rotation.y = ry; if(w) ball(0.035,0xFFFDF4,dx+Math.cos(ry)*0.05,0.215,dz-Math.sin(ry)*0.05,1.3,0.4,0.9,q,0); }); }},
+      {n:'紅粄', p:'fung banˊ', k:(q)=>{ for(const [dx,dz] of [[-0.1,-0.07],[0.1,-0.05],[0,0.1]]){ ball(0.15,0xE8445A,dx,0.14,dz,1.15,0.5,1,q); ball(0.1,0xF2788A,dx,0.17,dz,1.1,0.4,0.9,q); } }},
+      {n:'艾粄', p:'ngieˇ banˊ', k:(q)=>{ for(const [dx,dz] of [[-0.1,-0.07],[0.1,-0.05],[0,0.1]]) ball(0.15,0x4E8F4A,dx,0.14,dz,1.15,0.55,1,q); }},
+      {n:'發粄', p:'fad banˊ', k:(q)=>{ for(const [dx,dz] of [[-0.09,-0.03],[0.1,0.05]]){ ball(0.2,0xFBE7B0,dx,0.2,dz,1,0.8,1,q); ball(0.08,0xF4D58A,dx,0.33,dz,1,0.5,1,q); } }},
+      {n:'菜包', p:'coiˇ bauˋ', k:(q)=>{ for(const [dx,dz] of [[-0.1,-0.03],[0.1,0.05]]){ ball(0.18,0xFFF0D0,dx,0.15,dz,1.3,0.6,1,q); for(const e of [-0.05,0.05]) ball(0.025,0x5FB04A,dx+e,0.26,dz,1,1,1,q,0); } }},
+    ];
+    items.forEach((it,i)=>{ const q = new THREE.Group(); q.position.set(-0.8+i*0.5,0.97+0.02,0.72); q.scale.setScalar(0.85); g.add(q);
+      cylM(0.29,0.29,0.04,mat(0xE9D3A2),0,0.02,0,q,12); const k = new THREE.Group(); k.position.y = 0.03; q.add(k); it.k(k);
+      const c = sign(0.58,0.3,it.n,it.p,'#FFF6E0','#5A3B1E'); c.position.set(0,0.2,0.4); c.rotation.x = -0.35; q.add(c); });
+    const v = person({shirt:0xF48FB1,apron:0xFFFFFF,hat:'cap',arm:true,ph:1.6}); v.position.set(0.7,0,-0.55); g.add(v); }
+  /* ③ 青菜攤：八箱菜，每箱前面一張客語字卡 */
+  { const g = stall(ZS[2],{name:'青菜',pin:'ciangˋ coiˇ',awn:0x5FBF7A,counter:0xC89B6A,signBg:'#5FBF7A',signFg:'#FFFFFF'});
+    const crate = (x,y,z,name,pin,build)=>{ const c = new THREE.Group(); c.position.set(x,y,z); g.add(c); const cm = mat(0xC9975D);
+      box(0.7,0.04,0.5,cm,0,0.02,0,c); box(0.7,0.3,0.04,cm,0,0.17,-0.23,c); box(0.7,0.3,0.04,cm,0,0.17,0.23,c); box(0.04,0.3,0.5,cm,-0.33,0.17,0,c); box(0.04,0.3,0.5,cm,0.33,0.17,0,c);
+      const lb = sign(0.6,0.24,name,null,'#FFF6E0','#3E5A22'); lb.position.set(0,0.17,0.253); c.add(lb); const vg = new THREE.Group(); vg.position.y = 0.06; c.add(vg); build(vg); return c; };
+    const G1 = 0x6BBF4E, G2 = 0x4FA64A;
+    const VEG = {
+      '蕹菜':(q)=>{ for(let i=0;i<9;i++){ const s = cylM(0.02,0.015,0.55,mat(G1),(i-4)*0.06,0.28,(i%3-1)*0.05,q,5); s.rotation.z = (i-4)*0.07; s.rotation.x = (i%3-1)*0.15; ball(0.07,0x4FA64A,(i-4)*0.075,0.56,(i%3-1)*0.06,1,0.5,1.6,q,0); } },
+      '高麗菜':(q)=>{ for(const [dx,dz] of [[-0.18,0],[0.16,-0.04],[0.0,0.1]]){ ball(0.2,0xC4E8A0,dx,0.2,dz,1,0.95,1,q); for(let k=0;k<4;k++){ const a = k*1.57+dx*5; ball(0.18,0x8CCB6A,dx+Math.cos(a)*0.1,0.12,dz+Math.sin(a)*0.1,1,0.3,1,q,0); } } },
+      '角菜':(q)=>{ for(let i=0;i<7;i++){ const a = (i-3)*0.12; const st = cylM(0.014,0.014,0.4,mat(0x7FCB6A),a*1.5,0.2,0,q,5); st.rotation.z = -a*0.8; ball(0.11,0x3F9A4A,a*2.4,0.46,0.02*(i%2?1:-1),0.8,0.3,1.4,q,0).rotation.z = -a; }  ball(0.07,0xE8605A,0,0.03,0,1.8,0.5,0.9,q,0); },
+      '苦蕒':(q)=>{ for(let k=0;k<7;k++){ const a = k*Math.PI*2/7; const l = ball(0.12,k%2?0xB5DC8C:0xA6D17C,Math.cos(a)*0.17,0.17,Math.sin(a)*0.17,0.7,0.3,1.4,q,0); l.rotation.y = -a; l.rotation.z = 0.5; } ball(0.1,0xD9F0A8,0,0.16,0,1,0.8,1,q); },
+      '白菜':(q)=>{ for(let i=0;i<5;i++){ const dx = (i-2)*0.13, dz = (i%2?0.05:-0.05); cylM(0.05,0.06,0.3,mat(0xF3F6E4),dx,0.16,dz,q,6); ball(0.1,0x67B94F,dx,0.38,dz,0.9,1.1,0.7,q,0); } },
+      '芥菜':(q)=>{ ball(0.26,0x7CB342,-0.05,0.24,0,1,0.9,1,q); ball(0.2,0x5E9C34,0.12,0.2,0.04,1,0.8,1,q); ball(0.14,0x8BC34A,-0.12,0.4,0,1,0.8,1,q); },
+      '苦瓜':(q)=>{ [[-0.18,0.0,0.3],[0.02,0.06,-0.2],[0.2,-0.03,0.1]].forEach(([dx,dz,ry])=>{ const m = ball(0.1,0x7FBF5A,dx,0.13,dz,1,1,3.0,q); m.rotation.y = ry; for(let k=0;k<5;k++){ const bz = (k-2)*0.12; const b = ball(0.03,0x6CAF4A,dx+Math.sin(ry)*bz,0.22,dz+Math.cos(ry)*bz,1,1,1,q,0); } }); },
+      '菜瓜':(q)=>{ [[-0.2,0.0,0.4],[0.0,-0.04,-0.3],[0.2,0.04,0.15]].forEach(([dx,dz,ry])=>{ const m = cylM(0.055,0.07,0.6,mat(0x9BCB6B),dx,0.12,dz,q,7); m.rotation.x = Math.PI/2; m.rotation.z = ry; }); },
+    };
+    const PIN = {'蕹菜':'vungˇ coiˇ','高麗菜':'goˋ li coiˇ','角菜':'gog coiˇ','苦蕒':'fuˊ mag','白菜':'pagˋ coiˇ','芥菜':'gaiˇ coiˇ','苦瓜':'fuˊ guaˋ','菜瓜':'coiˇ guaˋ'};
+    ['蕹菜','高麗菜','角菜','苦蕒'].forEach((nm,i)=>crate(-1.17+i*0.78,0.97,0.78,nm,PIN[nm],VEG[nm]));
+    ['白菜','芥菜','苦瓜','菜瓜'].forEach((nm,i)=>crate(-1.17+i*0.78,0,1.7,nm,PIN[nm],VEG[nm]));
+    const v = person({shirt:0x8FD16A,apron:0xFFFFFF,hat:'straw',arm:true,ph:2.4}); v.position.set(0,0,-0.5); g.add(v); }
+  /* ④ 留空的攤位：只有鋪面與四根矮樁，之後再加客家美食 */
+  { const g = new THREE.Group(); g.position.set(-20.6,FY,5.6); g.rotation.y = Math.PI/2; scene.add(g); box(W,0.02,D,mat(0xE2D5B6),0,0.01,0,g);
+    for(const sx of [-1,1]) for(const sz of [-1,1]) cylM(0.05,0.06,0.5,wood,sx*(W/2-0.1),0.25,sz*(D/2-0.1),g,6); }
+  /* 前方：兩張圓桌、板凳與客人，一位客人站在青菜攤前 */
+  function table(x,z,seats,occ){
+    const g = new THREE.Group(); g.position.set(x,FY,z); scene.add(g); cylM(0.6,0.6,0.06,woodL,0,0.78,0,g,14); cylM(0.07,0.1,0.75,wood,0,0.38,0,g,6);
+    for(const bz of [[-0.2,0.1],[0.15,-0.15]]){ cylM(0.17,0.12,0.14,mat(0xFFFFFF),bz[0],0.88,bz[1],g,10); cylM(0.14,0.14,0.02,mat(0xFFF1CF),bz[0],0.96,bz[1],g,10); }
+    const cs = [0x74C0FF,0xFF9CC2,0xFFD24D];
+    seats.forEach((a,i)=>{ const sx = Math.sin(a)*1.0, sz = Math.cos(a)*1.0; cylM(0.2,0.2,0.42,wood,sx,0.21,sz,g,8);
+      if(i<occ){ const p = person({shirt:cs[i%3],sit:true,ph:i*1.7+x}); p.position.set(sx,0.42,sz); p.rotation.y = a+Math.PI; g.add(p); } });
+  }
+  table(-24.9,3.75,[1.2,3.4,5.0],2); table(-24.9,7.45,[1.2,3.4],1);
+  { const p = person({shirt:0xFFB26B,pants:0x5A6A8A,ph:3.3}); p.position.set(-26.3,FY,9.3+2.1); p.rotation.y = Math.PI*0.2; scene.add(p); }
+})();
 let dogApi = null, mouseNav = null;
 (function dogs(){
   const matBase = mat, FLUFF = new THREE.MeshStandardMaterial({color:0xFFFFFF, emissive:0x787878, flatShading:true, roughness:1});
@@ -1399,10 +1527,11 @@ let dogApi = null, mouseNav = null;
   const baseFree = (x,z)=>{
     if(x<-50||x>50||z<-46.5||z>40) return false;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
-    if(ell(x,z,-24,-5,7.4,6.4) || ell(x,z,30.5,0.5,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
-    if(x>-26.5&&x<-21.5&&z>-1&&z<riverZ(x)-5.4) return false;
+    if(ell(x,z,-33,-5,7.4,6.4) || ell(x,z,30.5,0.5,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
+    if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
+    if(x>-30.8&&x<-16.8&&z>0&&z<12) return false; /* 客家市集 */
     for(const q of treeSpots){ const r = 0.1*q[2]+0.2; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/(q.r*1.0+0.5))**2+((z-q.z)/(q.zr*1.0+0.5))**2 < 1) return false; }
     return true;
@@ -1414,6 +1543,7 @@ let dogApi = null, mouseNav = null;
     for(const [a,b] of TILE_LINKS){ const A = TILE_ALL[a], B = TILE_ALL[b], ax = A.pos[0], az = A.pos[1], vx = B.pos[0]-ax, vz = B.pos[1]-az, f = Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/(vx*vx+vz*vz))); if(Math.hypot(x-(ax+vx*f), z-(az+vz*f))<0.95) return true; }
     return false; };
   const isFree = (x,z)=> baseFree(x,z) && (G.mode!=='idle' || !onTile(x,z));
+  
   /* 地面高度：地塊上面比地面高 0.78，橋面高 2.05（兩端有斜坡） */
   const TILE_ALL = [HUB, ...UNITS];
   const TILES = TILE_ALL.map(d=>({x:d.pos[0], z:d.pos[1], R:d.r*ISC*1.04}));
@@ -1427,10 +1557,11 @@ let dogApi = null, mouseNav = null;
     if(x<-50||x>50||z<-46.5||z>riverZ(x)-4.9) return false;
     if(x*x+z*z < 213) return false;
     if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
-    if(ell(x,z,-24,-5,6.9,5.9) || ell(x,z,30.5,0.5,5.1,4.3)) return false;
-    if(x>-26&&x<-22&&z>-1) return false;
+    if(ell(x,z,-33,-5,6.9,5.9) || ell(x,z,30.5,0.5,5.1,4.3)) return false;
+    if(x>-35&&x<-31&&z>-1) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false;
-    if(x>-29&&x<-25.5&&z>-17&&z<-8.5) return false;
+    if(x>-38&&x<-34.5&&z>-17&&z<-8.5) return false;
+    if(x>-30.8&&x<-16.8&&z>0&&z<12) return false; /* 客家市集 */
     for(const q of treeSpots){ const r = 0.3*q[2]+0.25; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2 < 1) return false; }
     return true;
@@ -1680,7 +1811,7 @@ let dogApi = null, mouseNav = null;
     }
   });
 })();
-[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); groundTree(p.x,p.z,1.4+rnd()*0.7); });
+[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); const tr = groundTree(p.x,p.z,1.4+rnd()*0.7); if(p.x>-31&&p.x<-15&&p.z>2&&p.z<16){ scene.remove(tr); treeSpots.pop(); } /* 市集前方的河岸樹拿掉（亂數不變） */ });
 
 
 /* 攔水壩：擋住約一半河面，水從另一半流過並冒出白色水花；可以用滑鼠或手指左右拖動，改變位置 */
@@ -2854,13 +2985,17 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   return [
   {n:'台三線', say:'「遠方來个朋友」走的就是台三線：從前是防禦邊界（土牛溝、隘勇線），也是樟腦與茶葉的產業走廊。客家庄沿著丘陵與平原交界開墾，自然的地理走廊，就成了今日的台三線。', mk:at(rp(0.42,10.2),1.8), cam:at(rp(0.27,12.5),2.2), tg:at(rp(0.45,10.2),0.4)},
   {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', mk:V(30.5,1.8,0.5), cam:V(30.5,2.3,10.5), tg:V(30.5,0.7,0.5)},
-  {n:'水車', say:'「水車」把池水送到稻田去', mk:V(-24,3.3,-9.1), cam:V(-17,3.2,-0.5), tg:V(-24,1.4,-9)},
+  {n:'水車', say:'「水車」把池水送到稻田去', mk:V(-33,3.3,-9.1), cam:V(-25,3.2,0.5), tg:V(-33,1.4,-9)},
   {n:'河壩脣', say:'「牛欄河」邊有螃蟹、青蛙和魚', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」橫跨在牛欄河上', mk:at(r2,1.8), cam:at(rp(0.38,12),2.6), tg:at(rp(0.468,0),1.3)},
   {n:'豬欄', say:'「豬欄」培育著神豬候選豬', mk:V(30.5,2.6,-9.0), cam:V(30.5,2.4,-3.0), tg:V(30.5,1.0,-12.6)},
   {n:'仙草', say:'桃竹苗个淺山地區種有仙草，像關西就當有名。', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
   {n:'草莓', say:'草莓色目靚，鼻起來香香甜甜，當餳人食。', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
   {n:'田脣', say:'「田」在北邊，這裡友善耕作，歡迎石虎', mk:V(12,1.6,-15.0), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
+  /* 客家市集（教師 2026-11-13）：品名都查過教育部臺灣客語辭典（海陸腔） */
+  {n:'粄條', say:'粄條係客庄个美食，美濃、新埔、關西都有。', html:'<b>粄條</b> <span class="mkp">banˊ tiau</span>：客庄个美食，美濃、新埔、關西都有。', mk:V(-29.1,4.6,1.9), cam:V(-19.8,3.8,1.9), tg:V(-29.3,1.3,1.9)},
+  {n:'粄', say:'粢粑、紅粄、艾粄、發粄、菜包，係客家人个粄。', html:'<b>粄</b> <span class="mkp">banˊ</span>：<span class="mkit"><b>粢粑</b> <span class="mkp">ci baˋ</span></span><span class="mkit"><b>紅粄</b> <span class="mkp">fung banˊ</span></span><span class="mkit"><b>艾粄</b> <span class="mkp">ngieˇ banˊ</span></span><span class="mkit"><b>發粄</b> <span class="mkp">fad banˊ</span></span><span class="mkit"><b>菜包</b> <span class="mkp">coiˇ bauˋ</span></span>', mk:V(-29.1,4.6,5.6), cam:V(-19.8,3.8,5.6), tg:V(-29.3,1.3,5.6)},
+  {n:'青菜', say:'蕹菜、高麗菜、角菜、苦蕒、白菜、芥菜、苦瓜、菜瓜。', html:'<span class="mkit"><b>蕹菜</b> <span class="mkp">vungˇ coiˇ</span>（空心菜）</span><span class="mkit"><b>高麗菜</b> <span class="mkp">goˋ li coiˇ</span></span><span class="mkit"><b>角菜</b> <span class="mkp">gog coiˇ</span>（菠菜）</span><span class="mkit"><b>苦蕒</b> <span class="mkp">fuˊ mag</span>（萵苣類）</span><span class="mkit"><b>白菜</b> <span class="mkp">pagˋ coiˇ</span>（小白菜）</span><span class="mkit"><b>芥菜</b> <span class="mkp">gaiˇ coiˇ</span></span><span class="mkit"><b>苦瓜</b> <span class="mkp">fuˊ guaˋ</span></span><span class="mkit"><b>菜瓜</b> <span class="mkp">coiˇ guaˋ</span>（絲瓜）</span>', mk:V(-29.1,4.6,9.3), cam:V(-19.8,3.8,9.3), tg:V(-29.3,1.3,9.3)},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
 function spotLeave(){
@@ -2879,7 +3014,7 @@ function spotGo(i){
   spotView = {i, saved}; pendingLimits = null;
   controls.minDistance = 2.5; controls.maxDistance = 70; controls.maxPolarAngle = Math.PI/2-0.03; controls.minPolarAngle = 0.2;
   stage.classList.add('spotview'); SPOTS.forEach((o,j)=>o.el.classList.toggle('on', j===i));
-  const c = $('#tourCap'); c.innerHTML = `<span>${escH(sp.say)}</span><button type="button" class="spotback">回到全景</button>`; c.dataset.spot = '1'; c.hidden = false;
+  const c = $('#tourCap'); c.innerHTML = `<span>${sp.html || escH(sp.say)}</span><button type="button" class="spotback">回到全景</button>`; c.dataset.spot = '1'; c.hidden = false;
   c.querySelector('.spotback').addEventListener('click', ()=>$('#btnReset').click());
   flyTo(sp.cam.clone(), sp.tg.clone());
 }
