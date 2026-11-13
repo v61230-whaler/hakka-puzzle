@@ -1329,7 +1329,7 @@ let pigApi = null;
 })();
 /* ── 客家市集（教師 2026-11-13）：島左側的空地，粄條攤、粄攤、青菜攤各一，另留一個空攤位給之後的客家美食；不放聲音、不放會動的人，只有蒸氣與微動。
    攤名與品名都查過教育部臺灣客語辭典（海陸腔）：粄條 banˊ tiau、粄 banˊ、粢粑 ci baˋ（對應麻糬）、紅粄 fung banˊ、艾粄 ngieˇ banˊ、發粄 fad banˊ、菜包 coiˇ bauˋ、
-   青菜 ciangˋ coiˇ（蔬菜）、蕹菜 vungˇ coiˇ（空心菜）、高麗菜 goˋ li coiˇ、角菜 gog coiˇ（菠菜）、苦蕒 fuˊ mag（萵苣類）、白菜 pagˋ coiˇ（小白菜）、芥菜 gaiˇ coiˇ、苦瓜 fuˊ guaˋ、菜瓜 coiˇ guaˋ（絲瓜） ── */
+   青菜 ciangˋ coiˇ（蔬菜）、蕹菜 vungˇ coiˇ（空心菜）、高麗菜 goˋ li coiˇ、痀腰菜 guˋ rhauˋ coiˇ（包心芥菜；辭典另有「大菜」tai+ coiˇ＝芥菜，兩者例句說無共樣）、角菜 gog coiˇ（菠菜）、苦蕒 fuˊ mag（萵苣類）、白菜 pagˋ coiˇ（小白菜）、芥菜 gaiˇ coiˇ、苦瓜 fuˊ guaˋ、菜瓜 coiˇ guaˋ（絲瓜） ── */
 (function market(){
   const SX = -29.1, ZS = [1.9,5.6,9.3], W = 3.2, D = 2.8, FY = 0.07; /* 教師 2026-11-13：三攤改縱向排成一列，背靠引水渠（x≈-33），面向東（島）；東邊的鋪面留空，有一個標好的空攤位 */
   const wood = mat(0xB98B5A), woodL = mat(0xEED9B0), skinM = mat(0xF5CBA7), hairM = mat(0x2B2B30), eyeM = mat(0x222222);
@@ -1430,14 +1430,13 @@ let pigApi = null;
       '高麗菜':(q)=>{ for(const [dx,dz] of [[-0.18,0],[0.16,-0.04],[0.0,0.1]]){ ball(0.2,0xC4E8A0,dx,0.2,dz,1,0.95,1,q); for(let k=0;k<4;k++){ const a = k*1.57+dx*5; ball(0.18,0x8CCB6A,dx+Math.cos(a)*0.1,0.12,dz+Math.sin(a)*0.1,1,0.3,1,q,0); } } },
       '角菜':(q)=>{ for(let i=0;i<7;i++){ const a = (i-3)*0.12; const st = cylM(0.014,0.014,0.4,mat(0x7FCB6A),a*1.5,0.2,0,q,5); st.rotation.z = -a*0.8; ball(0.11,0x3F9A4A,a*2.4,0.46,0.02*(i%2?1:-1),0.8,0.3,1.4,q,0).rotation.z = -a; }  ball(0.07,0xE8605A,0,0.03,0,1.8,0.5,0.9,q,0); },
       '苦蕒':(q)=>{ for(let k=0;k<7;k++){ const a = k*Math.PI*2/7; const l = ball(0.12,k%2?0xB5DC8C:0xA6D17C,Math.cos(a)*0.17,0.17,Math.sin(a)*0.17,0.7,0.3,1.4,q,0); l.rotation.y = -a; l.rotation.z = 0.5; } ball(0.1,0xD9F0A8,0,0.16,0,1,0.8,1,q); },
-      '白菜':(q)=>{ for(let i=0;i<5;i++){ const dx = (i-2)*0.13, dz = (i%2?0.05:-0.05); cylM(0.05,0.06,0.3,mat(0xF3F6E4),dx,0.16,dz,q,6); ball(0.1,0x67B94F,dx,0.38,dz,0.9,1.1,0.7,q,0); } },
-      '芥菜':(q)=>{ ball(0.26,0x7CB342,-0.05,0.24,0,1,0.9,1,q); ball(0.2,0x5E9C34,0.12,0.2,0.04,1,0.8,1,q); ball(0.14,0x8BC34A,-0.12,0.4,0,1,0.8,1,q); },
-      '苦瓜':(q)=>{ [[-0.18,0.0,0.3],[0.02,0.06,-0.2],[0.2,-0.03,0.1]].forEach(([dx,dz,ry])=>{ const m = ball(0.1,0x7FBF5A,dx,0.13,dz,1,1,3.0,q); m.rotation.y = ry; for(let k=0;k<5;k++){ const bz = (k-2)*0.12; const b = ball(0.03,0x6CAF4A,dx+Math.sin(ry)*bz,0.22,dz+Math.cos(ry)*bz,1,1,1,q,0); } }); },
+      '湯匙白':(q)=>{ for(let i=0;i<5;i++){ const dx = (i-2)*0.13, dz = (i%2?0.05:-0.05); cylM(0.05,0.06,0.3,mat(0xF3F6E4),dx,0.16,dz,q,6); ball(0.1,0x67B94F,dx,0.38,dz,0.9,1.1,0.7,q,0); } }, /* 湯匙白：莖淺白、葉呈勺形（辭典：不結球白菜的一種，對應青江菜） */
+      '痀腰菜':(q)=>{ ball(0.26,0x7CB342,-0.05,0.24,0,1,0.9,1,q); ball(0.2,0x5E9C34,0.12,0.2,0.04,1,0.8,1,q); ball(0.14,0x8BC34A,-0.12,0.4,0,1,0.8,1,q); },
       '菜瓜':(q)=>{ [[-0.2,0.0,0.4],[0.0,-0.04,-0.3],[0.2,0.04,0.15]].forEach(([dx,dz,ry])=>{ const m = cylM(0.055,0.07,0.6,mat(0x9BCB6B),dx,0.12,dz,q,7); m.rotation.x = Math.PI/2; m.rotation.z = ry; }); },
     };
-    const PIN = {'蕹菜':'vungˇ coiˇ','高麗菜':'goˋ li coiˇ','角菜':'gog coiˇ','苦蕒':'fuˊ mag','白菜':'pagˋ coiˇ','芥菜':'gaiˇ coiˇ','苦瓜':'fuˊ guaˋ','菜瓜':'coiˇ guaˋ'};
+    const PIN = {'蕹菜':'vungˇ coiˇ','高麗菜':'goˋ li coiˇ','角菜':'gog coiˇ','苦蕒':'fuˊ mag','湯匙白':'tongˋ shi pagˋ','痀腰菜':'guˋ rhauˋ coiˇ','菜瓜':'coiˇ guaˋ'};
     ['蕹菜','高麗菜','角菜','苦蕒'].forEach((nm,i)=>crate(-1.17+i*0.78,0.97,0.78,nm,PIN[nm],VEG[nm]));
-    ['白菜','芥菜','苦瓜','菜瓜'].forEach((nm,i)=>crate(-1.17+i*0.78,0,1.7,nm,PIN[nm],VEG[nm]));
+    ['湯匙白','痀腰菜','菜瓜'].forEach((nm,i)=>crate(-0.78+i*0.78,0,1.7,nm,PIN[nm],VEG[nm]));
     const v = person({shirt:0x8FD16A,apron:0xFFFFFF,hat:'straw',arm:true,ph:2.4}); v.position.set(0,0,-0.5); g.add(v); }
   /* ④ 留空的攤位：只有鋪面與四根矮樁，之後再加客家美食 */
   { const g = new THREE.Group(); g.position.set(-20.6,FY,5.6); g.rotation.y = Math.PI/2; scene.add(g); box(W,0.02,D,mat(0xE2D5B6),0,0.01,0,g);
@@ -2995,7 +2994,7 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   /* 客家市集（教師 2026-11-13）：品名都查過教育部臺灣客語辭典（海陸腔） */
   {n:'粄條', say:'粄條係客庄个美食，美濃、新埔、關西都有。', html:'<b>粄條</b> <span class="mkp">banˊ tiau</span>：客庄个美食，美濃、新埔、關西都有。', mk:V(-29.1,4.6,1.9), cam:V(-19.8,3.8,1.9), tg:V(-29.3,1.3,1.9)},
   {n:'粄', say:'粢粑、紅粄、艾粄、發粄、菜包，係客家人个粄。', html:'<b>粄</b> <span class="mkp">banˊ</span>：<span class="mkit"><b>粢粑</b> <span class="mkp">ci baˋ</span></span><span class="mkit"><b>紅粄</b> <span class="mkp">fung banˊ</span></span><span class="mkit"><b>艾粄</b> <span class="mkp">ngieˇ banˊ</span></span><span class="mkit"><b>發粄</b> <span class="mkp">fad banˊ</span></span><span class="mkit"><b>菜包</b> <span class="mkp">coiˇ bauˋ</span></span>', mk:V(-29.1,4.6,5.6), cam:V(-19.8,3.8,5.6), tg:V(-29.3,1.3,5.6)},
-  {n:'青菜', say:'蕹菜、高麗菜、角菜、苦蕒、白菜、芥菜、苦瓜、菜瓜。', html:'<span class="mkit"><b>蕹菜</b> <span class="mkp">vungˇ coiˇ</span>（空心菜）</span><span class="mkit"><b>高麗菜</b> <span class="mkp">goˋ li coiˇ</span></span><span class="mkit"><b>角菜</b> <span class="mkp">gog coiˇ</span>（菠菜）</span><span class="mkit"><b>苦蕒</b> <span class="mkp">fuˊ mag</span>（萵苣類）</span><span class="mkit"><b>白菜</b> <span class="mkp">pagˋ coiˇ</span>（小白菜）</span><span class="mkit"><b>芥菜</b> <span class="mkp">gaiˇ coiˇ</span></span><span class="mkit"><b>苦瓜</b> <span class="mkp">fuˊ guaˋ</span></span><span class="mkit"><b>菜瓜</b> <span class="mkp">coiˇ guaˋ</span>（絲瓜）</span>', mk:V(-29.1,4.6,9.3), cam:V(-19.8,3.8,9.3), tg:V(-29.3,1.3,9.3)},
+  {n:'青菜', say:'蕹菜、高麗菜、角菜、苦蕒、湯匙白、痀腰菜、菜瓜。', html:'<span class="mkit"><b>蕹菜</b> <span class="mkp">vungˇ coiˇ</span>（空心菜）</span><span class="mkit"><b>高麗菜</b> <span class="mkp">goˋ li coiˇ</span></span><span class="mkit"><b>角菜</b> <span class="mkp">gog coiˇ</span>（菠菜）</span><span class="mkit"><b>苦蕒</b> <span class="mkp">fuˊ mag</span>（萵苣類）</span><span class="mkit"><b>湯匙白</b> <span class="mkp">tongˋ shi pagˋ</span>（青江菜）</span><span class="mkit"><b>痀腰菜</b> <span class="mkp">guˋ rhauˋ coiˇ</span>（包心芥菜）</span><span class="mkit"><b>菜瓜</b> <span class="mkp">coiˇ guaˋ</span>（絲瓜）</span>', mk:V(-29.1,4.6,9.3), cam:V(-19.8,3.8,9.3), tg:V(-29.3,1.3,9.3)},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
 function spotLeave(){
