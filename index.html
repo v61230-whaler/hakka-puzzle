@@ -2918,24 +2918,28 @@ function dogSay(txt, sp){
   $tourCap.innerHTML = h; $tourCap.hidden = !txt;
 }
 let dogTour = null, pendingLimits = null;
+const dogLead = (()=>{ const g = new THREE.Group(); g.visible = false; scene.add(g); const el = makeLabel('', 'tag spot on', 1.9, g, ()=>{}); return {g, el}; })(); /* 開場時浮在帶路狗頭上的名牌 */
 function dogTourStart(){
   if(reduce || !dogApi || !dogApi.tourAcquire) return;
   const d = dogApi.tourAcquire(); if(!d) return;
   setMode('dog');
   const a = Math.floor(Math.random()*DOG_SPOTS.length); let b; do{ b = Math.floor(Math.random()*DOG_SPOTS.length); }while(b===a);
-  dogTour = {d, spots:[DOG_SPOTS[a], DOG_SPOTS[b]], k:0, phase:'cut', t:0, cyaw:d.yaw, pit:0, ready:false,
+  dogTour = {d, spots:[DOG_SPOTS[a], DOG_SPOTS[b]], k:0, phase:'intro', t:0, cyaw:d.yaw, pit:0, ready:false,
     saved:{fov:camera.fov, minD:controls.minDistance, maxD:controls.maxDistance, maxP:controls.maxPolarAngle, minP:controls.minPolarAngle}};
   pendingLimits = null; tween = null;
-  d.g.visible = false; d.bub.visible = false;
-  camera.fov = 66; camera.updateProjectionMatrix();
+  /* 先讓學生看到是哪一隻狗帶路（教師 2026-11-13）：鏡頭飛到這隻狗的正面，停約 2.8 秒，再黑一下切進狗狗視角 */
+  d.bub.visible = false;
   controls.minDistance = 0.3; controls.maxDistance = 400; controls.maxPolarAngle = Math.PI; controls.minPolarAngle = 0;
   $dogCam.hidden = false; $('#hint').hidden = true;
-  $dogFade.style.opacity = 1;
+  $dogFade.style.opacity = 0;
+  { const gy = d.gy||0, fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+    flyTo(new THREE.Vector3(d.x+fx*4.6+fz*1.6, gy+d.eyeH*4.2, d.z+fz*4.6-fx*1.6), new THREE.Vector3(d.x, gy+d.eyeH*0.5, d.z)); }
   dogSay(`這次由「${DOG_NAMES[d.idx]}」帶路`);
+  dogLead.el.innerHTML = `<b>▼ ${DOG_NAMES[d.idx]}帶路</b>`; dogLead.g.position.set(d.x, d.gy||0, d.z); dogLead.g.visible = true;
 }
 function dogTourStop(){
   if(!dogTour) return;
-  const T = dogTour; dogTour = null;
+  const T = dogTour; dogTour = null; dogLead.g.visible = false;
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir); controls.target.copy(camera.position).addScaledVector(dir, 12.5);
   dogApi.tourRelease(T.d);
   camera.fov = T.saved.fov; camera.updateProjectionMatrix();
@@ -2948,8 +2952,13 @@ function updateDogTour(dt){
   const T = dogTour, d = T.d; T.t += dt;
   const sp = T.spots[T.k];
   const finish = ()=>{ dogTourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); };
+  if(T.phase==='intro'){
+    if(T.t>=2.8){ T.phase = 'cut'; T.t = 0; $dogFade.style.opacity = 1; }
+    return;
+  }
   if(T.phase==='cut'){
     if(T.t>=0.45){
+      dogLead.g.visible = false; d.g.visible = false; d.bub.visible = false; camera.fov = 66; camera.updateProjectionMatrix();
       const st = sp.st(), lk = sp.lk();
       if(!dogApi.tourPlace(d, st.x, st.z, lk.x, sp.ly, lk.z)){ if(T.k===0){ finish(); return; } T.phase = 'end'; T.t = 0; $dogFade.style.opacity = 1; return; }
       T.cyaw = d.yaw; T.pit = 0; T.ready = true; T.phase = 'walk'; T.t = 0; $dogFade.style.opacity = 0;
