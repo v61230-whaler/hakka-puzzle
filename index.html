@@ -46,7 +46,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .mkit{display:inline-block;margin:2px 10px 2px 0;white-space:nowrap}
 .mkp{font-size:.82em;opacity:.75}
 #stage.spotview .tag{display:none}
-.spotnav{font:inherit;font-size:20px;line-height:1;border:2px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;width:32px;height:32px;margin:0 8px;cursor:pointer;flex:none}
+.mnav{pointer-events:auto;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:#1B7F6B;color:#fff;border:2px solid #fff;font:700 15px/1.2 var(--f-body);cursor:pointer;white-space:nowrap;box-shadow:0 3px 0 rgba(42,63,99,.2);transition:transform .15s}
+.mnav:hover{transform:translateY(-2px)}
+.mnav[hidden]{display:none}
+.mnav .arr{font-size:22px;line-height:1}
 .spotback{margin-left:8px;font:inherit;border:2px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:2px 12px;cursor:pointer}
 .pin{pointer-events:auto;font:500 12px/1.2 var(--f-body);background:var(--persimmon);color:#fff;border:0;border-radius:999px;padding:3px 7px;cursor:pointer;white-space:nowrap}
 .pin:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
@@ -2999,17 +3002,20 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'草莓', say:'草莓色目靚，鼻起來香香甜甜，當餳人食。', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
   {n:'田脣', say:'「田」在北邊，這裡友善耕作，歡迎石虎', mk:V(12,1.6,-16.8), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
   /* 客家市集（教師 2026-11-13）：三個攤位合成一個景點，進去後用左右鍵（或畫面上的 ‹ ›）切換攤位；日後新增攤位只要在 stalls 加一列（品名要查教育部辭典），再把攤位蓋在市集裡 */
-  {n:'客家市集', say:'客家市集：左右點選，看各個攤位', html:'<b>客家市集</b>：按左右看攤位', mk:V(-29.1,5.2,5.6), cam:V(-14.5,15.5,19.5), tg:V(-25.5,0.5,5.5), stalls:[
+  {n:'客家市集', say:'客家市集：點一個攤位看看', html:'<b>客家市集</b>：點一個攤位看看', mk:V(-29.1,5.2,5.6), cam:V(-14.5,15.5,19.5), tg:V(-25.5,0.5,5.5), stalls:[
     {n:'粄條', say:'粄條係客庄个美食，美濃、新埔、關西都有。', html:'<b>粄條</b> <span class="mkp">banˊ tiau</span>：客庄个美食，美濃、新埔、關西都有。', cam:V(-19.8,3.8,1.9), tg:V(-29.3,1.3,1.9)},
     {n:'粄', say:'粢粑、紅粄、艾粄、發粄、菜包，係客家人个粄。', html:'<b>粄</b> <span class="mkp">banˊ</span>：<span class="mkit"><b>粢粑</b> <span class="mkp">ci baˋ</span></span><span class="mkit"><b>紅粄</b> <span class="mkp">fung banˊ</span></span><span class="mkit"><b>艾粄</b> <span class="mkp">ngieˇ banˊ</span></span><span class="mkit"><b>發粄</b> <span class="mkp">fad banˊ</span></span><span class="mkit"><b>菜包</b> <span class="mkp">coiˇ bauˋ</span></span>', cam:V(-19.8,3.8,5.6), tg:V(-29.3,1.3,5.6)},
     {n:'青菜', say:'蕹菜、高麗菜、角菜、苦蕒、湯匙白、大菜、菜瓜。', html:'<span class="mkit"><b>蕹菜</b> <span class="mkp">vungˇ coiˇ</span>（空心菜）</span><span class="mkit"><b>高麗菜</b> <span class="mkp">goˋ li coiˇ</span></span><span class="mkit"><b>角菜</b> <span class="mkp">gog coiˇ</span>（菠菜）</span><span class="mkit"><b>苦蕒</b> <span class="mkp">fuˊ mag</span>（萵苣類）</span><span class="mkit"><b>湯匙白</b> <span class="mkp">tongˋ shi pagˋ</span>（青江菜）</span><span class="mkit"><b>大菜</b> <span class="mkp">tai+ coiˇ</span>（芥菜）</span><span class="mkit"><b>菜瓜</b> <span class="mkp">coiˇ guaˋ</span>（絲瓜）</span>', cam:V(-19.8,3.8,9.3), tg:V(-29.3,1.3,9.3)},
   ]},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
+/* 市集的左右切換：不放在說明框裡，改成貼在畫面中攤位旁邊的標籤（和其他景點一樣，說明框只有「回到全景」）。
+   本景點的鏡頭從東邊往西看：畫面左邊是南（z 大）、右邊是北（z 小），所以左箭頭去 stalls 的下一個、右箭頭去上一個。 */
+const mnav = [0,1].map(()=>{ const g = new THREE.Group(); scene.add(g); const o = {g, go:null}; o.el = makeLabel('', 'mnav', 0, g, ()=>o.go && o.go()); o.el.hidden = true; return o; });
 let spotNav = null;
-addEventListener('keydown', e=>{ if(spotNav && spotView && (e.key==='ArrowLeft'||e.key==='ArrowRight') && !/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||'')){ spotNav(e.key==='ArrowLeft' ? -1 : 1); e.preventDefault(); } });
+addEventListener('keydown', e=>{ if(spotNav && spotView && (e.key==='ArrowLeft'||e.key==='ArrowRight') && !/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||'')){ spotNav(e.key==='ArrowLeft' ? 1 : -1); e.preventDefault(); } });
 function spotLeave(){
-  if(!spotView) return; spotNav = null;
+  if(!spotView) return; spotNav = null; mnav.forEach(o=>{ o.el.hidden = true; });
   pendingLimits = spotView.saved; spotView = null; stage.classList.remove('spotview');
   SPOTS.forEach(sp=>sp.el.classList.remove('on'));
   const c = $('#tourCap'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
@@ -3028,12 +3034,18 @@ function spotGo(i, k0){
   const st = sp.stalls || null; let k = k0 || 0; /* k=0：全景（市集的總覽）；k≥1：第 k 個攤位 */
   const render = ()=>{
     const v = (st && k>0) ? st[k-1] : sp;
-    c.innerHTML = (st ? '<button type="button" class="spotnav" data-d="-1" aria-label="上一個攤位">‹</button>' : '') + `<span>${v.html || escH(v.say)}</span>` + (st ? '<button type="button" class="spotnav" data-d="1" aria-label="下一個攤位">›</button>' : '') + '<button type="button" class="spotback">回到全景</button>';
+    c.innerHTML = `<span>${v.html || escH(v.say)}</span><button type="button" class="spotback">回到全景</button>`;
     c.querySelector('.spotback').addEventListener('click', ()=>$('#btnReset').click());
-    c.querySelectorAll('.spotnav').forEach(b=>b.addEventListener('click', ()=>go(+b.dataset.d)));
+    if(st){ /* 左右箭頭：貼在目前這攤的左右兩側（畫面左＝南、右＝北）；總覽時不顯示 */
+      const nb = [k>0 && k<st.length ? st[k] : null, k>1 ? st[k-2] : null];
+      mnav.forEach((o,n)=>{ const t = nb[n]; o.el.hidden = !t; if(!t) return;
+        o.go = ()=>{ k += n===0 ? 1 : -1; render(); };
+        o.el.innerHTML = n===0 ? `<span class="arr">‹</span><b>${t.n}</b>` : `<b>${t.n}</b><span class="arr">›</span>`;
+        o.g.position.set(-27.7, 2.1, v.tg.z + (n===0 ? 1.95 : -1.95)); });
+    } else mnav.forEach(o=>{ o.el.hidden = true; });
     flyTo(v.cam.clone(), v.tg.clone());
   };
-  const go = d=>{ k = (k + d + st.length + 1) % (st.length + 1); render(); };
+  const go = d=>{ if(!st || k===0) return; const k2 = k + d; if(k2>=1 && k2<=st.length){ k = k2; render(); } };
   spotNav = st ? go : null;
   render();
 }
