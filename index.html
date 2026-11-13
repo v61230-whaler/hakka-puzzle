@@ -221,7 +221,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <button role="tab" id="tab-guide" aria-selected="false">上課須知</button>
     </div>
     <div id="view"></div>
-    <footer class="src note">整理自「仙平先生个教室」網站「1 客家摎𠊎」「2 仰般上課」與 Padlet 課程地圖（2026-10-24）。各單元說明與單元間連線為初版，待老師確認修改。</footer>
+    <footer class="src note">整理自「仙平先生个教室」網站「1 客家摎𠊎」「2 仰般上課」與 Padlet 課程地圖（2026-10-24）。</footer>
   </aside>
 </div>
 
@@ -394,7 +394,7 @@ function renderUnit(id){
     <p>${esc(u.desc)}</p>
     ${u.score?`<p class="note">${esc(u.score)}</p>`:''}
     <h3>網站頁面</h3>${linkList(u.links)}
-    ${related.length?`<h3>和這些單元相連 <span class="badge">初版</span></h3><div class="chips">${related.map(r=>`<button class="chip" data-unit="${r.o}" title="${esc(r.why)}">${esc(unitById(r.o).no)} ${esc(unitById(r.o).title)}・${esc(r.why)}</button>`).join('')}</div>`:''}
+    ${related.length?`<h3>和這些單元相連</h3><div class="chips">${related.map(r=>`<button class="chip" data-unit="${r.o}" title="${esc(r.why)}">${esc(unitById(r.o).no)} ${esc(unitById(r.o).title)}・${esc(r.why)}</button>`).join('')}</div>`:''}
     ${extra}
   </div>`;
 }
