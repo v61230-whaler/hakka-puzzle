@@ -2971,7 +2971,7 @@ function dogTourStop(){
 }
 function updateDogTour(dt){
   if(pendingLimits && !tween && !dogTour){ controls.minDistance = pendingLimits.minD; controls.maxDistance = pendingLimits.maxD; controls.maxPolarAngle = pendingLimits.maxP; controls.minPolarAngle = pendingLimits.minP; pendingLimits = null; }
-  if(!dogTour) return;
+  if(!dogTour){ if(!dogLead.el.hidden) dogLead.el.hidden = true; return; } /* 保險：不在導覽中就一定收掉帶路名牌 */
   const T = dogTour, d = T.d; T.t += dt;
   const sp = T.spots[T.k];
   const finish = ()=>{ dogTourStop(); setMode('panorama'); setTab('units'); onSelect3D(null); };
