@@ -1676,10 +1676,15 @@ let dogApi = null, mouseNav = null;
       const o = pool[Math.floor(rnd()*pool.length)];
       if(o.pair){ o.pair.paired = false; o.pair = null; } o.paired = false; o.path = []; o.flee = 0; o.leave = false;
       o.x = pt.x; o.z = pt.z; o.yaw = Math.atan2(pv.x-pt.x, pv.z-pt.z); o.gy = heightAt(o.x,o.z); o.sp = 0; o.state = 'wait'; o.wait = 1e9; o.g.position.set(o.x, o.gy, o.z); o.g.rotation.y = o.yaw;
-      d.meet = {o, st:'go', t:0, bark:rnd()<0.6};
+      const half = g=>{ g.updateMatrixWorld(true); const v = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()); return Math.max(v.x, v.z)/2; };
+      d.meet = {o, st:'go', t:0, gap:half(d.g)+half(o.g)+0.5}; /* 依兩隻狗的身長決定停下的距離，鼻子對鼻子，不重疊（教師 2026-11-14） */
     }
     return true; };
-  dogApi.meetEnd = d=>{ const mt = d && d.meet; if(!mt || mt.st==='done') return; mt.st = 'done'; const o = mt.o; o.paired = false; o.state = 'wait'; o.wait = 0.3; o.x += Math.cos(d.yaw)*1.3; o.z -= Math.sin(d.yaw)*1.3; };
+  dogApi.meetEnd = d=>{ const mt = d && d.meet; if(!mt || mt.st==='done') return; mt.st = 'done'; const o = mt.o; o.paired = false;
+    /* 對方跑到旁邊讓路（不瞬間移位）：先試右邊、再試左邊，都不通就原地等 */
+    const px = Math.cos(d.yaw), pz = -Math.sin(d.yaw); let go = null;
+    for(const sd of [1,-1]) for(const r of [3,2.2]){ if(go) break; const x = o.x+px*sd*r, z = o.z+pz*sd*r, c = ci(x,z); if(c>=0 && frN[c]) go = {x, z}; }
+    if(go){ o.path = [go]; o.state = 'go'; o.run = true; o.gt = 2; o.leave = false; } else { o.state = 'wait'; o.wait = 0.3; } };
   dogApi.tourBark = (d,one)=>{ if(!d || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,!!one]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; }; /* 導覽開場：帶路的狗先叫兩聲（教師 2026-11-14） */
   dogApi.tourRelease = d=>{ if(!d) return; if(d.meet){ dogApi.meetEnd(d); d.meet = null; } d.tour = false; d.turnMax = 0; d.state = 'wait'; d.wait = 0.5; d.path = []; d.arrived = false; if(d.save){ d.x = d.save.x; d.z = d.save.z; d.yaw = d.save.yaw; d.gy = heightAt(d.x,d.z); } d.g.visible = true; };
   let ready = false;
@@ -1809,10 +1814,11 @@ let dogApi = null, mouseNav = null;
       } else if(d.state==='tour'){
         const wp = d.path[0], mt = d.meet; let hold = false;
         if(mt && wp){
-          if(mt.st==='go' && Math.hypot(mt.o.x-d.x, mt.o.z-d.z)<1.3){ mt.st = 'stay'; mt.t = 0; if(mt.bark) dogApi.tourBark(mt.o, true); }
+          if(mt.st==='go' && Math.hypot(mt.o.x-d.x, mt.o.z-d.z)<mt.gap){ mt.st = 'stay'; mt.t = 0; dogApi.tourBark(mt.o, true); } /* 對到臉就叫一聲打招呼 */
           if(mt.st==='stay'){ hold = true; mt.t += dt; d.sp = Math.max(0, d.sp-6*dt);
             const ty = Math.atan2(mt.o.x-d.x, mt.o.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-3*dt, Math.min(3*dt, df));
             if(mt.t>=2) dogApi.meetEnd(d); }
+          if(mt.st==='done' && mt.t<4 && mt.o.state==='go' && Math.hypot(mt.o.x-d.x, mt.o.z-d.z)<mt.gap){ hold = true; mt.t += dt; d.sp = Math.max(0, d.sp-6*dt); } /* 對方還沒讓開就再等一下，不穿過去 */
         }
         if(hold){}
         else if(wp){ const last = d.path.length===1, dist = steer(d, wp.x, wp.z, 2.1, dt, last); if(dist<(last?0.35:0.6)) d.path.shift(); }
