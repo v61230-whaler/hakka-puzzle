@@ -913,14 +913,18 @@ function grove(cx, cz, n, radius){
     const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
     if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
     placed.push([x,z]); const tr = groundTree(x,z,1.3+rnd()*0.9);
-    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5) || (x>-30.8&&x<-16.8&&z>0&&z<12.5) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17) || (x>-23.6&&x<-17.4&&z>-10&&z<-3.6)){ scene.remove(tr); treeSpots.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
+    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5) || (x>-30.8&&x<-16.8&&z>0&&z<12.5) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17) || (x>-26.4&&x<-13.6&&z>-15.2&&z<-3.6)){ scene.remove(tr); treeSpots.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
   }
 }
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
 [[-40,-6,5,4],[-37,8,4,3.5],[38,-3,5,4],[36,10,4,3.5],
  [-36,-33,8,5],[-24,-37,9,5],[-12,-33,8,4.5],[0,-38,9,5.5],[12,-34,8,5],[24,-38,9,5],[36,-33,8,4.5],[-45,-28,6,4],[46,-28,6,4]].forEach(([x,z,n,r])=>grove(x,z,n,r));
 /* 關西太和宮（教師 2026-11-17）：客家市集北側、仙草田南側、水牛泡的水池東邊，正面朝前（+z）；擋到的樹已在 grove() 裡移除 */
-{ const tp = new THREE.Group(); tp.userData.top = 0; scene.add(tp); taihoTemple(tp, -20.5, -7.5, 1.6); }
+{ const tp = new THREE.Group(); tp.userData.top = 0; scene.add(tp); taihoTemple(tp, -20, -10.7, 4.0); /* 教師 2026-11-17：本體放大到 250%（1.6→4.0），背面貼仙草田邊 */
+  /* 廟前廣場：和客家市集廣場同色的石板，往南一直鋪到市集廣場，兩個廣場連成一片 */
+  const pz0 = -7.2, pz1 = 0.4, pw = 9.0;
+  const a = new THREE.Mesh(new THREE.BoxGeometry(pw+0.5,0.05,pz1-pz0), mat(0xD8C7A2)); a.position.set(-20,0.025,(pz0+pz1)/2); scene.add(a);
+  const b = new THREE.Mesh(new THREE.BoxGeometry(pw,0.06,pz1-pz0-0.25), mat(0xEFE3C8)); b.position.set(-20,0.04,(pz0+pz1)/2+0.12); scene.add(b); }
 const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields 填入 */
 (function paddyFields(){
   const base = new THREE.Mesh(new THREE.BoxGeometry(84,0.06,14.5), hillMat(0xD9C08A)); base.position.set(0,0.02,-22.3); scene.add(base);
@@ -1546,7 +1550,8 @@ let dogApi = null, mouseNav = null;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
     if(x>-30.8&&x<-16.8&&z>0&&z<12) return false; /* 客家市集 */
-    if(x>-23&&x<-18&&z>-9.4&&z<-4.6) return false; /* 太和宮 */
+    if(x>-25.8&&x<-14.2&&z>-14.8&&z<-6.2) return false; /* 太和宮本體 */
+    if(Math.hypot(x+20,z+4.5)<1.1) return false; /* 廟前香爐 */
     for(const q of treeSpots){ const r = 0.1*q[2]+0.2; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/(q.r*1.0+0.5))**2+((z-q.z)/(q.zr*1.0+0.5))**2 < 1) return false; }
     return true;
@@ -1577,7 +1582,8 @@ let dogApi = null, mouseNav = null;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false;
     if(x>-38&&x<-34.5&&z>-17&&z<-8.5) return false;
     if(x>-30.8&&x<-16.8&&z>0&&z<12) return false; /* 客家市集 */
-    if(x>-23&&x<-18&&z>-9.4&&z<-4.6) return false; /* 太和宮 */
+    if(x>-25.8&&x<-14.2&&z>-14.8&&z<-6.2) return false; /* 太和宮本體 */
+    if(Math.hypot(x+20,z+4.5)<1.1) return false; /* 廟前香爐 */
     for(const q of treeSpots){ const r = 0.3*q[2]+0.25; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
     for(const q of hillSpots){ if(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2 < 1) return false; }
     return true;
