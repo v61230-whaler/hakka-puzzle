@@ -481,8 +481,7 @@ const HOME = { pos:new THREE.Vector3(2.5, 24, 44), target:new THREE.Vector3(2.5,
 const LINKVIEW = { pos:new THREE.Vector3(2.5, 50, 12), target:new THREE.Vector3(2.5, 0, 0) };
 camera.position.copy(HOME.pos);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.copy(HOME.target);controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI*0.44;
+controls.target.copy(HOME.target);controls.enableDamping = true;controls.maxPolarAngle = Math.PI*0.44;
 controls.minDistance = 12; controls.maxDistance = 90;
 controls.enablePan = false;
 
@@ -518,6 +517,9 @@ ring.rotation.x = -Math.PI/2; ring.position.y = 0.01; scene.add(ring);
 
 /* 關西風的卡通山林：外圈淡藍綠遠山，內圈翠綠近山，山上有圓樹和杉樹，天上有雲 */
 const hills = [], treeSpots = [], hillSpots = [];
+/* 會擋住點擊的實體（教師 2026-11-17：點太和宮卻觸發後面的仙草）：太和宮、地上的樹。所有點擊判斷都要先看有沒有被它們擋住 */
+const solids = [];
+const solidD = rc=>{ const h = rc.intersectObjects(solids, true)[0]; return h ? h.distance : 1e9; };
 let bridgeFrame = null; /* 東安橋的座標軸，狗上橋用 */
 const rnd = (seed => () => (seed = (seed*1664525 + 1013904223) >>> 0) / 4294967296)(20261024);
 function hillMat(hex){ const m = new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.95}); hills.push({m, base:new THREE.Color(hex)}); return m; }
@@ -905,7 +907,7 @@ function groundTree(x, z, sc){
     const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05,1), hillMat(col)); c.position.y = 1.7; g.add(c);
     const c2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7,1), hillMat(col)); c2.position.set(0.5,2.3,0.2); g.add(c2);
   }
-  g.position.set(x,0.02,z); g.scale.setScalar(sc); g.rotation.y = rnd()*6; scene.add(g); return g;
+  g.position.set(x,0.02,z); g.scale.setScalar(sc); g.rotation.y = rnd()*6; scene.add(g); solids.push(g); return g;
 }
 function grove(cx, cz, n, radius){
   const placed = [];
@@ -913,7 +915,7 @@ function grove(cx, cz, n, radius){
     const a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
     if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
     placed.push([x,z]); const tr = groundTree(x,z,1.3+rnd()*0.9);
-    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5) || (x>-30.8&&x<-16.8&&z>0&&z<12.5) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17) || (x>-26.4&&x<-13.6&&z>-15.2&&z<-3.6)){ scene.remove(tr); treeSpots.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
+    if((x>25.5&&x<35.5&&z>-16.5&&z<-8) || (((x-30.5)/6.6)**2+((z-0.5)/5.8)**2<1) || (x>36.2&&x<39.8&&z>-17&&z<8.5) || (x>-30.8&&x<-16.8&&z>0&&z<12.5) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17) || (x>-26.4&&x<-13.6&&z>-15.2&&z<-3.6)){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
   }
 }
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
@@ -1296,6 +1298,7 @@ let pigApi = null;
       const h = rcP.intersectObjects(pigs.map(p=>p.g), true)[0]; let hit = null;
       if(h){ let o = h.object; while(o && !pigs.some(p=>p.g===o)) o = o.parent; hit = pigs.find(p=>p.g===o) || null; }
       if(!rcP.ray.intersectPlane(gpl, gv)) return;
+      { const sd = solidD(rcP); if(sd < (h ? h.distance : rcP.ray.origin.distanceTo(gv)-0.05)) return; }
       poke(gv.x, gv.z, hit); });
   }
   const GW = GT/2-0.3;
@@ -1859,7 +1862,7 @@ let dogApi = null, mouseNav = null;
     }
   });
 })();
-[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); const tr = groundTree(p.x,p.z,1.4+rnd()*0.7); if(p.x>-31&&p.x<-15&&p.z>2&&p.z<16){ scene.remove(tr); treeSpots.pop(); } /* 市集前方的河岸樹拿掉（亂數不變） */ });
+[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); const tr = groundTree(p.x,p.z,1.4+rnd()*0.7); if(p.x>-31&&p.x<-15&&p.z>2&&p.z<16){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 市集前方的河岸樹拿掉（亂數不變） */ });
 
 
 /* 攔水壩：擋住約一半河面，水從另一半流過並冒出白色水花；可以用滑鼠或手指左右拖動，改變位置 */
@@ -2055,7 +2058,7 @@ function cuteHouse(p, x, z, s=1, o={}){
 /* 關西太和宮（教師 2026-11-17）：依內政部「臺灣宗教文化資產」〈關西太和宮〉照片——三川殿灰色石面、石雕龍柱、
    明間「假四垂」雙層屋頂、橘瓦燕尾脊、屋脊剪黏雙龍搶珠、兩側紅牆橫屋上有欄杆與小鐘鼓樓、前有台階與香爐。正面朝 +z（朝鏡頭）。 */
 function taihoTemple(p, x, z, s=1){
-  const y = p.userData.top, g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(s); g.userData.taiho = true; p.add(g);
+  const y = p.userData.top, g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(s); g.userData.taiho = true; p.add(g); solids.push(g);
   const STONE = 0xA9A49B, STONE_L = 0xCBC4B6, RED = 0xB8432F, DRED = 0x7A2318, GOLD = 0xE8B43A, TILE = 0xF39A3E, RIDGE = 0xE0603E, CREAM = 0xF1E8D4;
   const B = (w,h,d,c,px,py,pz,o)=>box(g,w,h,d,c,px,py,pz,o);
   /* 山牆式屋頂：三角柱，沿 x 方向 */
@@ -2672,6 +2675,8 @@ renderer.domElement.addEventListener('pointerup', e=>{
   ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ptr, camera);
   const hit = ray.intersectObjects(pickables, false)[0];
+  { const ht = ray.intersectObjects(solids, true)[0]; /* 點到廟身 → 太和宮近看；點到樹 → 擋住、不穿透 */
+    if(ht && (!hit || ht.distance < hit.distance)){ let o = ht.object; while(o && !o.userData.taiho) o = o.parent; if(o) spotGo(SPOTS.findIndex(sp=>sp.n==='太和宮')); return; } }
   if(!hit) return;
   if(hit.object.userData.lesson){ selectLesson(hit.object.userData.lesson); return; }
   if(hit.object.userData.mstall){ spotGo(SPOTS.findIndex(sp=>sp.stalls), hit.object.userData.mstall); return; } /* 點攤位 → 該攤位的平視角 */
@@ -2682,7 +2687,9 @@ renderer.domElement.addEventListener('pointermove', e=>{
   const r = renderer.domElement.getBoundingClientRect();
   ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ptr, camera);
-  renderer.domElement.style.cursor = ray.intersectObjects(pickables, false).length ? 'pointer' : 'grab';
+  const hpk = ray.intersectObjects(pickables, false)[0], hsd = ray.intersectObjects(solids, true)[0]; let onT = false;
+  if(hsd && (!hpk || hsd.distance < hpk.distance)){ let o = hsd.object; while(o && !o.userData.taiho) o = o.parent; onT = !!o; }
+  renderer.domElement.style.cursor = (onT || (hpk && (!hsd || hpk.distance < hsd.distance))) ? 'pointer' : 'grab';
 });
 
 /* 拖動水壩：按住水壩左右拖，沿著小河移動 */
@@ -2754,10 +2761,10 @@ renderer.domElement.addEventListener('pointermove', e=>{
   el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
   el.addEventListener('pointerdown', e=>{
     aimAt(e);
-    if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ const dd = o.userData.dog; if(dd.shy) dogApi.scare(dd, h.point.x, h.point.z); else dogApi.trigger(dd); return; } } }
-    if(dogApi && dogApi.lot && rc.intersectObjects(dogApi.lot,false).length){ dogApi.toggleGather(); return; }
+    if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h && h.distance < solidD(rc)){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ const dd = o.userData.dog; if(dd.shy) dogApi.scare(dd, h.point.x, h.point.z); else dogApi.trigger(dd); return; } } }
+    if(dogApi && dogApi.lot){ const hl = rc.intersectObjects(dogApi.lot,false)[0]; if(hl && hl.distance < solidD(rc)){ dogApi.toggleGather(); return; } }
     const hc = rc.intersectObjects(chase.cats, true)[0];
-    if(hc){ let o = hc.object; while(o && !chase.cats.includes(o)) o = o.parent; const sg = signs.find(s=>s.cat===o); if(sg) sg.t = 2.4; }
+    if(hc && hc.distance < solidD(rc)){ let o = hc.object; while(o && !chase.cats.includes(o)) o = o.parent; const sg = signs.find(s=>s.cat===o); if(sg) sg.t = 2.4; }
   });
   el.addEventListener('pointerleave', ()=>{ if(dogApi) dogApi.ptr = null; });
   el.addEventListener('pointermove', e=>{
@@ -2787,7 +2794,7 @@ function feedKindAt(x,z){
     const r = el.getBoundingClientRect(); pF.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rcF.setFromCamera(pF, camera);
     if(!rcF.ray.intersectPlane(plane, hit)) return;
     const x = hit.x, z = hit.z, d0 = rcF.ray.origin.distanceTo(hit);
-    const blockers = [...pickables, ...damPickables, ...chase.cats, chase.mouse, chase.mouse2, ...(dogApi ? dogApi.groups : [])];
+    const blockers = [...solids, ...pickables, ...damPickables, ...chase.cats, chase.mouse, chase.mouse2, ...(dogApi ? dogApi.groups : [])];
     const hb = rcF.intersectObjects(blockers, true)[0]; if(hb && hb.distance < d0-0.05) return;
     const bf = bridgeFrame; if(bf){ const dx = x-bf.x, dz = z-bf.z, a = dx*bf.tx+dz*bf.tz, p = dx*bf.tz-dz*bf.tx; if(Math.abs(a)<1.7 && Math.abs(p)<8) return; }
     let kind = null, u = 0, off = 0;
@@ -2865,27 +2872,32 @@ function feedKindAt(x,z){
     else { eatEl.classList.add('jelly','sprig','on'); setTimeout(()=>{ eatEl.classList.remove('sprig'); eatEl.classList.add('eat'); }, 800); done(3600); }
   }
   const hide = (parts,idx,per)=>{ for(const pt of parts){ for(let k=0;k<(per?pt.per:1);k++) pt.im.setMatrixAt((per?idx*pt.per:idx)+k, ZERO); pt.im.instanceMatrix.needsUpdate = true; } };
+  const occRc = new THREE.Raycaster();
   const findCrop = (cx,cy,r)=>{
     const pxPer = (len,dist)=>len*r.height/(2*dist*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));
     const scr = (pos)=>{ v.copy(pos).project(camera); return (v.z>1||v.z<-1) ? null : {x:r.left+(v.x+1)/2*r.width, y:r.top+(1-v.y)/2*r.height}; };
-    let best = null, bd = 1e9; const q = new THREE.Vector3();
+    const q = new THREE.Vector3(), cands = [];
     if(CROP.berries) for(const b of CROP.berries){ if(b.st) continue; const dist = camera.position.distanceTo(b.pos); if(dist>30) continue; const sp = scr(b.pos); if(!sp) continue;
-      const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(26, pxPer(0.2,dist)*2.2); if(d<1 && d<bd){ bd = d; best = {kind:'berry', o:b}; } }
+      const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(26, pxPer(0.2,dist)*2.2); if(d<1) cands.push({d, kind:'berry', o:b, p:b.pos.clone()}); }
     if(CROP.clumps) for(const c of CROP.clumps){ if(c.st) continue; q.set(c.x,0.85,c.z); const dist = camera.position.distanceTo(q); if(dist>30) continue; const sp = scr(q); if(!sp) continue;
-      const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(32, pxPer(0.6,dist)); if(d<1 && d<bd){ bd = d; best = {kind:'clump', o:c}; } }
-    return best;
+      const d = Math.hypot(cx-sp.x, cy-sp.y)/Math.max(32, pxPer(0.6,dist)); if(d<1) cands.push({d, kind:'clump', o:c, p:q.clone()}); }
+    /* 依距離由近到遠，取第一個沒有被廟、樹、地塊、攤位擋住的（不再「穿透」） */
+    cands.sort((a,b)=>a.d-b.d);
+    for(const c of cands){ const dir = c.p.clone().sub(camera.position), dist = dir.length(); occRc.set(camera.position, dir.normalize());
+      const h = occRc.intersectObjects([...solids, ...pickables], true)[0]; if(h && h.distance < dist-0.4) continue; return {kind:c.kind, o:c.o}; }
+    return null;
   };
     const wPl = new THREE.Plane(new THREE.Vector3(0,1,0), -0.1), wHit = new THREE.Vector3();
   /* 滑鼠移到可點的水牛、稻草人、果實、花穗上時，游標由手掌變成手指 */
   el.addEventListener('pointermove', e=>{
     if(e.buttons) return;
     const r = el.getBoundingClientRect(); p2.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(p2, camera);
-    const hp = rc.intersectObjects(pickables,false)[0], hd = hp ? hp.distance : 1e9; let hot = false;
+    const hp = rc.intersectObjects(pickables,false)[0], hd = Math.min(hp ? hp.distance : 1e9, solidD(rc)); let hot = false;
     if(!reduce){ const hb = buffApi ? rc.intersectObjects(buffApi.groups,true)[0] : null, hs = rc.intersectObjects(CROP.scarecrows||[],true)[0]; hot = !!((hb && hb.distance<hd) || (hs && hs.distance<hd)); }
     if(!hot && pigApi && !reduce){ const hg = rc.intersectObjects(pigApi.groups,true)[0]; hot = !!(hg && hg.distance<hd); }
     if(!hot && !hp && !busy) hot = !!findCrop(e.clientX, e.clientY, r);
     if(!hot && !hp && el.style.cursor!=='grabbing' && el.style.cursor!=='ew-resize' && rc.ray.intersectPlane(wPl, wHit) && feedKindAt(wHit.x, wHit.z)){
-      const bl = [...pickables, ...damPickables, ...crabPickables, ...chase.cats, chase.mouse, chase.mouse2, ...(dogApi ? dogApi.groups : []), ...(pigApi ? pigApi.groups : [])];
+      const bl = [...solids, ...pickables, ...damPickables, ...crabPickables, ...chase.cats, chase.mouse, chase.mouse2, ...(dogApi ? dogApi.groups : []), ...(pigApi ? pigApi.groups : [])];
       const hb2 = rc.intersectObjects(bl, true)[0]; hot = !(hb2 && hb2.distance < rc.ray.origin.distanceTo(wHit)-0.05);
     }
     if(hot) el.style.cursor = 'pointer';
@@ -2894,7 +2906,7 @@ function feedKindAt(x,z){
   el.addEventListener('pointerup', e=>{
     if(!dn || Math.hypot(e.clientX-dn.x, e.clientY-dn.y)>6){ dn = null; return; } dn = null;
     const r = el.getBoundingClientRect(); p2.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(p2, camera);
-    const hp = rc.intersectObjects(pickables,false)[0], hd = hp ? hp.distance : 1e9;
+    const hp = rc.intersectObjects(pickables,false)[0], hd = Math.min(hp ? hp.distance : 1e9, solidD(rc));
     if(buffApi && !reduce){ const hb = rc.intersectObjects(buffApi.groups,true)[0]; if(hb && hb.distance<hd){ let o = hb.object; while(o && !buffApi.groups.includes(o)) o = o.parent; if(o) buffApi.poke(o); return; } }
     if(!reduce && SCARE_OK()){ const hs = rc.intersectObjects(CROP.scarecrows||[],true)[0]; if(hs && hs.distance<hd){ let o = hs.object; while(o && !(CROP.scarecrows||[]).includes(o)) o = o.parent; if(o){ CROP.scare(o); return; } } }
     if(hp || busy) return;
