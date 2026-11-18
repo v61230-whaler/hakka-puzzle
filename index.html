@@ -1500,17 +1500,17 @@ const marketCat = (()=>{
     p.add(S(new THREE.SphereGeometry(0.045,6,5),0,-0.2,0.015,1,0.7,1.3,wh));               /* 白腳掌 */
     legs.push({p,sx,fz});
   }
-  const head = new THREE.Group(); head.position.set(0,0.27,0.3); bg.add(head);
+  const head = new THREE.Group(); head.position.set(0,0.27,0.3); head.rotation.order = 'YXZ'; bg.add(head);
   head.add(S(new THREE.SphereGeometry(0.14,12,10),0,0,0,1.05,0.95,0.95,br));
   head.add(S(new THREE.SphereGeometry(0.1,10,8),0,-0.045,0.06,1.05,0.8,0.85,wh));       /* 白口鼻 */
   head.add(S(new THREE.SphereGeometry(0.035,6,5),0,0.04,0.115,0.7,1.6,0.6,wh));          /* 額頭中間的白線 */
   head.add(S(new THREE.SphereGeometry(0.018,6,5),0,-0.01,0.145,1.2,0.8,0.8,pk));          /* 粉紅鼻 */
-  const eyes = [];
+  const eyes = [], ears = [];
   for(const sx of [-1,1]){
     const e = new THREE.Group(); e.position.set(sx*0.06,0.025,0.11); head.add(e); eyes.push(e);
     e.add(S(new THREE.SphereGeometry(0.036,8,6),0,0,0,1,1,0.7,amb)); e.add(S(new THREE.SphereGeometry(0.024,6,5),sx*0.002,0,0.022,1,1,0.5,blk));
-    const ear = S(new THREE.ConeGeometry(0.05,0.1,4),sx*0.085,0.12,-0.01,1,1,0.6,br); ear.rotation.z = -sx*0.3; head.add(ear);
-    const ein = S(new THREE.ConeGeometry(0.03,0.065,4),sx*0.083,0.115,0.012,1,1,0.4,pk); ein.rotation.z = -sx*0.3; head.add(ein);
+    const ep = new THREE.Group(); ep.position.set(sx*0.085,0.08,-0.01); ep.rotation.z = -sx*0.3; head.add(ep); ears.push(ep); /* 耳朵掛在耳根，才能抖動 */
+    ep.add(S(new THREE.ConeGeometry(0.05,0.1,4),0,0.04,0,1,1,0.6,br)); ep.add(S(new THREE.ConeGeometry(0.03,0.065,4),-sx*0.002,0.035,0.022,1,1,0.4,pk));
   }
   const lids = eyes.map(e=>{ const l = S(new THREE.SphereGeometry(0.03,8,6),0,-0.004,0.0,1.25,0.22,0.7,blk); l.visible = false; e.add(l); return l; }); /* 睡覺時閉眼：眼睛換成一條細細的黑線 */
   const tail = new THREE.Group(); tail.position.set(0.1,0.06,-0.32); bg.add(tail);      /* 尾巴從屁股繞到身體側邊，尾端會甩 */
@@ -1520,11 +1520,12 @@ const marketCat = (()=>{
   g.traverse(m=>{ if(m.isMesh) m.userData.mcat = true; });
   /* 狀態：lie 趴著看、sleep 交叉前腳睡、walk 在棚頂上走（u：往東西的位置，w：往南北的位置） */
   const o = {x:PX, z:PZ, y:PY, g, head, watcher:null, meow:null};
-  let st = 'lie', stT = 0, stDur = 6, u = 0.15, w = 0, yaw = 0, lift = 0, slp = 0, tu = 0, tw = 0, gait = 0, cross = 0;
+  let st = Math.random()<0.5 ? 'sleep' : 'lie', stT = 0, stDur = 6, u = 0.15, w = 0, yaw = 0, lift = 0, slp = 0, tu = 0, tw = 0, gait = 0, cross = 0;
   const near = a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  let gy = 0, gp = 0.05, gr = 0, gT = 1, bT = 2, bD = 0.14, bP = -1, eT = 3, eS = 0, eP = -1; const hv = {x:0, y:0, z:0}; /* 頭的注視點、眨眼、耳朵 */
   const pick = ()=>{ const r = Math.random();
-    if(r<0.35){ st = 'sleep'; stDur = 10+Math.random()*10; }
-    else if(r<0.7){ st = 'walk'; let k = 0; do{ tw = -1.15+Math.random()*2.3; k++; }while(Math.abs(tw-w)<0.7 && k<9); tu = -0.35+Math.random()*0.9; stDur = 20; }
+    if(r<0.45){ st = 'sleep'; stDur = 15+Math.random()*15; }
+    else if(r<0.75){ st = 'walk'; let k = 0; do{ tw = -1.15+Math.random()*2.3; k++; }while(Math.abs(tw-w)<0.7 && k<9); tu = -0.35+Math.random()*0.9; stDur = 20; }
     else { st = 'lie'; stDur = 6+Math.random()*6; } stT = 0; };
   pondTick.push((dt,t)=>{
     dt = Math.min(dt,0.1); stT += dt;
@@ -1542,7 +1543,7 @@ const marketCat = (()=>{
       if(stT>stDur && !o.watcher){ st = 'lie'; stT = 0; stDur = 5; }
     } else if(st==='sleep'){ wantSlp = 1; if(stT>stDur){ st = 'lie'; stT = 0; stDur = 3+Math.random()*3; } }
     else if(stT>stDur && !o.watcher) pick();
-    lift += Math.max(-dt*1.6, Math.min(dt*1.6, wantLift-lift)); slp += Math.max(-dt*0.8, Math.min(dt*0.8, wantSlp-slp));
+    lift += Math.max(-dt*1.6, Math.min(dt*1.6, wantLift-lift)); slp += Math.max(-dt*0.8, Math.min(dt*(0.35), wantSlp-slp)); /* 慢慢低頭睡著，醒來較快 */
     const e = lift*lift*(3-2*lift), s = slp*slp*(3-2*slp);
     g.position.set(u,0,w); g.rotation.y = yaw; bg.position.y = e*0.165;
     if(moving) gait += dt*9;
@@ -1551,15 +1552,33 @@ const marketCat = (()=>{
       L.p.rotation.x = lie*(1-e) + sw*e;
       L.p.rotation.y = L.fz>0 ? (1-e)*s*L.sx*0.5 : 0;                 /* 睡覺時兩隻前腳往內交叉 */
       L.p.position.y = 0.07 + (L.fz>0 && L.sx>0 ? 0.03*s*(1-e) : 0); }  /* 右前腳疊在左前腳上 */
-    /* 頭：趴著慢慢左右看；睡覺低頭靠在交叉的前腳上；有狗時轉頭看狗 */
-    let hy = Math.sin(t*0.37)*0.75 + Math.sin(t*0.13+1)*0.25;
-    if(moving || st==='walk') hy *= 0.25;
-    if(o.watcher){ const ww = o.watcher; hy = near(Math.atan2(ww.x-o.x, ww.z-o.z) - yaw); hy = Math.max(-1.3, Math.min(1.3, hy)); }
-    hy *= (1-s);
-    head.rotation.y += (hy-head.rotation.y)*Math.min(1, dt*2.5);
-    head.rotation.x = (o.watcher ? 0.25 : 0.05+0.04*Math.sin(t*0.5))*(1-s) + 0.38*s;
+    /* 頭（教師 2026-11-18：要更自然）：真的貓不是一直左右掃，而是「盯住一處 → 很快轉過去 → 再盯住」。
+       每隔 1.2–4.5 秒換一個注視點（多半小幅移動，偶爾大轉頭、抬頭看上面、歪頭），用彈簧追過去：起步快、到位前放慢、略帶一點過頭；
+       另外會眨眼（偶爾慢慢眨）、單邊耳朵抖一下。睡覺時低頭靠在交叉的前腳上，隨呼吸微動；有狗時盯著狗、頭稍低、耳朵往前。 */
+    gT -= dt;
+    if(gT<=0){ const r = Math.random();
+      if(st==='walk'){ gy = (Math.random()-0.5)*0.5; gp = 0.12+Math.random()*0.1; gr = 0; gT = 1+Math.random()*1.5; }
+      else { if(r<0.55) gy = Math.max(-1.1, Math.min(1.1, gy+(Math.random()-0.5)*0.6)); else gy = (Math.random()*2-1)*1.1;
+        gp = Math.random()<0.15 ? -0.25-Math.random()*0.15 : 0.0+Math.random()*0.15;   /* 偶爾抬頭看上面 */
+        gr = Math.random()<0.25 ? (Math.random()<0.5?-1:1)*(0.12+Math.random()*0.1) : 0; /* 偶爾歪頭 */
+        gT = 1.2+Math.random()*3.3; } }
+    let ty = gy, tp = gp, tr = gr;
+    if(o.watcher){ const ww = o.watcher; ty = Math.max(-1.3, Math.min(1.3, near(Math.atan2(ww.x-o.x, ww.z-o.z) - yaw))); tp = 0.3; tr = 0; }
+    ty += 0.035*Math.sin(t*0.9)+0.02*Math.sin(t*2.3+1); tp += 0.025*Math.sin(t*1.3+2); /* 盯著時頭也有一點點自然的晃動，不會完全僵住 */
+    ty *= (1-s); tp = tp*(1-s) + (0.38+0.02*Math.sin(t*1.1))*s; tr *= (1-s);
+    const K = o.watcher ? 90 : 55, C = 2*Math.sqrt(K)*0.78;   /* 阻尼略小於臨界：轉到位時稍微過頭再回來 */
+    hv.y += (K*(ty-head.rotation.y) - C*hv.y)*dt; hv.x += (K*(tp-head.rotation.x) - C*hv.x)*dt; hv.z += (K*0.6*(tr-head.rotation.z) - C*0.8*hv.z)*dt;
+    head.rotation.y += hv.y*dt; head.rotation.x += hv.x*dt; head.rotation.z += hv.z*dt;
     head.position.set(0, 0.27-0.09*s, 0.3-0.07*s);
-    const closed = s>0.6; lids.forEach(l=>{ l.visible = closed; }); eyes.forEach(e=>{ e.children[0].visible = e.children[1].visible = !closed; });
+    /* 眨眼：每 2–6 秒一次，四分之一是慢慢眨 */
+    bT -= dt; if(bT<=0){ bD = Math.random()<0.25 ? 0.5 : 0.14; bP = 0; bT = 2+Math.random()*4; }
+    let lidK = 1; if(bP>=0){ bP += dt; const f = bP/bD; lidK = f<1 ? Math.abs(1-2*f) : 1; if(f>=1) bP = -1; }
+    const closed = s>0.6; lids.forEach(l=>{ l.visible = closed; });
+    eyes.forEach(e=>{ e.children[0].visible = e.children[1].visible = !closed; e.scale.y = closed ? 1 : Math.max(0.12, lidK); });
+    /* 耳朵：偶爾單邊抖一下；被狗看時兩耳朝前 */
+    eT -= dt; if(eT<=0){ eS = Math.random()<0.5 ? 0 : 1; eP = 0; eT = 2.5+Math.random()*5; }
+    ears.forEach((ep,i)=>{ let tw = 0; if(eP>=0 && i===eS){ tw = Math.sin(eP/0.18*Math.PI*2)*0.35; } ep.rotation.x = (o.watcher ? -0.2 : 0) + tw; ep.rotation.y = (i?1:-1)*0.15*s; });
+    if(eP>=0){ eP += dt; if(eP>0.36) eP = -1; }
     tip.rotation.y = -0.15+Math.sin(t*(1.6-1.0*s))*(0.25-0.15*s); tail.rotation.y = s*0.5;
     body.scale.y = 0.78+(0.025+0.015*s)*Math.sin(t*(1.8-0.7*s));
     o.x = PX + u*Math.cos(SL); o.z = PZ + w;
