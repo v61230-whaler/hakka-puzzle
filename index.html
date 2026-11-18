@@ -1479,42 +1479,107 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
   table(-24.9,3.75,[1.2,3.4,5.0],2); table(-24.9,7.45,[1.2,3.4],1);
   { const p = person({shirt:0xFFB26B,pants:0x5A6A8A,ph:3.3}); p.position.set(-26.3,FY,9.3+2.1); p.rotation.y = Math.PI*0.2; scene.add(p); }
 })();
-/* 市集帳篷上的咖啡色賓士貓（教師 2026-11-18，依教師給的照片：背、頭頂、耳朵咖啡色，口鼻、胸、腹、腳掌白色，粉紅鼻、琥珀色大眼）。
-   身長約狗的一半，懶懶趴在「點心店」攤的棚頂北半邊（市集整塊狗不能進去，狗只能從北邊太和宮廣場經過），頭慢慢左右看；羅威那、薩摩耶經過時會停下來看牠、叫三聲（在狗的程式裡） */
+/* 市集帳篷上的橘色賓士貓（教師 2026-11-18：原為咖啡色，同日改橘色；口鼻、胸、腹、腳掌白色，粉紅鼻、琥珀色大眼）。
+   身長約狗的一半，在「粄」攤的棚頂上：身體順著棚頂橫躺（和棚頂斜面垂直方向），三種動作輪流——趴著左右看、低頭趴著兩前腳交叉睡覺、站起來在棚頂上走一段。
+   羅威那、薩摩耶走進市集經過時會停下來看牠、叫三聲（在狗的程式裡）；點貓會喵一聲（WebAudio 合成，不用外部音檔） */
 const marketCat = (()=>{
-  const g = new THREE.Group(), br = mat(0x8A5634), wh = mat(0xFFFFFF), pk = mat(0xF2A0A8), amb = mat(0xB8792A), blk = mat(0x1E1A18);
-  const body = S(new THREE.CapsuleGeometry(0.15,0.36,4,10).rotateX(Math.PI/2),0,0.13,0,1,0.78,1,br); g.add(body);
-  g.add(S(new THREE.SphereGeometry(0.15,10,8),0,0.08,0.02,0.92,0.5,1.55,wh));            /* 白肚子 */
-  g.add(S(new THREE.SphereGeometry(0.13,10,8),0,0.13,0.24,1.0,0.95,0.7,wh));             /* 白胸口 */
-  for(const sx of [-1,1]){
-    g.add(S(new THREE.CapsuleGeometry(0.045,0.2,3,6).rotateX(Math.PI/2),sx*0.075,0.04,0.36,1,1,1,wh));   /* 往前伸的白前腳 */
-    g.add(S(new THREE.SphereGeometry(0.075,8,6),sx*0.12,0.07,-0.2,0.8,0.8,1.2,br));                       /* 後腿 */
-    g.add(S(new THREE.SphereGeometry(0.045,6,5),sx*0.14,0.03,-0.08,1,0.7,1.4,wh));                         /* 白後腳掌 */
+  const PX = -28.75, PY = 2.745, PZ = 5.6, SL = 0.13;   /* 粄攤棚頂的中線（世界座標）與斜度 */
+  const tilt = new THREE.Group(); tilt.position.set(PX,PY,PZ); tilt.rotation.z = -SL; scene.add(tilt); /* 順著棚頂往東傾 */
+  const g = new THREE.Group(); tilt.add(g);
+  const OR = 0xE8873A, br = mat(OR), wh = mat(0xFFFFFF), pk = mat(0xF2A0A8), amb = mat(0xC8902A), blk = mat(0x1E1A18);
+  const bg = new THREE.Group(); g.add(bg);                                                  /* 站起來時整個身體往上抬 */
+  const body = S(new THREE.CapsuleGeometry(0.15,0.36,4,10).rotateX(Math.PI/2),0,0.13,0,1,0.78,1,br); bg.add(body);
+  bg.add(S(new THREE.SphereGeometry(0.15,10,8),0,0.08,0.02,0.92,0.5,1.55,wh));           /* 白肚子 */
+  bg.add(S(new THREE.SphereGeometry(0.13,10,8),0,0.13,0.24,1.0,0.95,0.7,wh));            /* 白胸口 */
+  for(const sx of [-1,1]) bg.add(S(new THREE.SphereGeometry(0.075,8,6),sx*0.11,0.1,-0.2,0.8,0.9,1.2,br)); /* 後腿（大腿） */
+  /* 四隻腳：從肩膀、臀部往下；趴著時往前伸（白前腳伸在頭前），站著時直立 */
+  const legs = [];
+  for(const [sx,fz] of [[-1,1],[1,1],[-1,-1],[1,-1]]){
+    const p = new THREE.Group(); p.position.set(sx*(fz>0?0.075:0.1),0.07,fz>0?0.25:-0.2); bg.add(p);
+    p.add(S(new THREE.CylinderGeometry(0.038,0.034,0.2,6).translate(0,-0.1,0),0,0,0,1,1,1,fz>0?wh:br));
+    p.add(S(new THREE.SphereGeometry(0.045,6,5),0,-0.2,0.015,1,0.7,1.3,wh));               /* 白腳掌 */
+    legs.push({p,sx,fz});
   }
-  const head = new THREE.Group(); head.position.set(0,0.27,0.3); g.add(head);
+  const head = new THREE.Group(); head.position.set(0,0.27,0.3); bg.add(head);
   head.add(S(new THREE.SphereGeometry(0.14,12,10),0,0,0,1.05,0.95,0.95,br));
   head.add(S(new THREE.SphereGeometry(0.1,10,8),0,-0.045,0.06,1.05,0.8,0.85,wh));       /* 白口鼻 */
   head.add(S(new THREE.SphereGeometry(0.035,6,5),0,0.04,0.115,0.7,1.6,0.6,wh));          /* 額頭中間的白線 */
   head.add(S(new THREE.SphereGeometry(0.018,6,5),0,-0.01,0.145,1.2,0.8,0.8,pk));          /* 粉紅鼻 */
+  const eyes = [];
   for(const sx of [-1,1]){
-    head.add(S(new THREE.SphereGeometry(0.036,8,6),sx*0.06,0.025,0.11,1,1,0.7,amb));
-    head.add(S(new THREE.SphereGeometry(0.024,6,5),sx*0.062,0.025,0.132,1,1,0.5,blk));
+    const e = new THREE.Group(); e.position.set(sx*0.06,0.025,0.11); head.add(e); eyes.push(e);
+    e.add(S(new THREE.SphereGeometry(0.036,8,6),0,0,0,1,1,0.7,amb)); e.add(S(new THREE.SphereGeometry(0.024,6,5),sx*0.002,0,0.022,1,1,0.5,blk));
     const ear = S(new THREE.ConeGeometry(0.05,0.1,4),sx*0.085,0.12,-0.01,1,1,0.6,br); ear.rotation.z = -sx*0.3; head.add(ear);
     const ein = S(new THREE.ConeGeometry(0.03,0.065,4),sx*0.083,0.115,0.012,1,1,0.4,pk); ein.rotation.z = -sx*0.3; head.add(ein);
   }
-  const tail = new THREE.Group(); tail.position.set(0.1,0.04,-0.32); g.add(tail);       /* 尾巴從屁股繞到身體側邊貼著，尾端會甩 */
+  const lids = eyes.map(e=>{ const l = S(new THREE.SphereGeometry(0.03,8,6),0,-0.004,0.0,1.25,0.22,0.7,blk); l.visible = false; e.add(l); return l; }); /* 睡覺時閉眼：眼睛換成一條細細的黑線 */
+  const tail = new THREE.Group(); tail.position.set(0.1,0.06,-0.32); bg.add(tail);      /* 尾巴從屁股繞到身體側邊，尾端會甩 */
   tail.add(S(new THREE.CapsuleGeometry(0.035,0.12,3,6).rotateZ(Math.PI/2),0.05,0,-0.02,1,1,1,br));
   const tip = new THREE.Group(); tip.position.set(0.1,0,0); tail.add(tip); tip.add(S(new THREE.CapsuleGeometry(0.033,0.22,3,6).rotateX(Math.PI/2),0,0,0.13,1,1,1,br));
-  g.rotation.order = 'YXZ'; g.rotation.y = Math.PI/2; g.rotation.x = 0.13; /* 面向東邊的廣場；順著棚頂往下傾 */
-  g.position.set(-28.4, 2.7, 1.3); scene.add(g);
-  const o = {x:-28.4, z:1.3, y:2.7, g, head, watcher:null};
+  { const hb = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,1.1), new THREE.MeshBasicMaterial({visible:false})); hb.position.set(0,0.25,0.05); g.add(hb); } /* 看不見的點擊範圍，比貓大一圈，學生比較好點到 */
+  g.traverse(m=>{ if(m.isMesh) m.userData.mcat = true; });
+  /* 狀態：lie 趴著看、sleep 交叉前腳睡、walk 在棚頂上走（u：往東西的位置，w：往南北的位置） */
+  const o = {x:PX, z:PZ, y:PY, g, head, watcher:null, meow:null};
+  let st = 'lie', stT = 0, stDur = 6, u = 0.15, w = 0, yaw = 0, lift = 0, slp = 0, tu = 0, tw = 0, gait = 0, cross = 0;
+  const near = a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  const pick = ()=>{ const r = Math.random();
+    if(r<0.35){ st = 'sleep'; stDur = 10+Math.random()*10; }
+    else if(r<0.7){ st = 'walk'; let k = 0; do{ tw = -1.15+Math.random()*2.3; k++; }while(Math.abs(tw-w)<0.7 && k<9); tu = -0.35+Math.random()*0.9; stDur = 20; }
+    else { st = 'lie'; stDur = 6+Math.random()*6; } stT = 0; };
   pondTick.push((dt,t)=>{
-    let ty = Math.sin(t*0.37)*0.75 + Math.sin(t*0.13+1)*0.25;  /* 慢慢左右看 */
+    dt = Math.min(dt,0.1); stT += dt;
     if(o.watcher && o.watcher.state!=='cat') o.watcher = null;
-    if(o.watcher){ const w = o.watcher; ty = Math.atan2(w.x-o.x, w.z-o.z) - Math.PI/2; ty = ((ty+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; ty = Math.max(-1.2, Math.min(1.2, ty)); }
-    head.rotation.y += (ty-head.rotation.y)*Math.min(1, dt*2.5); head.rotation.x = o.watcher ? 0.25 : 0.05+0.04*Math.sin(t*0.5);
-    tip.rotation.y = -0.15+Math.sin(t*1.6)*0.25; body.scale.y = 0.78+0.025*Math.sin(t*1.8);
+    if(o.watcher && st==='sleep'){ st = 'lie'; stT = 0; stDur = 4; }    /* 狗來了就醒來看 */
+    let wantLift = 0, wantSlp = 0, moving = false;
+    if(st==='walk'){
+      wantLift = 1;
+      if(o.watcher){ /* 被狗叫時停在原地站著看 */ }
+      else if(lift>0.95){ const dx = tu-u, dz = tw-w, dd = Math.hypot(dx,dz);
+        if(dd>0.05){ const ty = Math.atan2(dx,dz), df = near(ty-yaw); yaw += Math.max(-2.5*dt, Math.min(2.5*dt, df));
+          if(Math.abs(df)<0.5){ const v = 0.32*dt; u += Math.sin(yaw)*v; w += Math.cos(yaw)*v; moving = true; } }
+        else { const ty = Math.abs(near(yaw))<Math.PI/2 ? 0 : Math.PI, df = near(ty-yaw); yaw += Math.max(-2*dt, Math.min(2*dt, df)); /* 轉回順著棚頂再趴下 */
+          if(Math.abs(df)<0.03){ st = 'lie'; stT = 0; stDur = 5+Math.random()*5; } } }
+      if(stT>stDur && !o.watcher){ st = 'lie'; stT = 0; stDur = 5; }
+    } else if(st==='sleep'){ wantSlp = 1; if(stT>stDur){ st = 'lie'; stT = 0; stDur = 3+Math.random()*3; } }
+    else if(stT>stDur && !o.watcher) pick();
+    lift += Math.max(-dt*1.6, Math.min(dt*1.6, wantLift-lift)); slp += Math.max(-dt*0.8, Math.min(dt*0.8, wantSlp-slp));
+    const e = lift*lift*(3-2*lift), s = slp*slp*(3-2*slp);
+    g.position.set(u,0,w); g.rotation.y = yaw; bg.position.y = e*0.165;
+    if(moving) gait += dt*9;
+    for(const L of legs){ const lie = L.fz>0 ? -Math.PI/2 : -Math.PI/2*0.92;
+      const sw = moving ? Math.sin(gait+(L.sx*L.fz>0?0:Math.PI))*0.45 : 0;
+      L.p.rotation.x = lie*(1-e) + sw*e;
+      L.p.rotation.y = L.fz>0 ? (1-e)*s*L.sx*0.5 : 0;                 /* 睡覺時兩隻前腳往內交叉 */
+      L.p.position.y = 0.07 + (L.fz>0 && L.sx>0 ? 0.03*s*(1-e) : 0); }  /* 右前腳疊在左前腳上 */
+    /* 頭：趴著慢慢左右看；睡覺低頭靠在交叉的前腳上；有狗時轉頭看狗 */
+    let hy = Math.sin(t*0.37)*0.75 + Math.sin(t*0.13+1)*0.25;
+    if(moving || st==='walk') hy *= 0.25;
+    if(o.watcher){ const ww = o.watcher; hy = near(Math.atan2(ww.x-o.x, ww.z-o.z) - yaw); hy = Math.max(-1.3, Math.min(1.3, hy)); }
+    hy *= (1-s);
+    head.rotation.y += (hy-head.rotation.y)*Math.min(1, dt*2.5);
+    head.rotation.x = (o.watcher ? 0.25 : 0.05+0.04*Math.sin(t*0.5))*(1-s) + 0.38*s;
+    head.position.set(0, 0.27-0.09*s, 0.3-0.07*s);
+    const closed = s>0.6; lids.forEach(l=>{ l.visible = closed; }); eyes.forEach(e=>{ e.children[0].visible = e.children[1].visible = !closed; });
+    tip.rotation.y = -0.15+Math.sin(t*(1.6-1.0*s))*(0.25-0.15*s); tail.rotation.y = s*0.5;
+    body.scale.y = 0.78+(0.025+0.015*s)*Math.sin(t*(1.8-0.7*s));
+    o.x = PX + u*Math.cos(SL); o.z = PZ + w;
   });
+  /* 點貓：喵一聲（兩個帶濾波的鋸齒波，音高先升後降），有在睡就醒來 */
+  let mac = null;
+  o.meow = ()=>{ try{
+    mac = mac || new (window.AudioContext||window.webkitAudioContext)(); if(mac.state==='suspended') mac.resume();
+    const T = mac.currentTime, D = 0.75, f0 = 520+Math.random()*80, out = mac.createGain(); out.gain.value = 0.5; out.connect(mac.destination);
+    const env = mac.createGain(); env.gain.setValueAtTime(0.0001,T); env.gain.exponentialRampToValueAtTime(1,T+0.06); env.gain.setValueAtTime(1,T+D*0.55); env.gain.exponentialRampToValueAtTime(0.0001,T+D);
+    const f1 = mac.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 5; f1.frequency.setValueAtTime(800,T); f1.frequency.linearRampToValueAtTime(1700,T+D*0.4); f1.frequency.linearRampToValueAtTime(900,T+D);
+    const f2 = mac.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = 6; f2.frequency.setValueAtTime(2400,T); f2.frequency.linearRampToValueAtTime(3200,T+D*0.4); f2.frequency.linearRampToValueAtTime(2500,T+D);
+    const osc = mac.createOscillator(); osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(f0,T); osc.frequency.linearRampToValueAtTime(f0*1.45,T+D*0.3); osc.frequency.linearRampToValueAtTime(f0*1.3,T+D*0.6); osc.frequency.linearRampToValueAtTime(f0*0.8,T+D);
+    const vib = mac.createOscillator(), vg = mac.createGain(); vib.frequency.value = 6; vg.gain.value = 9; vib.connect(vg); vg.connect(osc.frequency);
+    const g2 = mac.createGain(); g2.gain.value = 0.45;
+    osc.connect(env); env.connect(f1); env.connect(f2); f1.connect(out); f2.connect(g2); g2.connect(out);
+    osc.start(T); vib.start(T); osc.stop(T+D+0.05); vib.stop(T+D+0.05);
+  }catch(_){}
+    if(st==='sleep'){ st = 'lie'; stT = 0; stDur = 5; } };
   return o;
 })();
 let dogApi = null, mouseNav = null;
@@ -1595,7 +1660,8 @@ let dogApi = null, mouseNav = null;
     if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
-    if(x>-30.8&&x<-16.8&&z>0&&z<12) return false; /* 客家市集 */
+    if(x>-30.8&&x<-26.9&&z>0.2&&z<11.1) return false; /* 客家市集的三個攤位（教師 2026-11-18：狗可以走進市集，只擋攤位、圓桌與站著的客人） */
+    if(Math.hypot(x+24.9,z-3.75)<1.45 || Math.hypot(x+24.9,z-7.45)<1.45 || Math.hypot(x+26.3,z-11.4)<0.6) return false;
     if(x>-25.8&&x<-14.2&&z>-14.8&&z<-6.2) return false; /* 太和宮本體 */
     if(Math.hypot(x+20,z+4.5)<1.1) return false; /* 廟前香爐 */
     for(const q of treeSpots){ const r = 0.1*q[2]+0.2; if((x-q[0])**2+(z-q[1])**2 < r*r) return false; }
@@ -1684,8 +1750,7 @@ let dogApi = null, mouseNav = null;
   const inZone = c=>Math.abs(cx(c))<30;
   const pickFrom = (arr, b, minD)=>{ for(let k=0;k<60;k++){ const c = arr[Math.floor(rnd()*arr.length)]; if(b.dist[c]>=minD && (inZone(c) || k>=40)) return c; } return -1; };
   /* ── 狗 ── */
-  const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, catFan:o===BREEDS[0]||o===BREEDS[6], catCd:5, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false, shy:!!o.shy, flee:0, fleeCd:0}; });
-  /* 點到狗：牠轉頭看向鏡頭，汪汪叫兩聲（聲音用瀏覽器合成，沒有音檔） */
+  const ds = BREEDS.map(o=>{ const g = makeDog(o); g.visible = false; scene.add(g); return {g, catFan:o===BREEDS[0]||o===BREEDS[6], catCd:5, x:0, z:0, yaw:0, sp:0, path:[], state:'init', wait:0, gait:0, gt:0, run:false, pair:null, pt:0, replan:0, ph:rnd()*6, mood:0, poi:false, shy:!!o.shy, flee:0, fleeCd:0}; });  /* 點到狗：牠轉頭看向鏡頭，汪汪叫兩聲（聲音用瀏覽器合成，沒有音檔） */
   const PITCH = [0.72,0.92,1.1,1.38,0.86,0.66,1.0]; /* 播放速度：伯恩山最低、法鬥最高（法鬥不叫） */
   const barkTex = (()=>{ const c = document.createElement('canvas'); c.width = 256; c.height = 160; const x = c.getContext('2d');
     x.font = '900 110px Huninn, "PingFang TC", "Noto Sans TC", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
@@ -1785,7 +1850,7 @@ let dogApi = null, mouseNav = null;
     const b = bfs(me), r = rnd(); let cell = -1, poi = false;
     const others = ds.filter(o=>o!==d && o.state!=='init' && !o.pair && !o.paired && b.dist[startCell(o)]>=0);
     if(rnd()<0.2 && others.length){ const o = others[Math.floor(rnd()*others.length)]; d.pair = o; o.paired = true; d.pt = 10+rnd()*8; d.state = 'pair'; d.replan = 0; d.path = []; return; }
-    if(d.catFan && d.catCd<=0 && rnd()<0.5){ for(let k=0;k<12 && cell<0;k++){ const c = ci(-25.8+rnd()*4.5, -0.8-rnd()*2.2); if(c>=0 && b.dist[c]>=0) cell = c; } } /* 羅威那、薩摩耶偶爾逛到市集，經過帳篷上的貓 */
+    if(d.catFan && d.catCd<=0 && rnd()<0.5){ for(let k=0;k<12 && cell<0;k++){ const c = ci(-26.4+rnd()*3.5, 5.0+rnd()*1.2); if(c>=0 && b.dist[c]>=0) cell = c; } } /* 羅威那、薩摩耶偶爾逛進市集，走到粄攤前（兩張圓桌中間的走道），經過棚頂上的貓 */
     if(cell>=0){}
     else if(r<0.15 && riverC.length){ cell = pickFrom(riverC,b,6); poi = true; }
     else if(r<0.30 && paddyC.length){ cell = pickFrom(paddyC,b,6); poi = true; }
@@ -1849,7 +1914,7 @@ let dogApi = null, mouseNav = null;
       if(d.shy && G.mode==='idle'){ if(d.fleeCd>0) d.fleeCd -= dt; if(dogApi.ptr && d.fleeCd<=0 && Math.hypot(dogApi.ptr.x-d.x, dogApi.ptr.z-d.z)<4.2) flee(d, dogApi.ptr.x, dogApi.ptr.z); }
       /* 羅威那、薩摩耶經過帳篷上的貓附近：停下來看牠 2 秒 → 叫三聲 → 3 秒後離開（教師 2026-11-18） */
       if(d.catFan){ if(d.catCd>0) d.catCd -= dt;
-        if(d.catCd<=0 && G.mode==='idle' && !d.tour && d.barkT<=0 && !d.flee && (d.state==='go'||d.state==='wait') && Math.hypot(marketCat.x-d.x, marketCat.z-d.z)<6){
+        if(d.catCd<=0 && G.mode==='idle' && !d.tour && d.barkT<=0 && !d.flee && (d.state==='go'||d.state==='wait') && Math.hypot(marketCat.x-d.x, marketCat.z-d.z)<4.5){
           if(d.pair){ d.pair.paired = false; d.pair = null; } d.state = 'cat'; d.catT = 0; d.cbf = [false,false,false]; d.path = []; marketCat.watcher = d; } }
       if(d.barkT>0){ d.barkT -= dt; const e = 1.7-d.barkT;
         const ty = Math.atan2(camera.position.x-d.x, camera.position.z-d.z), df = ((ty-d.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; d.yaw += Math.max(-9*dt,Math.min(9*dt,df));
@@ -2817,6 +2882,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
   el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
   el.addEventListener('pointerdown', e=>{
     aimAt(e);
+    { const hm = rc.intersectObject(marketCat.g, true)[0]; if(hm && hm.distance < solidD(rc)){ marketCat.meow(); down = null; return; } } /* 點貓：喵一聲，不切到攤位 */
     if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h && h.distance < solidD(rc)){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ const dd = o.userData.dog; if(dd.shy) dogApi.scare(dd, h.point.x, h.point.z); else dogApi.trigger(dd); return; } } }
     if(dogApi && dogApi.lot){ const hl = rc.intersectObjects(dogApi.lot,false)[0]; if(hl && hl.distance < solidD(rc)){ dogApi.toggleGather(); return; } }
     const hc = rc.intersectObjects(chase.cats, true)[0];
