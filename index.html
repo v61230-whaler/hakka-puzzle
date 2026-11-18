@@ -106,8 +106,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tour-cap a{color:var(--indigo)}
 .tour-cap.mini{padding:4px}
 .tour-cap.mini .captxt{display:none}
-.tour-cap .capshow{display:none}
-.tour-cap.mini .capshow{display:inline-flex;align-items:center;gap:6px;margin-left:0;padding:3px 12px 3px 5px}
+.tour-cap .capshow{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;padding:3px 12px 3px 5px}
+.tour-cap.mini .capshow{margin-left:0}
 .capshow .ic{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#2F7CC4;color:#fff;font:italic 700 14px/1 Georgia,'Times New Roman',serif}
 .fallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 
@@ -3147,12 +3147,11 @@ SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, 
 const mnav = [0,1].map(()=>{ const g = new THREE.Group(); scene.add(g); const o = {g, go:null}; o.el = makeLabel('', 'mnav', 0, g, ()=>o.go && o.go()); o.el.hidden = true; return o; });
 let spotNav = null;
 addEventListener('keydown', e=>{ if(spotNav && spotView && (e.key==='ArrowLeft'||e.key==='ArrowRight') && !/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||'')){ spotNav(e.key==='ArrowLeft' ? 1 : -1); e.preventDefault(); } });
-let capT = 0;
 function spotLeave(){
   if(!spotView) return; spotNav = null; mnav.forEach(o=>{ o.el.hidden = true; });
   pendingLimits = spotView.saved; spotView = null; stage.classList.remove('spotview');
   SPOTS.forEach(sp=>sp.el.classList.remove('on'));
-  const c = $('#tourCap'); clearTimeout(capT); c.classList.remove('mini'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
+  const c = $('#tourCap'); c.classList.remove('mini'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
 }
 function spotGo(i, k0){
   const sp = SPOTS[i], keep = spotView ? spotView.saved : null;
@@ -3169,9 +3168,9 @@ function spotGo(i, k0){
   const render = ()=>{
     const v = (st && k>0) ? st[k-1] : sp;
     c.innerHTML = `<span class="captxt">${v.html || escH(v.say)}</span><button type="button" class="spotback capshow" aria-label="打開說明"><span class="ic" aria-hidden="true">i</span>說明</button>`;
-    /* 到達後說明框停 6 秒就收成小鈕，不擋畫面；按「說明」再打開 */
-    const fold = ()=>{ clearTimeout(capT); c.classList.remove('mini'); capT = setTimeout(()=>{ if(c.dataset.spot) c.classList.add('mini'); }, 6900); };
-    c.querySelector('.capshow').addEventListener('click', fold); fold();
+    /* 一開始只顯示「ⓘ 說明」小鈕，不擋畫面；按一下打開文字，再按一下收起 */
+    c.classList.add('mini');
+    c.querySelector('.capshow').addEventListener('click', ()=>c.classList.toggle('mini'));
     if(st){ /* 左右箭頭：貼在目前這攤的左右兩側（畫面左＝南、右＝北）；總覽時不顯示 */
       const nb = [k>0 && k<st.length ? st[k] : null, k>1 ? st[k-2] : null];
       mnav.forEach((o,n)=>{ const t = nb[n]; o.el.hidden = !t; if(!t) return;
