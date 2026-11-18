@@ -107,7 +107,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tour-cap.mini{padding:4px}
 .tour-cap.mini .captxt{display:none}
 .tour-cap .capshow{display:none}
-.tour-cap.mini .capshow{display:inline-block;margin-left:0}
+.tour-cap.mini .capshow{display:inline-flex;align-items:center;gap:6px;margin-left:0;padding:3px 12px 3px 5px}
+.capshow .ic{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#2F7CC4;color:#fff;font:italic 700 14px/1 Georgia,'Times New Roman',serif}
 .fallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 
 #panel{border-left:1px solid var(--line);background:var(--card);overflow-y:auto;min-width:0;
@@ -3167,7 +3168,7 @@ function spotGo(i, k0){
   const st = sp.stalls || null; let k = k0 || 0; /* k=0：全景（市集的總覽）；k≥1：第 k 個攤位 */
   const render = ()=>{
     const v = (st && k>0) ? st[k-1] : sp;
-    c.innerHTML = `<span class="captxt">${v.html || escH(v.say)}</span><button type="button" class="spotback capshow">說明</button>`;
+    c.innerHTML = `<span class="captxt">${v.html || escH(v.say)}</span><button type="button" class="spotback capshow" aria-label="打開說明"><span class="ic" aria-hidden="true">i</span>說明</button>`;
     /* 到達後說明框停 6 秒就收成小鈕，不擋畫面；按「說明」再打開 */
     const fold = ()=>{ clearTimeout(capT); c.classList.remove('mini'); capT = setTimeout(()=>{ if(c.dataset.spot) c.classList.add('mini'); }, 6900); };
     c.querySelector('.capshow').addEventListener('click', fold); fold();
