@@ -104,6 +104,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 @keyframes dogblink{50%{opacity:.25}}
 .dogfade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s;z-index:1999999}
 .tour-cap a{color:var(--indigo)}
+.tour-cap.mini{padding:4px}
+.tour-cap.mini .captxt{display:none}
+.tour-cap .capshow{display:none}
+.tour-cap.mini .capshow{display:inline-block;margin-left:0}
 .fallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 
 #panel{border-left:1px solid var(--line);background:var(--card);overflow-y:auto;min-width:0;
@@ -2950,7 +2954,7 @@ const TOUR_ROUTES = [['u2','u4'],['u3','u5'],['u1','u7'],['u6','u2'],['u4','u7']
 let tour = null, lastRoute = -1;
 const $tourDlg = $('#tourDialog'), $tourCap = $('#tourCap');
 const tourY = 0.6*ISC + 0.06;
-function tourSay(txt){ $tourCap.textContent = txt; $tourCap.hidden = !txt; }
+function tourSay(txt){ $tourCap.classList.remove('mini'); $tourCap.textContent = txt; $tourCap.hidden = !txt; }
 function tourPaths(ids){
   const P = id=>{ const g = groups[id]; return new THREE.Vector3(g.position.x, tourY, g.position.z); };
   const unit = id=>{ const v = P(id); return v.clone().setY(0); };
@@ -3028,7 +3032,7 @@ function dogSay(txt, sp){
   let h = '';
   if(sp && sp.photo){ const im = `<img src="${escH(sp.photo)}" alt="" style="display:block;max-height:110px;max-width:100%;margin:0 auto 6px;border-radius:12px">`; h += sp.u ? `<a href="${escH(sp.u)}" target="_blank" rel="noopener">${im}</a>` : im; }
   h += escH(txt);
-  $tourCap.innerHTML = h; $tourCap.hidden = !txt;
+  $tourCap.classList.remove('mini'); $tourCap.innerHTML = h; $tourCap.hidden = !txt;
 }
 let dogTour = null, pendingLimits = null;
 const dogLead = (()=>{ const g = new THREE.Group(); scene.add(g); const el = makeLabel('', 'tag spot on lead', 1.9, g, ()=>{}); el.hidden = true; return {g, el}; /* CSS2D 標籤不吃 group.visible，要用 el.hidden */ })(); /* 開場時浮在帶路狗頭上的名牌 */
@@ -3142,11 +3146,12 @@ SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, 
 const mnav = [0,1].map(()=>{ const g = new THREE.Group(); scene.add(g); const o = {g, go:null}; o.el = makeLabel('', 'mnav', 0, g, ()=>o.go && o.go()); o.el.hidden = true; return o; });
 let spotNav = null;
 addEventListener('keydown', e=>{ if(spotNav && spotView && (e.key==='ArrowLeft'||e.key==='ArrowRight') && !/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||'')){ spotNav(e.key==='ArrowLeft' ? 1 : -1); e.preventDefault(); } });
+let capT = 0;
 function spotLeave(){
   if(!spotView) return; spotNav = null; mnav.forEach(o=>{ o.el.hidden = true; });
   pendingLimits = spotView.saved; spotView = null; stage.classList.remove('spotview');
   SPOTS.forEach(sp=>sp.el.classList.remove('on'));
-  const c = $('#tourCap'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
+  const c = $('#tourCap'); clearTimeout(capT); c.classList.remove('mini'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
 }
 function spotGo(i, k0){
   const sp = SPOTS[i], keep = spotView ? spotView.saved : null;
@@ -3162,8 +3167,10 @@ function spotGo(i, k0){
   const st = sp.stalls || null; let k = k0 || 0; /* k=0：全景（市集的總覽）；k≥1：第 k 個攤位 */
   const render = ()=>{
     const v = (st && k>0) ? st[k-1] : sp;
-    c.innerHTML = `<span>${v.html || escH(v.say)}</span><button type="button" class="spotback">回到全景</button>`;
-    c.querySelector('.spotback').addEventListener('click', ()=>$('#btnReset').click());
+    c.innerHTML = `<span class="captxt">${v.html || escH(v.say)}</span><button type="button" class="spotback capshow">說明</button>`;
+    /* 到達後說明框停 6 秒就收成小鈕，不擋畫面；按「說明」再打開 */
+    const fold = ()=>{ clearTimeout(capT); c.classList.remove('mini'); capT = setTimeout(()=>{ if(c.dataset.spot) c.classList.add('mini'); }, 6900); };
+    c.querySelector('.capshow').addEventListener('click', fold); fold();
     if(st){ /* 左右箭頭：貼在目前這攤的左右兩側（畫面左＝南、右＝北）；總覽時不顯示 */
       const nb = [k>0 && k<st.length ? st[k] : null, k>1 ? st[k-2] : null];
       mnav.forEach((o,n)=>{ const t = nb[n]; o.el.hidden = !t; if(!t) return;
