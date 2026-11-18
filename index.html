@@ -1666,6 +1666,7 @@ let dogApi = null, mouseNav = null;
   const bF = ()=>bridgeFrame;
   const bridgeAP = (x,z)=>{ const b = bridgeFrame; if(!b) return null; const dx = x-b.x, dz = z-b.z; return {a: dx*b.tx+dz*b.tz, p: dx*b.tz-dz*b.tx}; };
   const onBridge = (x,z)=>{ const q = bridgeAP(x,z); return !!q && Math.abs(q.a)<0.95 && Math.abs(q.p)<5.67+2.43; };
+  let mktOpen = false, frAC = null, frNC = null; /* 市集廣場開放與否；frAC/frNC 是羅威那、薩摩耶專用的地圖 */
   const baseFree = (x,z)=>{
     if(x<-50||x>50||z<-46.5||z>40) return false;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
@@ -1673,7 +1674,8 @@ let dogApi = null, mouseNav = null;
     if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
-    if(x>-30.8&&x<-26.9&&z>0.2&&z<11.1) return false; /* 客家市集的三個攤位（教師 2026-11-18：狗可以走進市集，只擋攤位、圓桌與站著的客人） */
+    if(!mktOpen && x>-30.8&&x<-16.8&&z>0&&z<12) return false; /* 客家市集廣場：只有羅威那、薩摩耶（catFan）能進去，其他狗不行（教師 2026-11-18） */
+    if(x>-30.8&&x<-26.9&&z>0.2&&z<11.1) return false; /* 市集的三個攤位 */
     if(Math.hypot(x+24.9,z-3.75)<1.45 || Math.hypot(x+24.9,z-7.45)<1.45 || Math.hypot(x+26.3,z-11.4)<0.6) return false;
     if(x>-25.8&&x<-14.2&&z>-14.8&&z<-6.2) return false; /* 太和宮本體 */
     if(Math.hypot(x+20,z+4.5)<1.1) return false; /* 廟前香爐 */
@@ -1722,6 +1724,9 @@ let dogApi = null, mouseNav = null;
   function build(){
     frA = new Uint8Array(NX*NZ); frN = new Uint8Array(NX*NZ);
     for(let i=0;i<frA.length;i++){ const x = cx(i), z = cz(i); if(baseFree(x,z)){ frA[i] = 1; if(!onTile(x,z)) frN[i] = 1; } }
+    frAC = new Uint8Array(NX*NZ); frNC = new Uint8Array(NX*NZ); mktOpen = true;
+    for(let i=0;i<frAC.length;i++){ const x = cx(i), z = cz(i); if(baseFree(x,z)){ frAC[i] = 1; if(!onTile(x,z)) frNC[i] = 1; } }
+    mktOpen = false;
     fr = frN;
     { const lb = new Int32Array(frN.length).fill(-1); let bestN = 0, bestL = -1, nl = 0;   /* 標出平常能走的最大一塊綠地，狗從地塊出來時要走到這一塊 */
       for(let s0=0;s0<frN.length;s0++){ if(!frN[s0]||lb[s0]>=0) continue; const st = [s0]; let n = 0; lb[s0] = nl;
@@ -1923,6 +1928,7 @@ let dogApi = null, mouseNav = null;
       if(G.mode==='call'){ G.t += dt; const live = ds.filter(d=>d.gat); if(live.every(d=>d.arr) || G.t>150){ G.mode = 'hold'; G.hold = 12; } }
       else if(G.mode==='hold'){ G.hold -= dt; if(G.hold<=0) gatherEnd(); } }
     for(const d of ds){ if(d.state==='init') continue;
+      mktOpen = !!d.catFan; fr = G.mode==='idle' ? (d.catFan ? frNC : frN) : (d.catFan ? frAC : frA); /* 只有羅威那、薩摩耶能進市集廣場（教師 2026-11-18） */
       d.gt -= dt;
       if(d.shy && G.mode==='idle'){ if(d.fleeCd>0) d.fleeCd -= dt; if(dogApi.ptr && d.fleeCd<=0 && Math.hypot(dogApi.ptr.x-d.x, dogApi.ptr.z-d.z)<4.2) flee(d, dogApi.ptr.x, dogApi.ptr.z); }
       /* 羅威那、薩摩耶經過帳篷上的貓附近：停下來看牠 2 秒 → 叫三聲 → 3 秒後離開（教師 2026-11-18） */
@@ -1994,6 +2000,7 @@ let dogApi = null, mouseNav = null;
         if(pul>0.05){ d.bub.position.set(d.x+Math.sin(d.yaw)*0.4, 1.45+d.gy, d.z+Math.cos(d.yaw)*0.4); const sc = 0.7+0.8*pul; d.bub.scale.set(1.2*sc, 0.75*sc, 1); }
       }
     }
+    mktOpen = false; fr = G.mode==='idle' ? frN : frA; /* 迴圈外（導覽、集合）一律當市集不能進 */
   });
 })();
 [[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); const tr = groundTree(p.x,p.z,1.4+rnd()*0.7); if(p.x>-31&&p.x<-15&&p.z>2&&p.z<16){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 市集前方的河岸樹拿掉（亂數不變） */ });
