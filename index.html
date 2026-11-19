@@ -2065,10 +2065,7 @@ function makeDam(t, side){
   const foams = [];
   for(let i=0;i<9;i++){ const f = new THREE.Mesh(new THREE.BoxGeometry(0.8+rnd()*0.5,0.07,0.2), foamM); g.add(f); foams.push({m:f, x:(rnd()-0.5)*2.4, z:rnd()*3, sp:1.2+rnd()*0.9}); }
   const splash = []; for(let i=0;i<4;i++){ const sp = new THREE.Mesh(new THREE.SphereGeometry(0.2+rnd()*0.1,8,6), foamM); g.add(sp); splash.push({m:sp, x:(i-1.5)*0.6, ph:i*1.3}); }
-  /* 左右箭頭：提示可以前後拖動 */
-  const arM = new THREE.MeshBasicMaterial({color:0xFF3D81}), arrows = [];
-  for(const dir of [1,-1]){ const a = new THREE.Mesh(new THREE.ConeGeometry(0.5,1.2,4).rotateX(dir*Math.PI/2), arM); a.position.set(0,2.5,dir*1.5); g.add(a); arrows.push({m:a, dir}); }
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.16,0.16,2.0), arM); bar.position.set(0,2.5,0); g.add(bar);
+  const arrows = []; /* 原本壩上的粉紅左右箭頭已刪（教師 2026-11-19：滑鼠移過去已經會出現左右箭頭游標） */
   g.scale.setScalar(DAM_K); scene.add(g);
   const d = {g, t, side, foams, splash, arrows};
   placeDam(d); dams.push(d); return d;
