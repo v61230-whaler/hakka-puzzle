@@ -281,6 +281,8 @@ const UNITS = [
     links:[{t:'桃園市語文競賽',s:'最新消息、線上報名、出場順序與成績查詢',u:'https://lang.twnpo.com/index.aspx'},
            {t:'中華民國115年全國語文競賽',s:'教育部主辦・大會公告、競賽內容、線上報名'}] },
 ];
+/* 地塊面積縮 30%（教師 2026-11-19）：半徑乘 √0.7≈0.84；島上建築的大小照原本半徑 r0 算，不跟著縮 */
+const TILE_SHRINK = Math.sqrt(0.7); for(const d of [HUB, ...UNITS]){ d.r0 = d.r; d.r = d.r*TILE_SHRINK; }
 
 const LESSONS = [
   { id:'L1', code:'4-1', title:'畫好食个柿餅', place:'新竹縣新埔鎮旱坑路一段283巷' },
@@ -2577,7 +2579,7 @@ function placeIsland(def, decorFn){
     spots.push(bb);
     for(const x of [bb.min.x, bb.max.x]) for(const z of [bb.min.z, bb.max.z]) R0 = Math.max(R0, Math.hypot(x, z));
   });
-  const k = Math.min(1.7, Math.max(0.55, def.r*0.72/R0));
+  const k = Math.min(1.7, Math.max(0.55, (def.r0 ?? def.r)*0.72/R0));   /* 用縮小前的半徑：建築大小不變 */
   dg.scale.setScalar(k);
   g.updateMatrixWorld(true);
   dg.traverse(o=>{ if(o.userData.house){ const H = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).y; if(H>0.01){ o.scale.y *= HOUSE_H/H; o.userData.hh = H; } } });
