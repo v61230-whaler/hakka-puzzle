@@ -1007,6 +1007,7 @@ const CROP = {}; /* 可摘取的草莓與仙草（互動用）：由 paddyFields
 })();
 /* 兩側空地的池塘：左邊那塊有灌溉用水車，把池水吸起來、沿木引水槽送到上方稻田；右邊那塊養兩尾錦鯉 */
 const pondTick = [];
+const marketPeople = []; let birdApi = null; /* 抓得起來的市集小人、麻雀（教師 2026-11-19） */
 let buffApi = null;
 (function ponds(){
   const sandM = bankMat, waterM = riverMat, wood = mat(C.wood), woodL = mat(0xD9A774), padM = mat(0x8FD16A), pinkM = mat(C.pink);
@@ -1156,6 +1157,10 @@ let buffApi = null;
   const bwR = makeBuffalo(BS); scene.add(bwR);
   for(const b of [bwL,bwR]){ b.userData.egret = makeEgret(); perchEgret(b); }
   buffApi = { groups:[bwL,bwR], poke(b){ b.userData.poke = true; flyOff(b); } };
+  /* 抓白鶴（牛背鷺）：拎起來時翅膀拍動；放開後從手上飛走、繞回原來那頭牛的背上（接 egretTick 的「飛回」段） */
+  buffApi.egrets = [bwL,bwR].map(b=>({b, e:b.userData.egret}));
+  buffApi.hold = q=>{ const e = q.e; if(e.mode==='perch'){ const wp = new THREE.Vector3(); e.g.getWorldPosition(wp); scene.add(e.g); e.g.position.copy(wp); e.g.scale.setScalar(q.b.scale.x*0.9); } e.mode = 'held'; egretFold(e,0); e.g.rotation.x = 0; };
+  buffApi.release = q=>{ const e = q.e, a = Math.random()*Math.PI*2; e.mode = 'fly'; e.t = 3.5; e.p1 = e.g.position.clone(); e.prev = e.p1.clone(); e.dir = new THREE.Vector3(Math.cos(a),0,Math.sin(a)); e.side = Math.random()<0.5?-1:1; };
   pondTick.push((dt,t)=>{ egretTick(bwL,dt,t); egretTick(bwR,dt,t); });
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
@@ -1397,7 +1402,7 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
     const arms = [-1,1].map(s=>{ const a = new THREE.Group(); a.position.set(s*0.33,1.2,0); a.rotation.z = s*0.25; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.065,0.55,6).translate(0,-0.275,0), mat(o.shirt)); a.add(l); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.075,6,5), skinM); hd.position.y = -0.58; a.add(hd); b.add(a); return a; });
     if(o.arm){ movers.push((t)=>{ arms[1].rotation.x = -0.9+Math.sin(t*2.2+o.ph)*0.35; arms[1].rotation.z = -0.25; }); }
     movers.push((t)=>{ head.rotation.y = Math.sin(t*0.5+(o.ph||0))*0.3; });
-    return g;
+    marketPeople.push(g); return g;
   }
   pondTick.push((dt,t)=>{ for(const f of movers) f(t); });
   /* 攤位骨架：四根柱子、後板、櫃台、紅白（或各色）條紋遮陽棚、立在棚後的字牌 */
@@ -2951,8 +2956,8 @@ renderer.domElement.addEventListener('pointermove', e=>{
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
 }
-/* 抓小人（教師 2026-11-19：學生想抓人）：只有路上走的小人能抓。按住拎起來，腳亂踢、頭上冒「𠊎愛去麵店！」並喊出來（GoHakka 阿哥 01 海陸）；
-   放開後落地，自己走到市集點心店前站一下，再走回原來的路。動物不能抓、不做圖鑑（教師決定） */
+/* 抓小人與動物（教師 2026-11-19）：路上的小人、市集攤販與客人、禾鷝仔（麻雀）、白鶴（牛背鷺）可以抓（老鼠、毛蟹原本就能抓）；動物抓起來頭上出現拼音卡。路上的小人：按住拎起來，腳亂踢、頭上冒「𠊎愛去麵店！」並喊出來（GoHakka 阿哥 01 海陸）；
+   放開後落地（丟進河裡會濺水花、先涉水上岸），自己走到市集點心店前站一下，再走回原來的路。不做圖鑑（教師決定） */
 {
   const el = renderer.domElement, rc = new THREE.Raycaster(), pt = new THREE.Vector2(), gp = new THREE.Plane(new THREE.Vector3(0,1,0), -0.6), gh = new THREE.Vector3();
   const SHOP = {x:-26.2, z:1.9};   /* 點心店櫃台前（攤位面向東，人站在東邊、面向西） */
@@ -2970,20 +2975,76 @@ renderer.domElement.addEventListener('pointermove', e=>{
   const bub = new THREE.Sprite(new THREE.SpriteMaterial({map:bubTex, transparent:true, depthTest:false, depthWrite:false, sizeAttenuation:false})); bub.scale.set(0.12,0.047,1); /* 不論鏡頭遠近，對話框在畫面上一樣大 */ bub.center.set(0.5,0); bub.visible = false; bub.renderOrder = 12; bub.raycast = ()=>{}; scene.add(bub);
   let bubW = null, bubT = 0;
   const aim = e=>{ const r = el.getBoundingClientRect(); pt.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(pt, camera); return r; };
-  /* 小人小小的：點在身體附近 40 像素內就算抓到 */
-  const pickW = e=>{ const r = el.getBoundingClientRect(); let best = null, bd = 40;
-    for(const w of walkers){ const v = w.g.position.clone(); v.y += 0.75; v.project(camera); if(v.z>1) continue;
-      const d = Math.hypot(e.clientX-(r.left+(v.x+1)/2*r.width), e.clientY-(r.top+(1-v.y)/2*r.height)); if(d<bd){ bd = d; best = w; } } return best; };
-  let held = null;
-  el.addEventListener('pointerdown', e=>{ const w = pickW(e); if(!w) return;
-    held = w; w.grab = {st:'held', path:null, tm:0, hx:w.g.position.x, hz:w.g.position.z}; gp.constant = -(w.g.position.y+0.0);
-    controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; e.stopImmediatePropagation();
-    shout(); bubW = w; bubT = 2.6; }, true);
-  el.addEventListener('pointermove', e=>{ if(!held) return; aim(e); if(rc.ray.intersectPlane(gp, gh)){ held.grab.hx = gh.x; held.grab.hz = gh.z; } el.style.cursor = 'grabbing'; e.stopImmediatePropagation(); }, true);
-  const letGo = ()=>{ if(!held) return; const w = held; held = null; controls.enabled = true; el.style.cursor = '';
-    const q = peopleNav ? peopleNav.snap(w.g.position.x, w.g.position.z) : {x:w.g.position.x, z:w.g.position.z};
-    w.grab.st = 'fall'; w.grab.vy = 0; w.grab.fx = q.x; w.grab.fz = q.z; bubT = Math.max(bubT, 1.2); };
+  /* 拼音卡（教師 2026-11-19）：動物被抓起來時頭上出現客語名字＋海陸腔拼音（教育部臺灣客語辭典），不出聲 */
+  const CARD = {
+    bird:  {n:'禾鷝仔', p:'vo bid er', sub:'麻雀'},
+    egret: {n:'白鶴', p:'pagˋ hogˋ', sub:'白鷺鷥'},
+    mouse: {n:'老鼠', p:'loˊ chuˊ', sub:''},
+    crab:  {n:'毛蟹', p:'moˋ haiˊ', sub:'螃蟹'} };
+  const cardTex = {};
+  const mkCard = k=>{ if(cardTex[k]) return cardTex[k]; const d = CARD[k], c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
+    const draw = ()=>{ x.clearRect(0,0,512,256); x.fillStyle = '#FFFBEF'; x.strokeStyle = '#5FBF7A'; x.lineWidth = 10; x.beginPath(); x.roundRect(8,8,496,240,34); x.fill(); x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#3A2A22'; x.font = 'bold 92px Huninn, "Noto Sans TC", sans-serif'; x.fillText(d.n,256,92,460);
+      x.fillStyle = '#2E7D4F'; x.font = 'bold 50px Huninn, "Noto Sans TC", sans-serif'; x.fillText(d.p + (d.sub ? '（'+d.sub+'）' : ''),256,188,470); };
+    draw(); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ draw(); t.needsUpdate = true; });
+    return cardTex[k] = t; };
+  const card = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true, depthTest:false, depthWrite:false, sizeAttenuation:false})); card.scale.set(0.12,0.06,1); card.center.set(0.5,0); card.visible = false; card.renderOrder = 12; card.raycast = ()=>{}; scene.add(card);
+  const showCard = (k,pos,dy)=>{ const t = mkCard(k); if(card.material.map!==t){ card.material.map = t; card.material.needsUpdate = true; } card.position.set(pos.x,pos.y+dy,pos.z); card.visible = true; };
+  /* 可以抓的：路上的小人、市集的攤販與客人、禾鷝仔（麻雀）、白鶴（牛背鷺）。小東西在畫面上很小：點在附近 40 像素內就算抓到 */
+  const scrD = (e,r,pos,dy)=>{ const v = pos.clone(); v.y += dy; v.project(camera); if(v.z>1) return 1e9; return Math.hypot(e.clientX-(r.left+(v.x+1)/2*r.width), e.clientY-(r.top+(1-v.y)/2*r.height)); };
+  const wp = new THREE.Vector3();
+  const pick = e=>{ const r = aim(e); let best = null, bd = 40;
+    for(const w of walkers){ const d = scrD(e,r,w.g.position,0.75); if(d<bd){ bd = d; best = {k:'walker', w}; } }
+    if(birdApi) for(const b of birdApi.birds){ const d = scrD(e,r,b.g.position,0.1); if(d<bd*0.9){ bd = d; best = {k:'bird', b}; } }
+    if(buffApi && buffApi.egrets) for(const q of buffApi.egrets){ q.e.g.getWorldPosition(wp); const d = scrD(e,r,wp,0.2); if(d<bd){ bd = d; best = {k:'egret', q}; } }
+    if(!best){ const h = rc.intersectObjects(marketPeople, true)[0]; if(h){ let o = h.object; while(o && !marketPeople.includes(o)) o = o.parent; if(o) best = {k:'vendor', g:o}; } }
+    return best; };
+  let held = null, vend = [];   /* vend：被抓過、正在跑回原位的市集小人 */
+  el.addEventListener('pointerdown', e=>{ const h = pick(e); if(!h) return;
+    if(h.k==='walker'){ const w = h.w; if(w.grab && w.grab.st==='held') return; w.grab = {st:'held', path:null, tm:0, hx:w.g.position.x, hz:w.g.position.z}; gp.constant = -w.g.position.y; shout(); bubW = w; bubT = 2.6; }
+    else if(h.k==='bird'){ birdApi.hold(h.b); gp.constant = -h.b.g.position.y; h.o = h.b.g; }
+    else if(h.k==='egret'){ buffApi.hold(h.q); gp.constant = -h.q.e.g.position.y; h.o = h.q.e.g; }
+    else { const g = h.g; let v = vend.find(q=>q.g===g);
+      if(!v){ v = {g, par:g.parent, lp:g.position.clone(), lr:g.rotation.clone(), home:new THREE.Vector3()}; g.getWorldPosition(v.home); vend.push(v); scene.attach(g); }
+      v.st = 'held'; h.v = v; h.o = g; gp.constant = -v.home.y; }
+    h.hx = (h.o||h.w.g).position.x; h.hz = (h.o||h.w.g).position.z; h.tm = 0; held = h;
+    controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; e.stopImmediatePropagation(); }, true);
+  el.addEventListener('pointermove', e=>{ if(!held) return; aim(e); if(rc.ray.intersectPlane(gp, gh)){ if(held.k==='walker'){ held.w.grab.hx = gh.x; held.w.grab.hz = gh.z; } else { held.hx = gh.x; held.hz = gh.z; } } el.style.cursor = 'grabbing'; e.stopImmediatePropagation(); }, true);
+  const letGo = ()=>{ if(!held) return; const h = held; held = null; controls.enabled = true; el.style.cursor = '';
+    if(h.k==='bird') birdApi.release(h.b);
+    else if(h.k==='egret') buffApi.release(h.q);
+    else if(h.k==='vendor'){ h.v.st = 'run'; h.v.vy = 0; }   /* 正在交易、吃麵：一放開就跑回原位 */
+    else { const w = h.w, p = w.g.position, nr = nearestRiver(p.x, p.z);
+      if(nr.dist<3.65){ w.grab.st = 'fall'; w.grab.vy = 0; w.grab.fx = p.x; w.grab.fz = p.z; w.grab.water = true; }   /* 丟進牛欄河：撲通一聲濺起水花，再自己走上岸 */
+      else { const q = peopleNav ? peopleNav.snap(p.x, p.z) : {x:p.x, z:p.z}; w.grab.st = 'fall'; w.grab.vy = 0; w.grab.fx = q.x; w.grab.fz = q.z; w.grab.water = false; }
+      bubT = Math.max(bubT, 1.2); } };
   el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
+  /* 水花：幾顆白色水珠往外噴再落下，加兩圈漣漪 */
+  const drops = [];
+  const splash = (x,z)=>{ addRipple(x,z,2.2); setTimeout(()=>addRipple(x,z,1.4),250);
+    for(let k=0;k<10;k++){ const m = new THREE.Mesh(new THREE.SphereGeometry(0.09,6,5), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.95})); m.raycast = ()=>{}; const a = k/10*Math.PI*2+Math.random()*0.4, sp = 1.5+Math.random()*1.5;
+      m.position.set(x,0.2,z); scene.add(m); drops.push({m, vx:Math.cos(a)*sp, vz:Math.sin(a)*sp, vy:4+Math.random()*2.5, t:0}); } };
+  pondTick.push((dt,t)=>{ dt = Math.min(dt,0.1);
+    for(let i=drops.length-1;i>=0;i--){ const d = drops[i]; d.t += dt; d.vy -= 14*dt; d.m.position.x += d.vx*dt; d.m.position.y += d.vy*dt; d.m.position.z += d.vz*dt; d.m.material.opacity = Math.max(0,0.95-d.t*0.9);
+      if(d.m.position.y<0.05 || d.t>1.2){ scene.remove(d.m); d.m.geometry.dispose(); d.m.material.dispose(); drops.splice(i,1); } }
+    /* 被拎著的鳥：跟著手、翅膀拍 */
+    if(held && (held.k==='bird' || held.k==='egret')){ const o = held.o; held.tm += dt; o.position.x += (held.hx-o.position.x)*Math.min(1,dt*14); o.position.z += (held.hz-o.position.z)*Math.min(1,dt*14);
+      o.position.y += (-gp.constant+0.5-o.position.y)*Math.min(1,dt*8); o.rotation.z = Math.sin(held.tm*8)*0.2;
+      const ws = held.k==='bird' ? held.b.wings : held.q.e.wings; for(const w of ws) w.pv.rotation.z = w.sx*Math.sin(t*30)*0.9; }
+    /* 市集小人：拎著時身體晃；放開後蹦蹦跳跳快步跑回原位，回到原本的攤位或座位 */
+    for(let i=vend.length-1;i>=0;i--){ const v = vend[i], g = v.g;
+      if(v.st==='held'){ g.position.x += (held.hx-g.position.x)*Math.min(1,dt*14); g.position.z += (held.hz-g.position.z)*Math.min(1,dt*14); g.position.y += (v.home.y+1.3-g.position.y)*Math.min(1,dt*10); g.rotation.z = Math.sin(t*9)*0.2; continue; }
+      g.rotation.z *= Math.max(0,1-dt*8);
+      const dx = v.home.x-g.position.x, dz = v.home.z-g.position.z, d = Math.hypot(dx,dz), sp = 4.5*dt;
+      if(d>sp){ g.position.x += dx/d*sp; g.position.z += dz/d*sp; g.position.y = v.home.y + Math.abs(Math.sin(t*14))*0.25 + Math.max(0,(g.position.y-v.home.y-0.25)*(1-dt*6)); }
+      else { v.par.attach(g); g.position.copy(v.lp); g.rotation.copy(v.lr); vend.splice(i,1); } }
+    /* 拼音卡：正被拎著的動物（禾鷝仔、白鶴、老鼠、毛蟹） */
+    let shown = false;
+    if(held && held.k==='bird'){ showCard('bird', held.o.position, 0.45); shown = true; }
+    else if(held && held.k==='egret'){ showCard('egret', held.o.position, 0.75); shown = true; }
+    else if(chase.m && chase.m.mode==='held' && chase.mouse){ showCard('mouse', chase.mouse.position, 0.6); shown = true; }
+    else { for(const o of crabPickables){ const c = o.userData.crab; if(c && c.mode==='drag'){ showCard('crab', c.g.position, 0.6); shown = true; break; } } }
+    if(!shown) card.visible = false; });
   const H = (x,z)=> peopleNav ? peopleNav.h(x,z)+0.09 : 0.7;
   /* 沿著路點走；走完回傳 true */
   const walk = (w,dt,tm)=>{ const G = w.grab, p = w.g.position; if(!G.path || !G.path.length) return true;
@@ -2996,8 +3057,13 @@ renderer.domElement.addEventListener('pointermove', e=>{
     if(G.st==='held'){ const ty = H(G.hx,G.hz)+1.3; p.x += (G.hx-p.x)*Math.min(1,dt*14); p.z += (G.hz-p.z)*Math.min(1,dt*14); p.y += (ty-p.y)*Math.min(1,dt*10);
       w.g.rotation.z = Math.sin(G.tm*9)*0.18; w.legs[0].rotation.x = Math.sin(G.tm*16)*0.9; w.legs[1].rotation.x = -Math.sin(G.tm*16+0.6)*0.9; return; }   /* 被拎著：身體晃、腳亂踢 */
     w.g.rotation.z *= Math.max(0,1-dt*8);
-    if(G.st==='fall'){ p.x += (G.fx-p.x)*Math.min(1,dt*6); p.z += (G.fz-p.z)*Math.min(1,dt*6); G.vy -= 18*dt; p.y += G.vy*dt; const hy = H(p.x,p.z);
-      if(p.y<=hy){ p.y = hy; G.st = 'go'; G.path = peopleNav ? peopleNav.path(p.x,p.z, SHOP.x+(Math.random()-0.5)*0.8, SHOP.z+(Math.random()-0.5)*1.4) : null; if(!G.path){ G.st = 'back'; } } return; }
+    if(G.st==='fall'){ p.x += (G.fx-p.x)*Math.min(1,dt*6); p.z += (G.fz-p.z)*Math.min(1,dt*6); G.vy -= 18*dt; p.y += G.vy*dt; const hy = G.water ? -0.25 : H(p.x,p.z);
+      if(p.y<=hy){ p.y = hy; G.st = 'go'; const gx = SHOP.x+(Math.random()-0.5)*0.8, gz = SHOP.z+(Math.random()-0.5)*1.4;
+        if(G.water){ splash(p.x,p.z); /* 先直直涉水走到最近的河岸，再走去點心店 */
+          const nr = nearestRiver(p.x,p.z), tg = riverCurve.getTangentAt(nr.u), nx = -tg.z, nz = tg.x, sd = Math.sign((p.x-nr.p.x)*nx+(p.z-nr.p.z)*nz) || 1, bk = {x:nr.p.x+nx*sd*5.0, z:nr.p.z+nz*sd*5.0};
+          const rest = peopleNav ? peopleNav.path(bk.x,bk.z,gx,gz) : null; G.path = rest ? [bk, ...rest] : [bk]; }
+        else G.path = peopleNav ? peopleNav.path(p.x,p.z,gx,gz) : null;
+        if(!G.path){ G.st = 'back'; } } return; }
     if(G.st==='go'){ if(walk(w,dt,tm)){ G.st = 'shop'; G.wait = 10+Math.random()*5; } return; }
     if(G.st==='shop'){ let df = -Math.PI/2-w.g.rotation.y; df = Math.atan2(Math.sin(df),Math.cos(df)); w.g.rotation.y += Math.max(-4*dt,Math.min(4*dt,df)); w.legs[0].rotation.x *= 0.9; w.legs[1].rotation.x *= 0.9;
       G.wait -= dt; if(G.wait<=0){ /* 回到原本那條路上離自己最近的一點 */
@@ -3116,10 +3182,14 @@ function feedKindAt(x,z){
     const d = b.p0.clone().sub(sc.position); d.y = 0; if(d.length()<0.1) d.set(1,0,0); d.normalize(); const a = (Math.random()-0.5)*1.6, c = Math.cos(a), sn = Math.sin(a);
     b.dir = new THREE.Vector3(d.x*c-d.z*sn,0,d.x*sn+d.z*c); b.side = Math.random()<0.5?-1:1; b.T2 = 8+Math.random()*3; } };
   CROP.scare = scare;
+  /* 抓禾鷝仔（麻雀）：拎起來時翅膀拍動；放開後從手上飛走、繞回原來的位置（接「飛回」段） */
+  birdApi = { birds, hold(b){ b.mode = 'held'; fold(b,0); b.g.rotation.x = 0; },
+    release(b){ const a = Math.random()*Math.PI*2; b.mode = 'fly'; b.t = 2.8; b.p1 = b.g.position.clone(); b.prev = b.p1.clone(); b.dir = new THREE.Vector3(Math.cos(a),0,Math.sin(a)); b.side = Math.random()<0.5?-1:1; b.T2 = 2.8+5+Math.random()*2; } };
   pondTick.push((dt,t)=>{
     for(const sc of SC){ const u = sc.userData; if(u.poke){ u.poke = false; u.pokeT = t; }
       const k = u.pokeT===undefined ? 0 : Math.max(0,1-(t-u.pokeT)/1.3), ph = u.pokeT===undefined ? 0 : t-u.pokeT; sc.rotation.z = 0.13*k*Math.sin(ph*30); sc.rotation.x = 0.05*k*Math.sin(ph*23); }
     for(const b of birds){
+      if(b.mode==='held') continue;
       if(b.mode==='perch'){ const pk = Math.pow(Math.max(0,Math.sin(t*0.8+b.ph*5)),10); b.body.rotation.x = 0.55*pk; b.g.rotation.y = b.yaw + 0.25*Math.sin(t*0.5+b.ph); continue; }
       b.t += dt; const p = b.g.position; let u = 0;
       if(b.t<2.8){ const k = b.t; p.set(b.p0.x+b.dir.x*(k*3.6+0.8*k*k), b.p0.y+5.5*(1-Math.exp(-k*1.1)), b.p0.z+b.dir.z*(k*3.6+0.8*k*k)); b.p1 = p.clone(); }
