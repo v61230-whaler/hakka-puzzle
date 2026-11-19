@@ -1415,6 +1415,20 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
     const sg2 = sign(2.3,0.82,o.name,o.pin,o.signBg,o.signFg); sg2.position.set(-W/2-0.06,3.2,0); sg2.rotation.y = -Math.PI/2; g.add(sg2); box(0.06,1.0,2.45,wood,-W/2-0.02,3.2,0,g); for(const sz of [-1,1]) cylM(0.05,0.05,1.1,wood,-W/2,3.1,sz*1.1,g,6);
     return g;
   }
+  /* 「𠊎講客」立牌（教師 2026-11-19）：客委會「𠊎講客」客語友善環境標章——粉紅色筆刷圖形（中間鏤空一個三角）加下方藍綠色一筆，
+     下寫「𠊎講客」「客語友善環境」（樣子依網路上客委會標章與店家立牌的圖片）。白色卡面、透明壓克力底座，立在櫃台上朝向客人 */
+  const hakkaCard = ()=>{ const cv = document.createElement('canvas'); cv.width = 256; cv.height = 320; const x = cv.getContext('2d');
+    const draw = ()=>{ x.clearRect(0,0,256,320); x.fillStyle = '#FFFFFF'; rr(x,4,4,248,312,26); x.fill(); x.lineWidth = 6; x.strokeStyle = '#E3E3E3'; x.stroke();
+      x.fillStyle = '#E57F8E'; x.beginPath(); x.moveTo(78,92); x.lineTo(96,66); x.lineTo(132,58); x.lineTo(150,50); x.lineTo(176,62); x.lineTo(178,96); x.lineTo(172,128); x.lineTo(150,134); x.lineTo(108,128); x.lineTo(74,132); x.lineTo(70,112); x.closePath(); x.fill();
+      x.fillStyle = '#FFFFFF'; x.beginPath(); x.moveTo(100,108); x.lineTo(130,80); x.lineTo(146,108); x.closePath(); x.fill();
+      x.fillStyle = '#5E9EA3'; x.beginPath(); x.moveTo(98,146); x.lineTo(168,140); x.lineTo(166,168); x.lineTo(100,172); x.closePath(); x.fill();
+      x.fillStyle = '#4A4A4A'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = FONT(56); x.fillText('𠊎講客',128,222); x.font = FONT(28); x.fillText('客語友善環境',128,278); };
+    draw(); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ draw(); tex.needsUpdate = true; });
+    return new THREE.Mesh(new THREE.PlaneGeometry(0.32,0.4), new THREE.MeshBasicMaterial({map:tex, transparent:true})); };
+  const acryl = new THREE.MeshStandardMaterial({color:0xDDEEFF, transparent:true, opacity:0.45, roughness:0.1});
+  function hakkaStand(par,x,z){ const q = new THREE.Group(); q.position.set(x,0.97,z); q.rotation.x = -0.12; par.add(q);
+    box(0.38,0.03,0.16,acryl,0,0.015,0,q); box(0.36,0.46,0.02,acryl,0,0.25,-0.02,q); const c = hakkaCard(); c.position.set(0,0.25,-0.005); q.add(c); return q; }
   /* ① 粄條攤：大鍋、碗、曬著的寬粄條 */
   { const g = stall(ZS[0],{name:'點心店',pin:'diamˊ simˋ diamˇ',awn:0xE8574A,counter:0xD9A774,signBg:'#E8574A',signFg:'#FFFFFF'});
     cylM(0.5,0.45,0.5,mat(0x9AA3AD),-0.8,1.22,0.6,g,12); cylM(0.42,0.42,0.02,mat(0xF1E3BD),-0.8,1.47,0.6,g,12);
@@ -1425,7 +1439,7 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
     box(0.06,1.2,0.06,wood,0.6,1.57,0.05,g); box(0.06,1.2,0.06,wood,1.45,1.57,0.05,g); box(0.95,0.05,0.05,wood,1.03,2.12,0.05,g);
     const strips = []; for(let i=0;i<8;i++){ const pv = new THREE.Group(); pv.position.set(0.66+i*0.106,2.1,0.05); const m = new THREE.Mesh(new THREE.PlaneGeometry(0.08,0.85).translate(0,-0.425,0), new THREE.MeshStandardMaterial({color:0xFFF5D8, side:THREE.DoubleSide, roughness:0.9})); pv.add(m); g.add(pv); strips.push(pv); }
     pondTick.push((dt,t)=>{ strips.forEach((s,i)=>{ s.rotation.z = Math.sin(t*1.1+i*0.7)*0.06; }); });
-    const v = person({shirt:0xFFFFFF,apron:0xE8574A,hat:'cap',arm:true,ph:0.3}); v.position.set(0,0,-0.45); g.add(v); tagStall(g,1); }
+    const v = person({shirt:0xFFFFFF,apron:0xE8574A,hat:'cap',arm:true,ph:0.3}); v.position.set(0,0,-0.45); g.add(v); hakkaStand(g,1.2,1.12); tagStall(g,1); }
   /* ② 粄攤：蒸籠、各種粄與粢粑（麻糬），每種前面立一張小字卡 */
   { const g = stall(ZS[1],{name:'粄',pin:'banˊ',awn:0xFFC93C,counter:0xF2D2A8,signBg:'#FFC93C',signFg:'#5A3B1E'});
     box(0.8,0.95,0.8,mat(0xB08A62),-1.1,0.475,-0.5,g);
@@ -1445,7 +1459,7 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
     items.forEach((it,i)=>{ const q = new THREE.Group(); q.position.set(-0.8+i*0.5,0.97+0.02,0.72); q.scale.setScalar(0.85); g.add(q);
       cylM(0.29,0.29,0.04,mat(0xE9D3A2),0,0.02,0,q,12); const k = new THREE.Group(); k.position.y = 0.03; q.add(k); it.k(k);
       const c = sign(0.58,0.3,it.n,it.p,'#FFF6E0','#5A3B1E'); c.position.set(0,0.2,0.4); c.rotation.x = -0.35; q.add(c); });
-    const v = person({shirt:0xF48FB1,apron:0xFFFFFF,hat:'cap',arm:true,ph:1.6}); v.position.set(0.7,0,-0.55); g.add(v); tagStall(g,2); }
+    const v = person({shirt:0xF48FB1,apron:0xFFFFFF,hat:'cap',arm:true,ph:1.6}); v.position.set(0.7,0,-0.55); g.add(v); hakkaStand(g,-1.25,1.12); tagStall(g,2); }
   /* ③ 青菜攤：八箱菜，每箱前面一張客語字卡 */
   { const g = stall(ZS[2],{name:'青菜',pin:'ciangˋ coiˇ',awn:0x5FBF7A,counter:0xC89B6A,signBg:'#5FBF7A',signFg:'#FFFFFF'});
     const crate = (x,y,z,name,pin,build)=>{ const c = new THREE.Group(); c.position.set(x,y,z); g.add(c); const cm = mat(0xC9975D);
@@ -1464,7 +1478,9 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
     const PIN = {'蕹菜':'vungˇ coiˇ','高麗菜':'goˋ li coiˇ','角菜':'gog coiˇ','苦蕒':'fuˊ mag','湯匙白':'tongˋ shi pagˋ','大菜':'tai+ coiˇ','菜瓜':'coiˇ guaˋ'};
     ['蕹菜','高麗菜','角菜','苦蕒'].forEach((nm,i)=>crate(-1.17+i*0.78,0.97,0.78,nm,PIN[nm],VEG[nm]));
     ['湯匙白','大菜','菜瓜'].forEach((nm,i)=>crate(-0.78+i*0.78,0,1.7,nm,PIN[nm],VEG[nm]));
-    const v = person({shirt:0x8FD16A,apron:0xFFFFFF,hat:'straw',arm:true,ph:2.4}); v.position.set(0,0,-0.5); g.add(v); tagStall(g,3); }
+    const v = person({shirt:0x8FD16A,apron:0xFFFFFF,hat:'straw',arm:true,ph:2.4}); v.position.set(0,0,-0.5); g.add(v);
+    { const c = hakkaCard(); c.position.set(1.1,0.62,1.235); g.add(c); } /* 櫃台上擺滿菜箱，標章改貼在櫃台正面 */
+    tagStall(g,3); }
   /* ④ 留空的攤位：只有鋪面與四根矮樁，之後再加客家美食 */
   { const g = new THREE.Group(); g.position.set(-20.6,FY,5.6); g.rotation.y = Math.PI/2; scene.add(g); box(W,0.02,D,mat(0xE2D5B6),0,0.01,0,g);
     for(const sx of [-1,1]) for(const sz of [-1,1]) cylM(0.05,0.06,0.5,wood,sx*(W/2-0.1),0.25,sz*(D/2-0.1),g,6); }
@@ -1518,6 +1534,15 @@ const marketCat = (()=>{
   const tip = new THREE.Group(); tip.position.set(0.1,0,0); tail.add(tip); tip.add(S(new THREE.CapsuleGeometry(0.033,0.22,3,6).rotateX(Math.PI/2),0,0,0.13,1,1,1,br));
   { const hb = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,1.1), new THREE.MeshBasicMaterial({visible:false})); hb.position.set(0,0.25,0.05); g.add(hb); } /* 看不見的點擊範圍，比貓大一圈，學生比較好點到 */
   g.traverse(m=>{ if(m.isMesh) m.userData.mcat = true; });
+  /* 睡覺時頭上冒「Z z z」（教師 2026-11-19）：三個字由小到大往上飄、淡出，永遠正面朝鏡頭 */
+  const zzz = [];
+  { const zc = document.createElement('canvas'); zc.width = zc.height = 128; const zx = zc.getContext('2d');
+    const drawZ = ()=>{ zx.clearRect(0,0,128,128); zx.font = 'bold 100px Huninn, "Noto Sans TC", sans-serif'; zx.textAlign = 'center'; zx.textBaseline = 'middle';
+      zx.lineWidth = 14; zx.lineJoin = 'round'; zx.strokeStyle = '#FFFFFF'; zx.strokeText('Z',64,68); zx.fillStyle = '#5B6FD6'; zx.fillText('Z',64,68); };
+    drawZ(); const zt = new THREE.CanvasTexture(zc); zt.colorSpace = THREE.SRGBColorSpace;
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ drawZ(); zt.needsUpdate = true; });
+    for(let i=0;i<3;i++){ const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2,0.2), new THREE.MeshBasicMaterial({map:zt, transparent:true, opacity:0, depthWrite:false}));
+      m.renderOrder = 5; m.visible = false; m.raycast = ()=>{}; scene.add(m); zzz.push({m, ph:i/3}); } }
   /* 狀態：lie 趴著看、sleep 交叉前腳睡、walk 在棚頂上走（u：往東西的位置，w：往南北的位置） */
   const o = {x:PX, z:PZ, y:PY, g, head, watcher:null, meow:null};
   let st = Math.random()<0.5 ? 'sleep' : 'lie', stT = 0, stDur = 6, u = 0.15, w = 0, yaw = 0, lift = 0, slp = 0, tu = 0, tw = 0, gait = 0, cross = 0;
@@ -1581,6 +1606,10 @@ const marketCat = (()=>{
     if(eP>=0){ eP += dt; if(eP>0.36) eP = -1; }
     tip.rotation.y = -0.15+Math.sin(t*(1.6-1.0*s))*(0.25-0.15*s); tail.rotation.y = s*0.5;
     body.scale.y = 0.78+(0.025+0.015*s)*Math.sin(t*(1.8-0.7*s));
+    { const hp = new THREE.Vector3(); head.getWorldPosition(hp); const on = s>0.7;
+      for(const q of zzz){ const f = (t*0.4+q.ph)%1; q.m.visible = on;
+        if(on){ q.m.position.set(hp.x+0.05+f*0.35, hp.y+0.2+f*0.7, hp.z+Math.sin(f*Math.PI*2+q.ph*5)*0.08); q.m.scale.setScalar(0.6+f*1.0);
+          q.m.material.opacity = Math.min(1,(s-0.7)/0.2)*Math.sin(Math.PI*f); q.m.quaternion.copy(camera.quaternion); } } }
     o.x = PX + u*Math.cos(SL); o.z = PZ + w;
   });
   /* 點貓：喵一聲。真實貓叫：OpenGameArt〈Meow〉（作者 IgnasD，CC0 公有領域，教師 2026-11-18 同意下載），轉成 mp3 內嵌；每次音高略有不同；有在睡就醒來 */
@@ -2139,6 +2168,42 @@ function dodgeBank(t, off){
   x.fillStyle = '#FFFFFF'; x.font = '900 130px "Helvetica Neue", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('3',128,118);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   for(const t of [0.2, 0.46, 0.74]){ const p = riverPoint(t, off(t)); const m = new THREE.Mesh(new THREE.PlaneGeometry(3.0,3.0).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false})); m.position.set(p.x, 0.09, p.z); scene.add(m); }
+  /* 新竹客運公車（教師 2026-11-19）：外觀依網路上新竹客運公路客運的照片——白色車身、下緣綠色裙邊、側面橘綠兩道波浪色帶，
+     車頭紅字「新竹客運」、上方橘色 LED 路牌。沿台三線來回開，各走自己的車道；跑完一趟停一下再掉頭 */
+  { const L = 3.6, Wd = 1.25, H = 1.45, CL = 0.18, bus = new THREE.Group(); scene.add(bus);
+    const cvTex = (w,h,fn)=>{ const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); fn(x);
+      if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ fn(x); t.needsUpdate = true; });
+      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+    const FT = px=>`bold ${px}px Huninn, "Noto Sans TC", sans-serif`;
+    const side = flip=>cvTex(1024,412,x=>{ x.save(); if(flip){ x.translate(1024,0); x.scale(-1,1); }  /* 兩側共用一張圖，另一側左右翻轉，車頭都在前 */
+      x.fillStyle = '#FFFFFF'; x.fillRect(0,0,1024,412); x.fillStyle = '#2E3A46'; x.fillRect(40,40,900,150); x.fillStyle = '#FFFFFF'; for(const k of [220,400,580,760]) x.fillRect(k,40,8,150);
+      x.fillStyle = '#2E3A46'; x.fillRect(950,40,60,300);                                   /* 前門 */
+      x.fillStyle = '#20A050'; x.fillRect(0,350,1024,62);                                     /* 綠色裙邊 */
+      const wave = (y0,col,th)=>{ x.strokeStyle = col; x.lineWidth = th; x.beginPath(); x.moveTo(0,y0+40); x.bezierCurveTo(250,y0-50,420,y0+80,640,y0); x.bezierCurveTo(780,y0-40,860,y0+10,940,y0+20); x.stroke(); };
+      wave(250,'#F07A28',26); wave(292,'#20A050',22); x.restore();
+      x.fillStyle = '#D9262C'; x.font = FT(38); x.textAlign = 'center'; x.textBaseline = 'middle'; if(!flip) x.fillText('新竹客運',830,214); else x.fillText('新竹客運',194,214); });
+    const front = cvTex(256,412,x=>{ x.fillStyle = '#FFFFFF'; x.fillRect(0,0,256,412); x.fillStyle = '#1C1C1C'; x.fillRect(16,14,224,58);
+      x.fillStyle = '#FF9A1F'; x.font = FT(40); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('台三線',128,44);
+      x.fillStyle = '#2E3A46'; x.fillRect(16,82,224,170); x.fillStyle = '#D9262C'; x.font = FT(38); x.fillText('新竹客運',128,290);
+      x.fillStyle = '#FFE9A8'; x.beginPath(); x.arc(40,335,14,0,7); x.arc(216,335,14,0,7); x.fill(); x.fillStyle = '#20A050'; x.fillRect(0,350,256,62); });
+    const back = cvTex(256,412,x=>{ x.fillStyle = '#FFFFFF'; x.fillRect(0,0,256,412); x.fillStyle = '#2E3A46'; x.fillRect(30,40,196,140); x.fillStyle = '#E2342F'; x.fillRect(24,300,40,22); x.fillRect(192,300,40,22); x.fillStyle = '#20A050'; x.fillRect(0,350,256,62); });
+    const m = t=>new THREE.MeshBasicMaterial({map:t}), wm = new THREE.MeshBasicMaterial({color:0xF4F4F2});
+    /* 箱子的六面：+x 車頭、-x 車尾、+z/-z 兩側、上面淡灰白 */
+    const body = new THREE.Mesh(new THREE.BoxGeometry(L,H,Wd), [m(front), m(back), wm, wm, m(side(false)), m(side(true))]); body.position.y = CL+H/2; bus.add(body);
+    { const r = new THREE.Mesh(new THREE.BoxGeometry(L*0.4,0.14,Wd*0.7), new THREE.MeshBasicMaterial({color:0xDCDCDA})); r.position.set(-0.3,CL+H+0.07,0); bus.add(r); } /* 車頂冷氣 */
+    const wheels = [], wg = new THREE.CylinderGeometry(0.26,0.26,0.18,14).rotateX(Math.PI/2), wmat = new THREE.MeshBasicMaterial({color:0x222222}), hub = new THREE.MeshBasicMaterial({color:0xBBBBBB});
+    for(const wx of [1.05,-1.0]) for(const sz of [-1,1]){ const wh = new THREE.Mesh(wg, wmat); wh.position.set(wx,0.26,sz*(Wd/2-0.05)); bus.add(wh);
+      const hb = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.19,8).rotateX(Math.PI/2), hub); hb.position.copy(wh.position); bus.add(hb); }
+    bus.traverse(o=>{ if(o.isMesh) o.raycast = ()=>{}; });
+    const curve = new THREE.CatmullRomCurve3(pts), len = curve.getLength(), SPD = 2.6, LANE = 1.1;
+    let f = Math.random(), dir = 1, wait = 0;
+    pondTick.push((dt)=>{ dt = Math.min(dt,0.1);
+      if(wait>0){ wait -= dt; return; }
+      f += dir*SPD*dt/len; if(f>0.97 || f<0.03){ f = Math.max(0.03, Math.min(0.97, f)); dir = -dir; wait = 2.5; }
+      const p = curve.getPointAt(f), tg = curve.getTangentAt(f).multiplyScalar(dir), nx = -tg.z, nz = tg.x;  /* 車道：行進方向的右側 */
+      bus.position.set(p.x + nx*LANE, 0.06, p.z + nz*LANE); bus.rotation.y = Math.atan2(-tg.z, tg.x);
+      body.position.y = CL+H/2 + Math.sin(f*len*3)*0.012; });
+  }
 })();
 
 
