@@ -130,6 +130,7 @@ h1{font:700 32px/1.2 var(--f-display);margin:4px 0 6px;text-wrap:balance}
 .row:hover{background:var(--chip)}
 .row:focus-visible{outline:2px solid var(--focus)}
 .row .no{font:700 22px/1 var(--f-display);color:var(--persimmon);text-align:center}
+.row .no.n2{font-size:17px;letter-spacing:-1px}
 .row .t{font-weight:500}
 .row .s{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
 .row .w{font:500 10.5px/1 var(--f-mono);letter-spacing:.04em;color:var(--indigo);border:2px solid var(--line);border-radius:999px;padding:4px 7px}
@@ -179,7 +180,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
 </style>
 
 <div id="app">
-  <div id="stage" aria-label="課程拼圖 3D 地圖：中間是教室主地塊，周圍七個單元地塊；完整內容請用右側清單">
+  <div id="stage" aria-label="課程拼圖 3D 地圖：中間是教室主地塊，周圍六個單元地塊；完整內容請用右側清單">
     <div class="tools">
       <button id="btnLinks" type="button" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="3" r="2"/><circle cx="13" cy="13" r="2"/><path d="M5 7.2L11 4M5 8.8L11 12"/></svg>關聯線</button>
       <button id="btnReset" type="button" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 13.5V7.2L8 2.8l5 4.4v6.3"/></svg>回到全景</button>
@@ -221,7 +222,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
     <div class="eyebrow">仙平先生个教室 · 海陸腔</div>
     <h1>課程拼圖</h1>
     <p class="lede">這係一門講話个課——共下來講古</p>
-    <p class="meta">7 個單元 · 10 個課文地點 · 5W1H 課程地圖</p>
+    <p class="meta">6 個單元 · 10 個課文地點 · 5W1H 課程地圖</p>
     <div class="search"><input id="q" type="search" placeholder="搜尋單元、課文、地點⋯" aria-label="搜尋"></div>
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-units" aria-selected="true">單元</button>
@@ -269,16 +270,13 @@ const UNITS = [
     q:'客家和誰有關？',
     desc:'從還我母語運動、客家政策到自己的家人，想一想客語今天的處境，以及自己能做什麼。',
     links:[{t:'3-2 客家專題',u:page('3-客家摎你/3-2-客家專題')},{t:'非同步線上課',u:page('3-客家摎你/3-2-客家專題/非同步線上課')}] },
-  { id:'u6', no:'六', w:'When', title:'客語認證', adv:true, pos:[5.1,-8.9], r:3.9, tiers:2, decor:'podium',
-    q:'什麼時候去考認證？',
-    desc:'進階單元：準備客語能力認證。哈客網路學院有拼音、詞彙學習和題庫、模擬測驗可以練習；報名和簡章請到客委會的客語能力認證網站。',
+  { id:'u6', no:'六七', w:'When', title:'客語文進階', adv:true, pos:[5.1,-8.9], r:3.9, tiers:2, decor:'trophy',   /* 原「六 客語認證」與「七 客語文競賽」合併（教師 2026-11-20），地塊沿用七號的獎盃與舞台 */
+    q:'什麼時候考認證、上台比賽？',
+    desc:'進階單元：準備客語能力認證，也可以上台參加客語文競賽。哈客網路學院有拼音、詞彙學習和題庫、模擬測驗可以練習；認證的報名和簡章請到客委會的客語能力認證網站。客語文競賽主要是各校的客語朗讀，以及市賽，賽事公告、報名和成績可以到下面的網站。',
     links:[{t:'4 教室・客語能力認證',s:'老師的教學網頁',u:page('4-教室')},
            {t:'哈客網路學院',s:'客家委員會・客語拼音與詞彙學習、題庫與模擬測驗',u:'https://elearning.hakka.gov.tw/'},
-           {t:'客語能力認證',s:'客家委員會・報名、簡章下載、題型介紹、線上試考',u:'https://hakkaexam.hakka.gov.tw/'}] },
-  { id:'u7', no:'七', w:'When', title:'客語文競賽', adv:true, pos:[15.4,-8.9], r:3.9, tiers:2, decor:'trophy',
-    q:'什麼時候上台比賽？',
-    desc:'進階單元：客語文競賽主要是各校的客語朗讀，以及市賽。想看賽事公告、報名和成績，可以到下面的網站。',
-    links:[{t:'桃園市語文競賽',s:'最新消息、線上報名、出場順序與成績查詢',u:'https://lang.twnpo.com/index.aspx'},
+           {t:'客語能力認證',s:'客家委員會・報名、簡章下載、題型介紹、線上試考',u:'https://hakkaexam.hakka.gov.tw/'},
+           {t:'桃園市語文競賽',s:'最新消息、線上報名、出場順序與成績查詢',u:'https://lang.twnpo.com/index.aspx'},
            {t:'中華民國115年全國語文競賽',s:'教育部主辦・大會公告、競賽內容、線上報名'}] },
 ];
 /* 地塊面積縮 30%（教師 2026-11-19）：半徑乘 √0.7≈0.84；島上建築的大小照原本半徑 r0 算，不跟著縮 */
@@ -325,7 +323,7 @@ const LINKS = [
   ['u1','u5','認識之後，再來反思'],
   ['u4','hub','期末報告用客語小幫手'],
   ['u2','u6','認證需要拼音與聽力'],
-  ['u3','u7','課文朗讀延伸到競賽'],
+  ['u3','u6','課文朗讀延伸到競賽'],
 ];
 
 const SCORE = [
@@ -352,7 +350,7 @@ function linkList(arr){
     : `<li><div class="nolink">${esc(l.t)}${l.s?`<small>${esc(l.s)}</small>`:''}</div></li>`).join('') + '</ul>';
 }
 function unitRow(u){
-  return `<li><button class="row" data-unit="${u.id}"><span class="no">${u.no}</span><span><span class="t">${esc(u.title)}</span><span class="s">${esc(u.q)}</span></span><span class="w ${u.adv?'adv':''}">${u.w}${u.adv?'+':''}</span></button></li>`;
+  return `<li><button class="row" data-unit="${u.id}"><span class="no${u.no.length>1?' n2':''}">${u.no}</span><span><span class="t">${esc(u.title)}</span><span class="s">${esc(u.q)}</span></span><span class="w ${u.adv?'adv':''}">${u.w}${u.adv?'+':''}</span></button></li>`;
 }
 function lessonRow(l){
   return `<li><button class="row" data-lesson="${l.id}"><span class="no" style="font-size:13px;font-family:var(--f-mono)">${esc(l.code||'走讀')}</span><span><span class="t">${esc(l.title)}</span><span class="s">${esc(l.place)}</span></span><span></span></button></li>`;
@@ -1722,7 +1720,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
     return true;
   };
   /* 八個地塊（主島加七個單元）和地塊之間的連接板：平常狗不能進去，只有「集合」時才能走進去（教師 2026-11-08） */
-  const TILE_LINKS = [[4,2],[2,1],[1,3],[3,5],[5,6],[6,4],[7,4],[7,6]];
+  const TILE_LINKS = [[4,2],[2,1],[1,3],[3,5],[5,6],[6,4]];
   const onTile = (x,z)=>{
     for(const t of TILES){ const R = t.R+0.25, dx = Math.abs(x-t.x), dz = Math.abs(z-t.z); if(dx<=0.866*R && dz+dx*0.5774<=R) return true; }
     for(const [a,b] of TILE_LINKS){ const A = TILE_ALL[a], B = TILE_ALL[b], ax = A.pos[0], az = A.pos[1], vx = B.pos[0]-ax, vz = B.pos[1]-az, f = Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/(vx*vx+vz*vz))); if(Math.hypot(x-(ax+vx*f), z-(az+vz*f))<0.95) return true; }
@@ -1734,7 +1732,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
   const TILES = TILE_ALL.map(d=>({x:d.pos[0], z:d.pos[1], R:d.r*ISC*1.04}));
   const heightAt = (x,z)=>{ let h = 0;
     for(const t of TILES){ const dx = Math.abs(x-t.x), dz = Math.abs(z-t.z); if(dx<=0.866*t.R && dz+dx*0.5774<=t.R){ h = 0.78; break; } }
-    if(h===0){ for(const [a,b] of [[4,2],[2,1],[1,3],[3,5],[5,6],[6,4],[7,4],[7,6]]){ const A = [HUB,...UNITS][a], B = [HUB,...UNITS][b]; const ax = A.pos[0], az = A.pos[1], bx = B.pos[0], bz = B.pos[1], vx = bx-ax, vz = bz-az, f = Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/(vx*vx+vz*vz))); if(Math.hypot(x-(ax+vx*f), z-(az+vz*f))<0.7){ h = 0.8; break; } } }
+    if(h===0){ for(const [a,b] of [[4,2],[2,1],[1,3],[3,5],[5,6],[6,4]]){ const A = [HUB,...UNITS][a], B = [HUB,...UNITS][b]; const ax = A.pos[0], az = A.pos[1], bx = B.pos[0], bz = B.pos[1], vx = bx-ax, vz = bz-az, f = Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/(vx*vx+vz*vz))); if(Math.hypot(x-(ax+vx*f), z-(az+vz*f))<0.7){ h = 0.8; break; } } }
     const q = bridgeAP(x,z); if(q && Math.abs(q.a)<0.95){ const ap = Math.abs(q.p); if(ap<5.67) h = Math.max(h,2.05); else if(ap<5.67+2.43) h = Math.max(h, 2.05*(1-(ap-5.67)/2.43)); }
     return h; };
   /* 田鼠回田裡用的路：地塊、河、池塘、引水渠、樹與山丘擋路，稻田可以穿過 */
@@ -2723,9 +2721,9 @@ const bridgePaths = [], traffic = {};
     const path = new THREE.LineCurve3(wa, wb);
     bridgePaths.push({a:A.id, b:B.id, wa, wb, path, len: path.getLength(), kind});
   };
-  [['u4','u2'],['u2','u1'],['u1','u3'],['u3','u5'],['u5','u6'],['u6','u4'],['u7','u4'],['u7','u6']].forEach(([a,b])=> connect(byId[a], byId[b], 'ring'));
+  [['u4','u2'],['u2','u1'],['u1','u3'],['u3','u5'],['u5','u6'],['u6','u4']].forEach(([a,b])=> connect(byId[a], byId[b], 'ring'));
   /* 環狀路線：沿著各地塊之間的短路，繞行一整圈（外圈）；主島上另有一圈繞著小學堂的內圈 */
-  { const seq = ['u4','u2','u1','u3','u5','u6','u7'], pts = [];
+  { const seq = ['u4','u2','u1','u3','u5','u6'], pts = [];
     seq.forEach((from,i)=>{ const to = seq[(i+1)%seq.length];
       const r = bridgePaths.find(r=> (r.a===from && r.b===to) || (r.a===to && r.b===from));
       if(r.a===from){ pts.push(r.wa, r.wb); } else { pts.push(r.wb, r.wa); } });
@@ -3315,7 +3313,7 @@ const tourCar = makeCar(C.pink, true); tourCar.scale.setScalar(2.1); tourCar.vis
   add(tourCar, new THREE.BoxGeometry(0.03,0.42,0.62), [fm,fm,fy,fy,fy,fy], 0.2, 1.18, -0.19);
   add(tourCar, new THREE.CylinderGeometry(0.2415,0.2415,0.03,3).rotateZ(Math.PI/2), fy, 0.2, 1.18, 0.241); }
 scene.add(tourCar);
-const TOUR_ROUTES = [['u2','u4'],['u3','u5'],['u1','u7'],['u6','u2'],['u4','u7'],['u3','u1'],['u5','u6']];
+const TOUR_ROUTES = [['u2','u4'],['u3','u5'],['u1','u6'],['u6','u2'],['u4','u1'],['u3','u1'],['u5','u6']];   /* 七號地塊併入六號（2026-11-20），原本到 u7 的路線改到 u6、u1 */
 let tour = null, lastRoute = -1;
 const $tourDlg = $('#tourDialog'), $tourCap = $('#tourCap');
 const tourY = 0.6*ISC + 0.06;
