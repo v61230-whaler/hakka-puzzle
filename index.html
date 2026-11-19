@@ -2977,7 +2977,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
   const aim = e=>{ const r = el.getBoundingClientRect(); pt.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rc.setFromCamera(pt, camera); return r; };
   /* 拼音卡（教師 2026-11-19）：動物被抓起來時頭上出現客語名字＋海陸腔拼音（教育部臺灣客語辭典），不出聲 */
   const CARD = {
-    bird:  {n:'禾鷝仔', p:'vo bid er', sub:'麻雀'},
+    bird:  {n:'屋簷鳥', p:'vug rham diauˋ', sub:'麻雀'},   /* 教師 2026-11-19 指定（辭典另有 禾鷝仔、麻雀） */
     egret: {n:'白鶴', p:'pagˋ hogˋ', sub:'白鷺鷥'},
     mouse: {n:'老鼠', p:'loˊ chuˊ', sub:''},
     crab:  {n:'毛蟹', p:'moˋ haiˊ', sub:'螃蟹'} };
