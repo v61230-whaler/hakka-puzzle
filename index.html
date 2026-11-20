@@ -1505,11 +1505,14 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
 /* 市集帳篷上的橘色賓士貓（教師 2026-11-18：原為咖啡色，同日改橘色；口鼻、胸、腹、腳掌白色，粉紅鼻、琥珀色大眼）。
    身長約狗的一半，在「粄」攤的棚頂上：身體順著棚頂橫躺（和棚頂斜面垂直方向），三種動作輪流——趴著左右看、低頭趴著兩前腳交叉睡覺、站起來在棚頂上走一段。
    羅威那、薩摩耶走進市集經過時會停下來看牠、叫三聲（在狗的程式裡）；點貓會喵一聲（真實貓叫錄音，CC0） */
-const marketCat = (()=>{
+/* 2026-11-20 教師：再加一隻小隻的黑色賓士貓（黑身，白口鼻、胸、腹、腳掌），住在南邊「青菜」攤的棚頂；兩隻大多各自休息、走動，
+   小貓偶爾會沿棚頂東緣（字牌擋不到的地方）跳過兩攤之間的縫，走到橘貓旁邊並排趴著，互看一下、有時一起睡，過一陣子再自己走回去。
+   兩隻共用同一套程式 makeRoofCat；座標 u、w 都以粄攤棚頂中線為原點（w 往南為正，青菜攤棚頂在 w≈2.1–5.3）。 */
+function makeRoofCat(cfg){
   const PX = -28.75, PY = 2.745, PZ = 5.6, SL = 0.13;   /* 粄攤棚頂的中線（世界座標）與斜度 */
   const tilt = new THREE.Group(); tilt.position.set(PX,PY,PZ); tilt.rotation.z = -SL; scene.add(tilt); /* 順著棚頂往東傾 */
-  const g = new THREE.Group(); tilt.add(g);
-  const OR = 0xE8873A, br = mat(OR), wh = mat(0xFFFFFF), pk = mat(0xF2A0A8), amb = mat(0xC8902A), blk = mat(0x1E1A18);
+  const g = new THREE.Group(); g.scale.setScalar(cfg.sc||1); tilt.add(g);
+  const br = mat(cfg.col), wh = mat(0xFFFFFF), pk = mat(0xF2A0A8), amb = mat(cfg.eye), blk = mat(0x1E1A18);
   const bg = new THREE.Group(); g.add(bg);                                                  /* 站起來時整個身體往上抬 */
   const body = S(new THREE.CapsuleGeometry(0.15,0.36,4,10).rotateX(Math.PI/2),0,0.13,0,1,0.78,1,br); bg.add(body);
   bg.add(S(new THREE.SphereGeometry(0.15,10,8),0,0.08,0.02,0.92,0.5,1.55,wh));           /* 白肚子 */
@@ -1523,7 +1526,7 @@ const marketCat = (()=>{
     p.add(S(new THREE.SphereGeometry(0.045,6,5),0,-0.2,0.015,1,0.7,1.3,wh));               /* 白腳掌 */
     legs.push({p,sx,fz});
   }
-  const head = new THREE.Group(); head.position.set(0,0.27,0.3); head.rotation.order = 'YXZ'; bg.add(head);
+  const head = new THREE.Group(); head.position.set(0,0.27,0.3); head.rotation.order = 'YXZ'; head.scale.setScalar(cfg.headK||1); bg.add(head); /* 小貓頭比例大一點 */
   head.add(S(new THREE.SphereGeometry(0.14,12,10),0,0,0,1.05,0.95,0.95,br));
   head.add(S(new THREE.SphereGeometry(0.1,10,8),0,-0.045,0.06,1.05,0.8,0.85,wh));       /* 白口鼻 */
   head.add(S(new THREE.SphereGeometry(0.035,6,5),0,0.04,0.115,0.7,1.6,0.6,wh));          /* 額頭中間的白線 */
@@ -1535,11 +1538,11 @@ const marketCat = (()=>{
     const ep = new THREE.Group(); ep.position.set(sx*0.085,0.08,-0.01); ep.rotation.z = -sx*0.3; head.add(ep); ears.push(ep); /* 耳朵掛在耳根，才能抖動 */
     ep.add(S(new THREE.ConeGeometry(0.05,0.1,4),0,0.04,0,1,1,0.6,br)); ep.add(S(new THREE.ConeGeometry(0.03,0.065,4),-sx*0.002,0.035,0.022,1,1,0.4,pk));
   }
-  const lids = eyes.map(e=>{ const l = S(new THREE.SphereGeometry(0.03,8,6),0,-0.004,0.0,1.25,0.22,0.7,blk); l.visible = false; e.add(l); return l; }); /* 睡覺時閉眼：眼睛換成一條細細的黑線 */
+  const lids = eyes.map(e=>{ const l = S(new THREE.SphereGeometry(0.03,8,6),0,-0.004,0.0,1.25,0.22,0.7,cfg.lid?mat(cfg.lid):blk); l.visible = false; e.add(l); return l; }); /* 睡覺時閉眼：眼睛換成一條細細的黑線 */
   const tail = new THREE.Group(); tail.position.set(0.1,0.06,-0.32); bg.add(tail);      /* 尾巴從屁股繞到身體側邊，尾端會甩 */
   tail.add(S(new THREE.CapsuleGeometry(0.035,0.12,3,6).rotateZ(Math.PI/2),0.05,0,-0.02,1,1,1,br));
   const tip = new THREE.Group(); tip.position.set(0.1,0,0); tail.add(tip); tip.add(S(new THREE.CapsuleGeometry(0.033,0.22,3,6).rotateX(Math.PI/2),0,0,0.13,1,1,1,br));
-  { const hb = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,1.1), new THREE.MeshBasicMaterial({visible:false})); hb.position.set(0,0.25,0.05); g.add(hb); } /* 看不見的點擊範圍，比貓大一圈，學生比較好點到 */
+  { const hb = new THREE.Mesh(new THREE.BoxGeometry(0.6*(cfg.hit||1),0.6*(cfg.hit||1),1.1*(cfg.hit||1)), new THREE.MeshBasicMaterial({visible:false})); hb.position.set(0,0.25,0.05); g.add(hb); } /* 看不見的點擊範圍，比貓大一圈，學生比較好點到 */
   g.traverse(m=>{ if(m.isMesh) m.userData.mcat = true; });
   /* 睡覺時頭上冒「Z z z」（教師 2026-11-19）：三個字由小到大往上飄、淡出，永遠正面朝鏡頭 */
   const zzz = [];
@@ -1548,40 +1551,64 @@ const marketCat = (()=>{
       zx.lineWidth = 14; zx.lineJoin = 'round'; zx.strokeStyle = '#FFFFFF'; zx.strokeText('Z',64,68); zx.fillStyle = '#5B6FD6'; zx.fillText('Z',64,68); };
     drawZ(); const zt = new THREE.CanvasTexture(zc); zt.colorSpace = THREE.SRGBColorSpace;
     if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ drawZ(); zt.needsUpdate = true; });
-    for(let i=0;i<3;i++){ const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2,0.2), new THREE.MeshBasicMaterial({map:zt, transparent:true, opacity:0, depthWrite:false}));
+    for(let i=0;i<3;i++){ const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2*(cfg.zk||1),0.2*(cfg.zk||1)), new THREE.MeshBasicMaterial({map:zt, transparent:true, opacity:0, depthWrite:false}));
       m.renderOrder = 5; m.visible = false; m.raycast = ()=>{}; scene.add(m); zzz.push({m, ph:i/3}); } }
   /* 狀態：lie 趴著看、sleep 交叉前腳睡、walk 在棚頂上走（u：往東西的位置，w：往南北的位置） */
-  const o = {x:PX, z:PZ, y:PY, g, head, watcher:null, meow:null};
-  let st = Math.random()<0.5 ? 'sleep' : 'lie', stT = 0, stDur = 6, u = 0.15, w = 0, yaw = 0, lift = 0, slp = 0, tu = 0, tw = 0, gait = 0, cross = 0;
+  const o = {x:PX, z:PZ+(cfg.w0||0), y:PY, g, head, watcher:null, meow:null, buddy:null, vis:null, attn:null, attnT:0, st:'lie', u:0, w:0, yaw:0};
+  let st = Math.random()<0.5 ? 'sleep' : 'lie', stT = 0, stDur = 6+Math.random()*8, u = cfg.u0??0.15, w = cfg.w0||0, yaw = cfg.yaw0||0, lift = 0, slp = 0, gait = 0, cross = 0;
+  let path = [], hop = null, hopY = 0, visCd = 35+Math.random()*40, visDur = 0;
   const near = a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  const rr = a=>a[0]+Math.random()*(a[1]-a[0]), HU = cfg.home.u, HW = cfg.home.w;
+  /* 兩攤棚頂之間的過道：粄攤南緣有字牌（u 到 0.88 為止），只有棚頂東緣 u≈1.08 過得去；從 w=1.3 跳到 w=2.3 */
+  const GU = 1.08, GA = 1.3, GB = 2.3, roof = ww=>ww<1.85 ? 0 : 1;
+  const route = (tu,tw)=>{ const p = []; if(roof(w)!==roof(tw)){ const a0 = roof(w) ? GB : GA, b0 = roof(w) ? GA : GB; p.push({u:GU,w:a0},{u:GU,w:b0,hop:true}); } p.push({u:tu,w:tw}); return p; };
   let gy = 0, gp = 0.05, gr = 0, gT = 1, bT = 2, bD = 0.14, bP = -1, eT = 3, eS = 0, eP = -1; const hv = {x:0, y:0, z:0}; /* 頭的注視點、眨眼、耳朵 */
-  const pick = ()=>{ const r = Math.random();
-    if(r<0.45){ st = 'sleep'; stDur = 15+Math.random()*15; }
-    else if(r<0.75){ st = 'walk'; let k = 0; do{ tw = -1.15+Math.random()*2.3; k++; }while(Math.abs(tw-w)<0.7 && k<9); tu = -0.35+Math.random()*0.9; stDur = 20; }
+  const pick = ()=>{ const r = Math.random(), B = o.buddy, calm = o.vis==='stay' || (B && (B.vis==='go'||B.vis==='stay')); /* 有伴在旁邊或正走過來時不走開 */
+    if(r<0.45 || (calm && r<0.75)){ st = 'sleep'; stDur = 15+Math.random()*15; }
+    else if(r<0.75 && !calm){ st = 'walk'; let k = 0, tu, tw; do{ tw = rr(HW); tu = rr(HU); k++; }while(Math.hypot(tu-u,tw-w)<0.7 && k<9); path = route(tu,tw); stDur = 40; }
     else { st = 'lie'; stDur = 6+Math.random()*6; } stT = 0; };
   pondTick.push((dt,t)=>{
     dt = Math.min(dt,0.1); stT += dt;
+    if(cfg.watchOf) o.watcher = cfg.watchOf().watcher;                   /* 小貓也會看狗 */
     if(o.watcher && o.watcher.state!=='cat') o.watcher = null;
     if(o.watcher && st==='sleep'){ st = 'lie'; stT = 0; stDur = 4; }    /* 狗來了就醒來看 */
+    const B = o.buddy;
+    /* 小貓去找橘貓：只有兩隻都醒著、沒在走、沒有狗時才出發；走到橘貓東側並排 */
+    if(cfg.visitor && B){
+      if(!o.vis){ visCd -= dt;
+        if(visCd<=0 && st==='lie' && !o.watcher && !B.watcher && B.st!=='walk'){
+          const tu = Math.min(1.0, B.u+0.42), tw = Math.max(-1.2, Math.min(1.2, B.w+0.12));
+          o.vis = 'go'; st = 'walk'; stT = 0; stDur = 60; path = route(tu,tw); } }
+      else if(o.vis==='stay'){ visDur -= dt;
+        if(visDur<=0 && st!=='walk' && !o.watcher){ o.vis = 'back'; st = 'walk'; stT = 0; stDur = 60; path = route(rr(HU), rr([2.7,4.6])); } } }
     let wantLift = 0, wantSlp = 0, moving = false;
     if(st==='walk'){
       wantLift = 1;
-      if(o.watcher){ /* 被狗叫時停在原地站著看 */ }
-      else if(lift>0.95){ const dx = tu-u, dz = tw-w, dd = Math.hypot(dx,dz);
+      if(hop){ hop.f = Math.min(1, hop.f+dt/hop.d); const f = hop.f, ef = f*f*(3-2*f);   /* 跳過兩攤之間的縫：拋物線 */
+        u = hop.u0+(hop.u1-hop.u0)*ef; w = hop.w0+(hop.w1-hop.w0)*ef; hopY = Math.sin(Math.PI*f)*0.3;
+        if(f>=1){ hop = null; hopY = 0; path.shift(); } }
+      else if(o.watcher){ /* 被狗叫時停在原地站著看 */ }
+      else if(lift>0.95 && path.length){ const P = path[0], dx = P.u-u, dz = P.w-w, dd = Math.hypot(dx,dz);
         if(dd>0.05){ const ty = Math.atan2(dx,dz), df = near(ty-yaw); yaw += Math.max(-2.5*dt, Math.min(2.5*dt, df));
-          if(Math.abs(df)<0.5){ const v = 0.32*dt; u += Math.sin(yaw)*v; w += Math.cos(yaw)*v; moving = true; } }
-        else { const ty = Math.abs(near(yaw))<Math.PI/2 ? 0 : Math.PI, df = near(ty-yaw); yaw += Math.max(-2*dt, Math.min(2*dt, df)); /* 轉回順著棚頂再趴下 */
-          if(Math.abs(df)<0.03){ st = 'lie'; stT = 0; stDur = 5+Math.random()*5; } } }
-      if(stT>stDur && !o.watcher){ st = 'lie'; stT = 0; stDur = 5; }
+          if(P.hop){ if(Math.abs(df)<0.1) hop = {u0:u, w0:w, u1:P.u, w1:P.w, f:0, d:0.55}; }
+          else if(Math.abs(df)<0.5){ const v = Math.min(dd, (cfg.spd||0.32)*dt); u += Math.sin(yaw)*v; w += Math.cos(yaw)*v; moving = true; } }
+        else path.shift(); }
+      else if(lift>0.95){ /* 到了：順著棚頂（小貓去找伴時和橘貓同方向）再趴下 */
+        const ax = o.vis==='go' && B ? B.yaw : yaw, ty = Math.abs(near(ax))<Math.PI/2 ? 0 : Math.PI, df = near(ty-yaw); yaw += Math.max(-2*dt, Math.min(2*dt, df));
+        if(Math.abs(df)<0.03){ st = 'lie'; stT = 0; stDur = 5+Math.random()*5;
+          if(o.vis==='go'){ o.vis = 'stay'; visDur = 25+Math.random()*35; stDur = 4+Math.random()*3; o.attn = B; o.attnT = 2.5; if(B && B.st!=='sleep'){ B.attn = o; B.attnT = 3; } }
+          else if(o.vis==='back'){ o.vis = null; visCd = 80+Math.random()*100; } } }
+      if(stT>stDur && !o.watcher && !hop){ path = []; st = 'lie'; stT = 0; stDur = 5;
+        if(o.vis==='go'){ o.vis = 'stay'; visDur = 4; } else if(o.vis==='back' && roof(w)===1){ o.vis = null; visCd = 80+Math.random()*100; } }
     } else if(st==='sleep'){ wantSlp = 1; if(stT>stDur){ st = 'lie'; stT = 0; stDur = 3+Math.random()*3; } }
-    else if(stT>stDur && !o.watcher) pick();
+    else if(stT>stDur && !o.watcher && !(o.vis==='back')) pick();
     lift += Math.max(-dt*1.6, Math.min(dt*1.6, wantLift-lift)); slp += Math.max(-dt*0.8, Math.min(dt*(0.35), wantSlp-slp)); /* 慢慢低頭睡著，醒來較快 */
     const e = lift*lift*(3-2*lift), s = slp*slp*(3-2*slp);
-    g.position.set(u,0,w); g.rotation.y = yaw; bg.position.y = e*0.165;
+    g.position.set(u,hopY,w); g.rotation.y = yaw; bg.position.y = e*0.165;
     if(moving) gait += dt*9;
     for(const L of legs){ const lie = L.fz>0 ? -Math.PI/2 : -Math.PI/2*0.92;
       const sw = moving ? Math.sin(gait+(L.sx*L.fz>0?0:Math.PI))*0.45 : 0;
-      L.p.rotation.x = lie*(1-e) + sw*e;
+      L.p.rotation.x = lie*(1-e) + sw*e + (hopY>0 ? (L.fz>0 ? -0.9 : 0.8)*Math.min(1,hopY/0.15) : 0); /* 跳的時候前腳往前伸、後腳往後蹬 */
       L.p.rotation.y = L.fz>0 ? (1-e)*s*L.sx*0.5 : 0;                 /* 睡覺時兩隻前腳往內交叉 */
       L.p.position.y = 0.07 + (L.fz>0 && L.sx>0 ? 0.03*s*(1-e) : 0); }  /* 右前腳疊在左前腳上 */
     /* 頭（教師 2026-11-18：要更自然）：真的貓不是一直左右掃，而是「盯住一處 → 很快轉過去 → 再盯住」。
@@ -1593,9 +1620,12 @@ const marketCat = (()=>{
       else { if(r<0.55) gy = Math.max(-1.1, Math.min(1.1, gy+(Math.random()-0.5)*0.6)); else gy = (Math.random()*2-1)*1.1;
         gp = Math.random()<0.15 ? -0.25-Math.random()*0.15 : 0.0+Math.random()*0.15;   /* 偶爾抬頭看上面 */
         gr = Math.random()<0.25 ? (Math.random()<0.5?-1:1)*(0.12+Math.random()*0.1) : 0; /* 偶爾歪頭 */
-        gT = 1.2+Math.random()*3.3; } }
+        gT = 1.2+Math.random()*3.3;
+        const pal = o.vis==='stay' ? B : (B && B.vis==='stay' ? B : null); if(pal && Math.random()<0.3){ o.attn = pal; o.attnT = 1.2+Math.random()*2.3; } } }
     let ty = gy, tp = gp, tr = gr;
+    o.attnT -= dt;
     if(o.watcher){ const ww = o.watcher; ty = Math.max(-1.3, Math.min(1.3, near(Math.atan2(ww.x-o.x, ww.z-o.z) - yaw))); tp = 0.3; tr = 0; }
+    else if(o.attn && o.attnT>0){ const aa = o.attn; ty = Math.max(-1.3, Math.min(1.3, near(Math.atan2(aa.x-o.x, aa.z-o.z) - yaw))); tp = 0.08; tr = 0; } /* 看旁邊的伴 */
     ty += 0.035*Math.sin(t*0.9)+0.02*Math.sin(t*2.3+1); tp += 0.025*Math.sin(t*1.3+2); /* 盯著時頭也有一點點自然的晃動，不會完全僵住 */
     ty *= (1-s); tp = tp*(1-s) + (0.38+0.02*Math.sin(t*1.1))*s; tr *= (1-s);
     const K = o.watcher ? 90 : 55, C = 2*Math.sqrt(K)*0.78;   /* 阻尼略小於臨界：轉到位時稍微過頭再回來 */
@@ -1615,22 +1645,27 @@ const marketCat = (()=>{
     body.scale.y = 0.78+(0.025+0.015*s)*Math.sin(t*(1.8-0.7*s));
     { const hp = new THREE.Vector3(); head.getWorldPosition(hp); const on = s>0.7;
       for(const q of zzz){ const f = (t*0.4+q.ph)%1; q.m.visible = on;
-        if(on){ q.m.position.set(hp.x+0.05+f*0.35, hp.y+0.2+f*0.7, hp.z+Math.sin(f*Math.PI*2+q.ph*5)*0.08); q.m.scale.setScalar(0.6+f*1.0);
+        if(on){ const zk = cfg.zk||1; q.m.position.set(hp.x+(0.05+f*0.35)*zk, hp.y+(0.2+f*0.7)*zk, hp.z+Math.sin(f*Math.PI*2+q.ph*5)*0.08*zk); q.m.scale.setScalar(0.6+f*1.0);
           q.m.material.opacity = Math.min(1,(s-0.7)/0.2)*Math.sin(Math.PI*f); q.m.quaternion.copy(camera.quaternion); } } }
-    o.x = PX + u*Math.cos(SL); o.z = PZ + w;
+    o.x = PX + u*Math.cos(SL); o.z = PZ + w; o.u = u; o.w = w; o.yaw = yaw; o.st = st;
   });
   /* 點貓：喵一聲。真實貓叫：OpenGameArt〈Meow〉（作者 IgnasD，CC0 公有領域，教師 2026-11-18 同意下載），轉成 mp3 內嵌；每次音高略有不同；有在睡就醒來 */
   const MEOW_B64 = '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';
   let mac = null, meowBuf = null;
   o.meow = ()=>{ try{
     mac = mac || new (window.AudioContext||window.webkitAudioContext)(); if(mac.state==='suspended') mac.resume();
-    const play = buf=>{ const src = mac.createBufferSource(), gn = mac.createGain(); src.buffer = buf; src.playbackRate.value = 0.94+Math.random()*0.14; gn.gain.value = 0.9; src.connect(gn); gn.connect(mac.destination); src.start(); };
+    const play = buf=>{ const src = mac.createBufferSource(), gn = mac.createGain(); src.buffer = buf; src.playbackRate.value = (cfg.pitch||1)*(0.94+Math.random()*0.14); gn.gain.value = 0.9; src.connect(gn); gn.connect(mac.destination); src.start(); };
     if(meowBuf) play(meowBuf);
     else { const u = Uint8Array.from(atob(MEOW_B64), c=>c.charCodeAt(0)); mac.decodeAudioData(u.buffer).then(buf=>{ meowBuf = buf; play(buf); }).catch(()=>{}); }
   }catch(_){}
     if(st==='sleep'){ st = 'lie'; stT = 0; stDur = 5; } };
   return o;
-})();
+}
+const marketCat = makeRoofCat({col:0xE8873A, eye:0xC8902A, u0:0.15, w0:0, home:{u:[-0.35,0.55], w:[-1.15,1.15]}});
+/* 小貓：身長約橘貓的 0.65 倍、頭比例大一點；黃綠色眼睛；叫聲音高較高 */
+const roofKitten = makeRoofCat({col:0x1F1C1E, eye:0xB9C24A, sc:0.65, headK:1.15, hit:1.5, zk:0.75, spd:0.27, pitch:1.3, lid:0x8A8286, u0:-0.2, w0:3.6, yaw0:Math.PI,
+  home:{u:[-0.8,0.8], w:[2.5,4.8]}, visitor:true, watchOf:()=>marketCat});
+marketCat.buddy = roofKitten; roofKitten.buddy = marketCat;
 let dogApi = null, mouseNav = null, peopleNav = null;
 (function dogs(){
   const matBase = mat, FLUFF = new THREE.MeshStandardMaterial({color:0xFFFFFF, emissive:0x787878, flatShading:true, roughness:1});
@@ -3123,7 +3158,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
   el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
   el.addEventListener('pointerdown', e=>{
     aimAt(e);
-    { const hm = rc.intersectObject(marketCat.g, true)[0]; if(hm && hm.distance < solidD(rc)){ marketCat.meow(); down = null; return; } } /* 點貓：喵一聲，不切到攤位 */
+    for(const cat of [marketCat, roofKitten]){ const hm = rc.intersectObject(cat.g, true)[0]; if(hm && hm.distance < solidD(rc)){ cat.meow(); down = null; return; } } /* 點貓：喵一聲，不切到攤位 */
     if(dogApi){ const h = rc.intersectObjects(dogApi.groups, true)[0]; if(h && h.distance < solidD(rc)){ let o = h.object; while(o && !o.userData.dog) o = o.parent; if(o){ const dd = o.userData.dog; if(dd.shy) dogApi.scare(dd, h.point.x, h.point.z); else dogApi.trigger(dd); return; } } }
     if(dogApi && dogApi.lot){ const hl = rc.intersectObjects(dogApi.lot,false)[0]; if(hl && hl.distance < solidD(rc)){ dogApi.toggleGather(); return; } }
     const hc = rc.intersectObjects(chase.cats, true)[0];
