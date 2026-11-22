@@ -97,6 +97,18 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tour-btns button{font:700 15px/1 var(--f-body);border-radius:999px;padding:11px 18px;cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--fg)}
 .tour-btns #tourGo{background:var(--persimmon);border-color:var(--persimmon);color:#fff}
 .tour-btns button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.gal{position:absolute;inset:0;z-index:2000001;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(20,32,58,.86);padding:16px;box-sizing:border-box}
+.gal[hidden]{display:none}
+.gal h3{margin:0;color:#fff;font:700 18px/1.3 var(--f-display)}
+.gal .ph{position:relative;flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+.gal img{max-width:100%;max-height:100%;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);user-select:none;-webkit-user-drag:none}
+.gal .nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:2px solid #fff;background:rgba(255,255,255,.18);color:#fff;font:700 22px/1 var(--f-body);cursor:pointer}
+.gal .nav.l{left:4px}.gal .nav.r{right:4px}
+.gal .x{position:absolute;top:10px;right:12px;width:42px;height:42px;border-radius:50%;border:2px solid #fff;background:rgba(255,255,255,.18);color:#fff;font:700 20px/1 var(--f-body);cursor:pointer}
+.gal .dots{display:flex;gap:8px}
+.gal .dots button{width:11px;height:11px;padding:0;border-radius:50%;border:2px solid #fff;background:transparent;cursor:pointer}
+.gal .dots button[aria-current="true"]{background:#fff}
+.gal button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .tour-cap{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);z-index:2000000;max-width:min(90%,420px);box-sizing:border-box;text-align:center;
   background:var(--card);color:var(--fg);border:2px solid var(--persimmon);border-radius:20px;padding:10px 16px;font:700 16px/1.5 var(--f-display);box-shadow:0 5px 0 rgba(42,63,99,.14)}
 .dogcam{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:12px;z-index:2000000;font:700 13px/1 var(--f-body);color:#fff;background:#E8502D;border-radius:999px;padding:8px 14px}
@@ -194,6 +206,12 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <div class="tour-btns"><button id="tourGo" type="button">好，出發！</button><button id="tourNo" type="button">我自己逛</button></div>
     </div>
     <div class="tour-cap" id="tourCap" role="status" aria-live="polite" hidden></div>
+    <div class="gal" id="gal" role="dialog" aria-modal="true" aria-labelledby="galT" hidden>
+      <button class="x" id="galX" type="button" aria-label="關閉">✕</button>
+      <h3 id="galT">東安橋與牛欄河</h3>
+      <div class="ph"><img id="galImg" alt=""><button class="nav l" id="galL" type="button" aria-label="上一張">‹</button><button class="nav r" id="galR" type="button" aria-label="下一張">›</button></div>
+      <div class="dots" id="galDots"></div>
+    </div>
     <div id="eat" aria-hidden="true"><svg viewBox="0 0 240 260">
       <g class="it sprig" transform="translate(120,120)"><g class="sw">
         <rect x="-2.5" y="-36" width="5" height="76" fill="#3F8A47"/>
@@ -2174,7 +2192,8 @@ function dodgeBank(t, off){
   /* 橋墩前的小石塊（河床邊緣） */
   for(const [x,z] of [[-3,1.4],[0,-1.4],[3,1.4]]){ const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35,0), hillMat(0xB9B6C8)); r.position.set(x,0.2,z); g.add(r); }
   /* 名牌：浮在橋上方的藍色名牌「東安橋」，永遠朝向螢幕、正著讀，不必轉視角 */
-  { const el = document.createElement('a'); el.className = 'tag bridge'; el.href = 'https://www.google.com/search?q=%E6%9D%B1%E5%AE%89%E6%A9%8B'; el.target = '_blank'; el.rel = 'noopener'; el.title = '在 Google 地圖上看東安橋'; el.innerHTML = '<b>東安橋</b><span aria-hidden="true" style="font-size:12px">↗</span>';
+  { const el = document.createElement('a'); el.className = 'tag bridge'; el.href = '#'; el.title = '看東安橋與牛欄河的相片'; el.innerHTML = '<b>東安橋</b><span aria-hidden="true" style="font-size:12px">📷</span>';
+    el.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); openGallery(0); });   /* 教師 2026-11-22：改成看教師拍的相片，不再連 Google */
     const lab = new CSS2DObject(el); lab.position.set(0, 4.2, 0); g.add(lab); }
   const p = riverPoint(BRIDGE_T, 0), tg = riverCurve.getTangentAt(BRIDGE_T);
   g.position.set(p.x, 0.02, p.z); g.rotation.y = Math.atan2(tg.x, tg.z); g.scale.setScalar(0.9); scene.add(g);
@@ -3436,14 +3455,30 @@ $('#btnTour').addEventListener('click', ()=>{
 $('#tourGo').addEventListener('click', tourStart);
 $('#tourNo').addEventListener('click', ()=>{ $tourDlg.hidden = true; });
 
+/* 東安橋與牛欄河相片（教師 2026-11-22 拍的 5 張）：點東安橋名牌打開；左右鍵、滑動、圓點換張，Esc 或 ✕ 關閉 */
+const GAL = ['assets/dongan-1.jpg','assets/dongan-2.jpg','assets/dongan-3.jpg','assets/dongan-4.jpg','assets/dongan-5.jpg'];
+let galI = 0;
+function galShow(i){ galI = (i+GAL.length)%GAL.length; $('#galImg').src = GAL[galI]; $('#galImg').alt = `東安橋與牛欄河相片 第 ${galI+1} 張，共 ${GAL.length} 張`;
+  [...$('#galDots').children].forEach((b,k)=>b.setAttribute('aria-current', k===galI ? 'true' : 'false')); }
+function openGallery(i){ const d = $('#gal');
+  if(!d.dataset.ready){ d.dataset.ready = 1;
+    GAL.forEach((_,k)=>{ const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', `第 ${k+1} 張`); b.onclick = ()=>galShow(k); $('#galDots').appendChild(b); });
+    $('#galL').onclick = ()=>galShow(galI-1); $('#galR').onclick = ()=>galShow(galI+1); $('#galX').onclick = closeGallery;
+    d.addEventListener('click', e=>{ if(e.target===d) closeGallery(); });
+    let sx = null; const ph = d.querySelector('.ph');
+    ph.addEventListener('pointerdown', e=>{ sx = e.clientX; }); ph.addEventListener('pointerup', e=>{ if(sx!==null && Math.abs(e.clientX-sx)>40) galShow(galI + (e.clientX<sx ? 1 : -1)); sx = null; });
+    document.addEventListener('keydown', e=>{ if(d.hidden) return; if(e.key==='Escape') closeGallery(); else if(e.key==='ArrowLeft') galShow(galI-1); else if(e.key==='ArrowRight') galShow(galI+1); });
+    GAL.forEach(u=>{ const im = new Image(); im.src = u; }); }
+  galShow(i); d.hidden = false; $('#galX').focus(); }
+function closeGallery(){ $('#gal').hidden = true; }
 /* Dog-eye tour (teacher 2026-11-08): a random dog walks to two outdoor spots, camera rides at its head height. Photo and link are optional per spot (teacher will supply selfies later). */
 const $dogCam = $('#dogCam'), $dogFade = $('#dogFade');
 const DOG_NAMES = ['羅威那','黃金獵犬','邊牧','法鬥','拉布拉多','伯恩山犬','薩摩耶'];
 const V3 = (x,z)=>new THREE.Vector3(x,0,z);
 const DOG_SPOTS = [
   {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
-  {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'', u:''},
-  {n:'東安橋', say:'「東安橋」係五孔石砌拱橋，橫過牛欄河頂。', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'', u:''},
+  {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'assets/dongan-2.jpg', u:''},
+  {n:'東安橋', say:'「東安橋」係五孔石砌拱橋，橫過牛欄河頂。', st:()=>riverPoint(0.468,15), lk:()=>riverPoint(0.468,0), ly:2.0, photo:'assets/dongan-1.jpg', u:''},
   {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', st:()=>V3(23,-1.5), lk:()=>V3(30.5,0.5), ly:0.5, photo:'', u:''},
   {n:'田', say:'「田」在北邊，這裡友善耕作，歡迎石虎', st:()=>V3(22.5,-13.4), lk:()=>V3(10,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
