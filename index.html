@@ -299,9 +299,10 @@ const UNITS = [
            {t:'中華民國115年全國語文競賽',s:'教育部主辦・大會公告、競賽內容、線上報名'}] },
 ];
 /* 地塊面積縮 30%（教師 2026-11-19）：半徑乘 √0.7≈0.84；島上建築的大小照原本半徑 r0 算，不跟著縮 */
-const TILE_SHRINK = Math.sqrt(0.7); for(const d of [HUB, ...UNITS]){ d.r0 = d.r; d.r = d.r*TILE_SHRINK; }
+/* 教師 2026-11-23 再縮 30%：面積再乘 0.7，累計半徑乘 0.7（原本的 √0.7 × √0.7） */
+const TILE_SHRINK = 0.7; for(const d of [HUB, ...UNITS]){ d.r0 = d.r; d.r = d.r*TILE_SHRINK; }
 /* 地塊間更集中（教師 2026-11-19）：各單元地塊的中心也往主島靠近，同樣乘 √0.7，地塊之間的距離回到縮小前的比例 */
-for(const d of UNITS){ d.pos0 = d.pos; d.pos = [d.pos[0]*TILE_SHRINK, d.pos[1]*TILE_SHRINK]; }
+for(const d of UNITS){ d.pos0 = d.pos; d.pos = [d.pos[0]*TILE_SHRINK, d.pos[1]*TILE_SHRINK]; }   /* 間距跟著縮（11-23 再縮一次）*/
 
 const LESSONS = [
   { id:'L1', code:'4-1', title:'畫好食个柿餅', place:'新竹縣新埔鎮旱坑路一段283巷' },
@@ -1220,7 +1221,7 @@ let buffApi = null;
 /* 五隻狗：只走綠地（不進地塊、池塘、稻田、河、樹叢與山丘）。大多各自遊蕩，有時走到河邊、稻田邊或山腳下停一停，偶爾遇到同伴就並肩走一段；走路與小跑會交替。
    做法：第一個畫面時把場景的障礙畫成 0.5 單位的格子地圖，用「廣度優先搜尋」找路，再把路拉直成幾個轉折點。 */
 /* 豬圈（教師 2026-11-10）：稻田東緣，三面磚牆、南面鐵柵欄（中間留出入口、不裝門板），沒有屋頂；養一隻大豬、兩隻小豬（3 是質數）。
-   後牆立標題牌「等𠊎大咧要做神豬」。神豬是死後才稱，所以大豬不披綢帶。整組以圍欄中心放大 K 倍（教師 2026-11-10 放大 20%）。
+   後牆立標題牌「等𠊎大咧～乜愛做大神豬」（教師 2026-11-23 改字）。神豬是死後才稱，所以大豬不披綢帶。整組以圍欄中心放大 K 倍（教師 2026-11-10 放大 20%）。
    玩法：①趕豬回圈（按小豬後方，小豬往前跑；狗靠近也會嚇到小豬；兩隻小豬都回圈有慶祝）②大豬趴著打呼冒 Zzz，點牠會醒、伸懶腰、哼一聲；點小豬有哼叫。 */
 const PIG = { cx:30.5, cz:-12.6, K:1.2, hw:3.0*1.2, hd:2.3*1.2, gate:2.0*1.2 }; /* hw、hd、gate 已含放大倍率（世界座標） */
 let pigApi = null;
@@ -1252,7 +1253,7 @@ let pigApi = null;
   const mud = new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.03,20), mat(0x8E6B4B)); mud.scale.set(1.7,1,1.05); mud.position.set(cx+hw-1.5, 0.065, cz-0.3); g.add(mud);
   const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 256; const tx = cv.getContext('2d');
   const drawT = ()=>{ tx.fillStyle = '#FFF1C9'; tx.fillRect(0,0,1280,256); tx.strokeStyle = '#B9824F'; tx.lineWidth = 14; tx.strokeRect(7,7,1266,242);
-    tx.textAlign = 'center'; tx.textBaseline = 'middle'; tx.fillStyle = '#7A4A2A'; tx.font = 'bold 150px Huninn, "Noto Sans TC", sans-serif'; tx.fillText('等𠊎大咧要做神豬', 640, 134); };
+    tx.textAlign = 'center'; tx.textBaseline = 'middle'; tx.fillStyle = '#7A4A2A'; tx.font = 'bold 112px Huninn, "Noto Sans TC", sans-serif'; tx.fillText('等𠊎大咧～乜愛做大神豬', 640, 132, 1220);   /* 字變多（11 字），字級從 150 改 112 才不會被擠扁 */ };
   drawT(); const tt = new THREE.CanvasTexture(cv); tt.colorSpace = THREE.SRGBColorSpace; tt.anisotropy = 4;
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ drawT(); tt.needsUpdate = true; });
   const sign = new THREE.Mesh(new THREE.BoxGeometry(5.0,1.0,0.1), [woodL,woodL,woodL,woodL,new THREE.MeshBasicMaterial({map:tt}),woodL]); sign.position.set(cx, 2.25, zN-0.2); g.add(sign);
@@ -2662,7 +2663,7 @@ function placeIsland(def, decorFn){
     spots.push(bb);
     for(const x of [bb.min.x, bb.max.x]) for(const z of [bb.min.z, bb.max.z]) R0 = Math.max(R0, Math.hypot(x, z));
   });
-  const k = Math.min(1.7, Math.max(0.55, (def.r0 ?? def.r)*0.72/R0));   /* 用縮小前的半徑：建築大小不變 */
+  const k = Math.min(1.7, Math.max(0.55, Math.min((def.r0 ?? def.r)*0.72, def.r*0.9)/R0));   /* 建築照原本大小，但不超出地塊九成（11-23 地塊再縮後，建築跟著小一點才不會凸出去） */
   dg.scale.setScalar(k);
   g.updateMatrixWorld(true);
   dg.traverse(o=>{ if(o.userData.house){ const H = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()).y; if(H>0.01){ o.scale.y *= HOUSE_H/H; o.userData.hh = H; } } });
