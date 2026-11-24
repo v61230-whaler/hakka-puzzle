@@ -100,6 +100,16 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .tour-btns button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .gal{position:absolute;inset:0;z-index:2000001;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(20,32,58,.86);padding:16px;box-sizing:border-box}
 .gal[hidden]{display:none}
+.teacard{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:2000001;width:min(90%,420px);box-sizing:border-box;background:var(--card);color:var(--fg);
+  border:3px solid #B4553C;border-radius:22px;padding:18px 20px 16px;box-shadow:0 8px 0 rgba(42,63,99,.16),0 0 0 100vmax rgba(30,50,90,.32)}
+.teacard[hidden]{display:none}
+.teacard h3{margin:0 0 10px;font:700 19px/1.3 var(--f-display);color:#9E2B22}
+.teacard ul{margin:0 0 12px;padding-left:1.2em;font-size:15px;line-height:1.7}
+.teacard .src{font-size:12px;color:var(--muted);margin:0 0 12px}
+.teacard .row2{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.teacard a,.teacard button{font:700 14px/1 var(--f-body);border-radius:999px;padding:10px 16px;cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--fg);text-decoration:none}
+.teacard a{background:#B4553C;border-color:#B4553C;color:#fff}
+.tag.tea{background:#B4553C}
 .gal h3{margin:0;color:#fff;font:700 18px/1.3 var(--f-display)}
 .gal .ph{position:relative;flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
 .gal img{max-width:100%;max-height:100%;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);user-select:none;-webkit-user-drag:none}
@@ -207,6 +217,16 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <div class="tour-btns"><button id="tourGo" type="button">好，出發！</button><button id="tourNo" type="button">我自己逛</button></div>
     </div>
     <div class="tour-cap" id="tourCap" role="status" aria-live="polite" hidden></div>
+    <div class="teacard" id="teaCard" role="dialog" aria-modal="true" aria-labelledby="teaT" hidden>
+      <h3 id="teaT">關西台灣紅茶公司</h3>
+      <ul>
+        <li>1937 年，羅碧玉結合地方茶廠，成立「臺灣紅茶株式會社」，自己把茶外銷到海外。</li>
+        <li>官方介紹說它是臺灣第一家直營外銷茶葉再製工廠，外銷數十個國家。</li>
+        <li>2006 年登錄為新竹縣歷史建築；廠裡有「台紅茶業文化館」。</li>
+      </ul>
+      <p class="src">資料來源：文化部國家文化資產網〈關西台灣紅茶公司〉</p>
+      <div class="row2"><a href="https://nchdb.boch.gov.tw/assets/advanceSearch/historicalBuilding/20200915000002" target="_blank" rel="noopener">看更多介紹</a><button type="button" id="teaX">關閉</button></div>
+    </div>
     <div class="gal" id="gal" role="dialog" aria-modal="true" aria-labelledby="galT" hidden>
       <button class="x" id="galX" type="button" aria-label="關閉">✕</button>
       <h3 id="galT">東安橋與牛欄河</h3>
@@ -2317,6 +2337,78 @@ function dodgeBank(t, off){
   }
 })();
 
+/* 關西台灣紅茶公司（教師 2026-11-24）：台三線南側、東安橋右邊。外觀依國家文化資產網〈關西台灣紅茶公司〉照片（新竹縣政府文化局）——
+   兩層紅磚廠房、紅瓦斜屋頂、屋頂下白色三角山牆；右前方較低的紅磚棟，中間大門上掛「關西茶廠」牌；
+   二樓外有水泥室外樓梯，淺綠色欄杆、上方鐵皮雨遮；窗框淺綠色。門面朝北，面對台三線和牛欄河，跟真實廠房臨路一樣；點名牌時鏡頭會自己轉到正面 */
+let teaFactory = null;
+(function(){
+  const BRICK = 0xB4553C, BRICK_D = 0x96432F, ROOF = 0xC9483A, WHITE = 0xF2EEE6, MINT = 0x8FD3C1, GLASS = 0x2F4550, CONC = 0xB9B4AA, CAN = 0x8E9AA6, WOOD = 0xB98A55;
+  const offR = t=>9.8 + 1.9*Math.sin(t*7.5+0.6) + 0.5*Math.sin(t*21+1.7);   /* 和台三線同一條路中心公式 */
+  const T = 0.565, p = riverPoint(T, offR(T) + 6.4), tg = riverCurve.getTangentAt(T);
+  const g = new THREE.Group(); g.position.set(p.x, 0.02, p.z); g.rotation.y = -Math.atan2(tg.z, tg.x) + Math.PI; g.scale.setScalar(2.6);   /* 門面朝北：面對台三線和牛欄河（教師 2026-11-24） */ scene.add(g); solids.push(g); g.userData.tea = true;
+  const B = (w,h,d,c,x,y,z,o)=>box(g,w,h,d,c,x,y,z,o);
+  /* 三角屋頂：ridgeAlong 'z' = 山牆朝前（主棟）；'x' = 屋脊左右走（前棟） */
+  const gable = (w,d,h,x,y,z,along)=>{ const sh = new THREE.Shape(); const half = (along==='z'? w : d)/2; sh.moveTo(-half,0); sh.lineTo(half,0); sh.lineTo(0,h); sh.closePath();
+    const len = along==='z' ? d : w; const geo = new THREE.ExtrudeGeometry(sh,{depth:len, bevelEnabled:false}); geo.translate(0,0,-len/2); if(along==='x') geo.rotateY(Math.PI/2);
+    return add(g, geo, mat(WHITE), x, y, z); };
+  const roofSlab = (w,d,h,x,y,z,along)=>{ /* 兩片斜屋面，蓋在三角形上，略出簷 */
+    const span = (along==='z'? w : d)/2 + 0.08, len = (along==='z'? d : w) + 0.16, sl = Math.hypot(span, h), ang = Math.atan2(h, span);
+    for(const sd of [-1,1]){ const m = along==='z' ? B(sl,0.06,len,ROOF, x+sd*span/2, y+h/2+0.02, z, {rz:-sd*ang}) : B(len,0.06,sl,ROOF, x, y+h/2+0.02, z+sd*span/2, {rx:sd*ang}); } };
+  const win = (x,y,z,w=0.2,h=0.26)=>{ B(w+0.04,h+0.04,0.03,MINT,x,y,z); B(w,h,0.035,GLASS,x,y,z+0.003); B(0.02,h,0.04,MINT,x,y,z+0.005); };
+  /* 主棟：兩層紅磚，山牆朝前，屋頂下白色三角 */
+  const MX = -0.45, MW = 1.6, MH = 1.15, MD = 1.3;
+  B(MW,MH,MD,BRICK,MX,MH/2,0);
+  for(const k of [-1,0,1]) B(0.07,MH,0.03,BRICK_D, MX+k*0.55, MH/2, MD/2+0.01);   /* 磚柱 */
+  B(MW,0.05,0.04,BRICK_D,MX,0.58,MD/2+0.015);                                        /* 樓層腰帶 */
+  gable(MW,MD,0.5,MX,MH,0,'z'); roofSlab(MW,MD,0.5,MX,MH,0,'z');
+  for(const k of [-0.27,0.27]) for(const yy of [0.3,0.86]) win(MX+k, yy, MD/2+0.02);
+  for(const k of [-0.62,0.62]) win(MX+k, 0.86, MD/2+0.02, 0.16, 0.26);
+  /* 二樓陽台＋室外樓梯（淺綠欄杆）＋鐵皮雨遮 */
+  const BX = MX+0.25, BY = 0.6, BZ = MD/2+0.28;
+  B(0.75,0.06,0.5,CONC,BX,BY,BZ);
+  for(let k=0;k<7;k++) B(0.02,0.18,0.02,MINT,BX-0.35+k*0.117,BY+0.12,BZ+0.24); B(0.75,0.025,0.025,MINT,BX,BY+0.21,BZ+0.24);
+  { const n = 6, sx = BX+0.5, len = Math.hypot(0.62, BY); const st = B(0.24,0.05,len,CONC, sx+0.1, BY/2, BZ+0.12, {rx:0}); st.rotation.set(0,0,0);
+    st.geometry = new THREE.BoxGeometry(len,0.05,0.24); st.rotation.z = -Math.atan2(BY,0.62); st.position.set(BX+0.37+0.31, BY/2, BZ+0.12);
+    for(let k=0;k<n;k++) B(0.02,0.18,0.02,MINT, BX+0.4+k*0.11, BY - k*BY/n + 0.1, BZ+0.24); }
+  B(0.82,0.025,0.5,CAN,BX+0.02,BY+0.5,BZ+0.02,{rx:0.18}); for(const k of [-0.36,0.38]) B(0.03,0.5,0.03,MINT,BX+k,BY+0.25,BZ+0.24);   /* 鐵皮雨遮：小一點、斜一點，不擋二樓窗 */
+  /* 右前方較低的紅磚棟：中間大門＋「關西茶廠」牌 */
+  const FX = 0.95, FW = 1.15, FH = 0.78, FD = 1.0, FZ = 0.1;
+  B(FW,FH,FD,BRICK,FX,FH/2,FZ);
+  gable(FW,FD,0.32,FX,FH,FZ,'x'); roofSlab(FW,FD,0.32,FX,FH,FZ,'x');
+  B(0.46,0.42,0.03,0x2A2A2E,FX,0.21,FZ+FD/2+0.01);                       /* 大門 */
+  B(0.6,0.04,0.12,CONC,FX,0.45,FZ+FD/2+0.05);                            /* 門上小雨遮 */
+  for(const k of [-0.42,0.42]) win(FX+k, 0.5, FZ+FD/2+0.02, 0.16, 0.2);
+  const cvTex = (w,h,draw)=>{ const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); draw(x);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ draw(x); t.needsUpdate = true; }); return t; };
+  const F = px=>`bold ${px}px Huninn, "Noto Sans TC", sans-serif`;
+  /* 「關西茶廠」橫牌（照片上大門上方的牌） */
+  { const t = cvTex(512,160,x=>{ x.fillStyle = '#6B3A26'; x.fillRect(0,0,512,160); x.strokeStyle = '#E8C98A'; x.lineWidth = 10; x.strokeRect(5,5,502,150);
+      x.fillStyle = '#F6E2B0'; x.font = F(96); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('關西茶廠',256,84,470); });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.16), new THREE.MeshBasicMaterial({map:t})); m.position.set(FX,0.6,FZ+FD/2+0.035); g.add(m); }
+  /* 直立招牌「台灣紅茶公司」：掛在主棟右前角 */
+  { const t = cvTex(160,640,x=>{ x.fillStyle = '#FFFFFF'; x.fillRect(0,0,160,640); x.strokeStyle = '#B4553C'; x.lineWidth = 10; x.strokeRect(5,5,150,630);
+      x.fillStyle = '#9E2B22'; x.font = F(92); x.textAlign = 'center'; x.textBaseline = 'middle'; [...'台灣紅茶公司'].forEach((c,i)=>x.fillText(c,80,70+i*100)); });
+    const SX = MX-MW/2-0.13, SZ = MD/2-0.1;   /* 掛在主棟左前角外側、正面朝鏡頭，前棟擋不到 */
+    B(0.2,0.78,0.05,WHITE,SX,0.85,SZ);
+    for(const sd of [-1,1]){ const m = new THREE.Mesh(new THREE.PlaneGeometry(0.17,0.7), new THREE.MeshBasicMaterial({map:t})); m.position.set(SX, 0.85, SZ+sd*0.027); if(sd<0) m.rotation.y = Math.PI; g.add(m); }
+    for(const yy of [1.18,0.52]) B(0.1,0.03,0.03,CONC,SX+0.12,yy,SZ); }
+  /* 門口的木頭茶箱 */
+  for(const [x,z,y] of [[0.45,0.85,0.07],[0.6,0.9,0.07],[0.52,0.88,0.21],[1.55,0.85,0.07]]){ B(0.14,0.14,0.14,WOOD,x,y,z); B(0.145,0.02,0.145,0x8A6038,x,y+0.03,z); }
+  /* 地面：廠前水泥地 */
+  B(3.0,0.02,0.7,0xD8D2C4,0.2,0.01,1.0);
+  g.traverse(o=>{ if(o.isMesh) o.userData.teaPart = true; });
+  /* 名牌：浮在廠房上方，點了打開介紹小卡 */
+  { const el = document.createElement('a'); el.className = 'tag bridge tea'; el.href = '#'; el.title = '認識台灣紅茶公司'; el.innerHTML = '<b>台灣紅茶公司</b>';
+    el.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); goTea(); });
+    const lab = new CSS2DObject(el); lab.position.set(0, 2.25, 0); g.add(lab); }
+  /* 正面視角：站在台三線北側路邊、稍高處看門面 */
+  const nx = -tg.z, nz = tg.x, nl = Math.hypot(nx,nz)||1;
+  g.userData.view = {cam:new THREE.Vector3(p.x - nx/nl*15 + tg.x*2, 12, p.z - nz/nl*15 + tg.z*2), tg:new THREE.Vector3(p.x, 2.0, p.z)};
+  teaFactory = g;
+})();
+
+
 
 function add(parent, geo, m, x=0, y=0, z=0){ const me = new THREE.Mesh(geo, m); me.position.set(x,y,z); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
 function prism(w, h, len){ const s = new THREE.Shape(); s.moveTo(-w/2,0); s.lineTo(w/2,0); s.lineTo(0,h); s.closePath(); const g = new THREE.ExtrudeGeometry(s,{depth:len,bevelEnabled:false}); g.translate(0,0,-len/2); return g; }
@@ -2993,7 +3085,7 @@ renderer.domElement.addEventListener('pointerup', e=>{
   ray.setFromCamera(ptr, camera);
   const hit = ray.intersectObjects(pickables, false)[0];
   { const ht = ray.intersectObjects(solids, true)[0]; /* 點到廟身 → 太和宮近看；點到樹 → 擋住、不穿透 */
-    if(ht && (!hit || ht.distance < hit.distance)){ let o = ht.object; while(o && !o.userData.taiho) o = o.parent; if(o) spotGo(SPOTS.findIndex(sp=>sp.n==='太和宮')); return; } }
+    if(ht && (!hit || ht.distance < hit.distance)){ let o = ht.object; while(o && !o.userData.taiho && !o.userData.tea) o = o.parent; if(o && o.userData.tea){ goTea(); return; } if(o) spotGo(SPOTS.findIndex(sp=>sp.n==='太和宮')); return; } }   /* 點紅茶公司廠房 → 介紹小卡 */
   if(!hit) return;
   if(hit.object.userData.lesson){ selectLesson(hit.object.userData.lesson); return; }
   if(hit.object.userData.mstall){ spotGo(SPOTS.findIndex(sp=>sp.stalls), hit.object.userData.mstall); return; } /* 點攤位 → 該攤位的平視角 */
@@ -3494,6 +3586,16 @@ function openGallery(key, i=0){ const d = $('#gal'), G = GALS[key]; GAL = G.p; $
   GAL.forEach(u=>{ const im = new Image(); im.src = u; });
   galShow(i); d.hidden = false; $('#galX').focus(); }
 function closeGallery(){ $('#gal').hidden = true; }
+/* 點紅茶公司：鏡頭先用 1.2 秒轉到門面正前方，再打開介紹小卡 */
+let teaFly = null;
+function goTea(){ if(!teaFactory) return; const v = teaFactory.userData.view;
+  teaFly = {t:0, c0:camera.position.clone(), t0:controls.target.clone(), c1:v.cam, t1:v.tg}; }
+pondTick.push(dt=>{ if(!teaFly) return; teaFly.t = Math.min(1, teaFly.t + dt/1.2); const k = teaFly.t*teaFly.t*(3-2*teaFly.t);
+  camera.position.lerpVectors(teaFly.c0, teaFly.c1, k); controls.target.lerpVectors(teaFly.t0, teaFly.t1, k); controls.update();
+  if(teaFly.t>=1){ teaFly = null; openTeaCard(); } });
+function openTeaCard(){ const d = $('#teaCard'); d.hidden = false; $('#teaX').focus();
+  if(!d.dataset.ready){ d.dataset.ready = 1; $('#teaX').onclick = ()=>{ d.hidden = true; };
+    document.addEventListener('keydown', e=>{ if(!d.hidden && e.key==='Escape') d.hidden = true; }); } }
 /* Dog-eye tour (teacher 2026-11-08): a random dog walks to two outdoor spots, camera rides at its head height. Photo and link are optional per spot (teacher will supply selfies later). */
 const $dogCam = $('#dogCam'), $dogFade = $('#dogFade');
 const DOG_NAMES = ['羅威那','黃金獵犬','邊牧','法鬥','拉布拉多','伯恩山犬','薩摩耶'];
