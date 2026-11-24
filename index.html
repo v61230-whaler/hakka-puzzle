@@ -1097,7 +1097,7 @@ let buffApi = null;
     el.addEventListener('pointerdown', e=>{ wd = {x:e.clientX, y:e.clientY}; }, true);
     el.addEventListener('pointerup', e=>{ const d = wd; wd = null; if(!d || Math.hypot(e.clientX-d.x, e.clientY-d.y)>6 || !onWheel(e)) return;
       e.stopImmediatePropagation(); wBoost = 6; }, true);   /* 6 = 快轉 5 秒＋減速 1 秒 */
-    window.addEventListener('load', ()=>el.addEventListener('pointermove', e=>{ if(onWheel(e)) el.style.cursor = 'pointer'; })); }
+    el.addEventListener('pointermove', e=>{ if(onWheel(e)) setTimeout(()=>{ el.style.cursor = 'pointer'; }, 0); }); }   /* 滑鼠移到水車變手指；等別的 pointermove 都跑完再設，才不會被蓋掉（模組腳本跑起來時 load 早已發生，不能等 load） */
   /* 引水槽：水車轉面朝向畫面，水從水車側邊（頂端往旁邊）流出，先橫向一小段、再轉向北斜下到稻田前緣；槽下有木柱撐著，槽裡有水在流 */
   const dashAll = [];
   function flumeSeg(start, end){
@@ -2329,7 +2329,7 @@ function dodgeBank(t, off){
       e.stopImmediatePropagation();   /* 點到公車就不再切換島嶼或投飼料 */
       if(turn>=0 || hold>0) return;   /* 正在迴轉就不重來 */
       honk(); if(wait<=0) hold = 0.9; }, true);   /* 停在終點等掉頭時只按喇叭 */
-    window.addEventListener('load', ()=>el.addEventListener('pointermove', e=>{ if(onBus(e)) el.style.cursor = 'pointer'; }));
+    el.addEventListener('pointermove', e=>{ if(onBus(e)) setTimeout(()=>{ el.style.cursor = 'pointer'; }, 0); });   /* 同水車：不能等 load */
   }
 })();
 
