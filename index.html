@@ -2337,7 +2337,8 @@ function dodgeBank(t, off){
    兩層紅磚廠房、紅瓦斜屋頂、屋頂下白色三角山牆；右前方較低的紅磚棟，中間大門上掛「關西茶廠」牌；
    二樓外有水泥室外樓梯，淺綠色欄杆、上方鐵皮雨遮；窗框淺綠色。門面朝北，面對台三線和牛欄河，跟真實廠房臨路一樣；點名牌時鏡頭會自己轉到正面 */
 let teaFactory = null;
-(function(){
+const SHOW_TEA = false;   /* 教師 2026-11-24：紅茶公司先取消（程式保留，要恢復改成 true） */
+(function(){ if(!SHOW_TEA) return;
   const BRICK = 0xB4553C, BRICK_D = 0x96432F, ROOF = 0xC9483A, WHITE = 0xF2EEE6, MINT = 0x8FD3C1, GLASS = 0x2F4550, CONC = 0xB9B4AA, CAN = 0x8E9AA6, WOOD = 0xB98A55;
   const offR = t=>9.8 + 1.9*Math.sin(t*7.5+0.6) + 0.5*Math.sin(t*21+1.7);   /* 和台三線同一條路中心公式 */
   const T = 0.565, p = riverPoint(T, offR(T) + 6.4), tg = riverCurve.getTangentAt(T);
