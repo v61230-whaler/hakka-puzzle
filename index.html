@@ -1069,7 +1069,19 @@ let buffApi = null;
     const bucket = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.1,0.55), mat(C.yellow)); bucket.position.set(0,R,0.2); arm.add(bucket); }
   for(const sx of [-1.1,1.1]){ for(const s of [-1,1]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,wy+0.5,6), wood);
       post.position.set(sx, (wy+0.5)/2 - 0.1, s*0.8); post.rotation.x = -s*0.25; post.position.z = s*0.45; wheel.add(post); } }
-  pondTick.push(dt=>{ spin.rotation.x -= dt*0.7; });
+  /* 點水車（教師 2026-11-24）：明顯加速轉 5 秒，再用 1 秒慢慢回到原本的速度；看不見的點擊範圍包住整個輪子 */
+  let wBoost = 0;
+  const wHit = new THREE.Mesh(new THREE.CylinderGeometry(R+0.25,R+0.25,1.9,16).rotateZ(Math.PI/2), new THREE.MeshBasicMaterial({visible:false})); wheel.add(wHit);
+  pondTick.push(dt=>{ if(wBoost>0) wBoost = Math.max(0, wBoost - dt);
+    const k = wBoost>1 ? 1 : wBoost;   /* 最後 1 秒線性減速 */
+    spin.rotation.x -= dt*(0.7 + 4.3*k); });
+  { const el = renderer.domElement, rcW = new THREE.Raycaster(), pW = new THREE.Vector2(); let wd = null;
+    const onWheel = e=>{ const r = el.getBoundingClientRect(); pW.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); rcW.setFromCamera(pW, camera);
+      const h = rcW.intersectObject(wHit, false)[0]; return !!h && h.distance < solidD(rcW); };
+    el.addEventListener('pointerdown', e=>{ wd = {x:e.clientX, y:e.clientY}; }, true);
+    el.addEventListener('pointerup', e=>{ const d = wd; wd = null; if(!d || Math.hypot(e.clientX-d.x, e.clientY-d.y)>6 || !onWheel(e)) return;
+      e.stopImmediatePropagation(); wBoost = 6; }, true);   /* 6 = 快轉 5 秒＋減速 1 秒 */
+    window.addEventListener('load', ()=>el.addEventListener('pointermove', e=>{ if(onWheel(e)) el.style.cursor = 'pointer'; })); }
   /* 引水槽：水車轉面朝向畫面，水從水車側邊（頂端往旁邊）流出，先橫向一小段、再轉向北斜下到稻田前緣；槽下有木柱撐著，槽裡有水在流 */
   const dashAll = [];
   function flumeSeg(start, end){
