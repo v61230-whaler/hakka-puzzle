@@ -273,6 +273,39 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
 {"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}
 </script>
 <script type="module">
+/* ---------- 點擊音效（教師 2026-11-27 勾選）：全部用 WebAudio 合成，不用音檔；第一次點擊後才建立 AudioContext ---------- */
+const SFX = (()=>{ let ac = null, nb = null, wheelEnd = 0;
+  const A = ()=>{ try{ ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(_){ ac = null; } return ac; };
+  const noise = ()=>{ if(!nb){ nb = ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate); const d = nb.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1; } return nb; };
+  const env = (g,t0,a,pk,dur)=>{ g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(pk,t0+a); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); };
+  const tone = (type,f0,f1,t0,dur,pk,dest)=>{ const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f0,t0); if(f1) o.frequency.exponentialRampToValueAtTime(f1,t0+dur); env(g,t0,Math.min(0.02,dur/4),pk,dur); o.connect(g); g.connect(dest||ac.destination); o.start(t0); o.stop(t0+dur+0.05); return o; };
+  const burst = (t0,dur,pk,ft,f,q,f1,dest)=>{ const s = ac.createBufferSource(); s.buffer = noise(); s.loop = true; const fl = ac.createBiquadFilter(); fl.type = ft; fl.frequency.setValueAtTime(f,t0); if(f1) fl.frequency.exponentialRampToValueAtTime(f1,t0+dur); fl.Q.value = q||1; const g = ac.createGain(); env(g,t0,Math.min(0.01,dur/5),pk,dur); s.connect(fl); fl.connect(g); g.connect(dest||ac.destination); s.start(t0, Math.random()); s.stop(t0+dur+0.05); };
+  const go = f=>{ try{ if(A()) f(ac.currentTime+0.01); }catch(_){} };
+  return {
+    whistle(){ go(t=>{ for(const [st,du] of [[0,0.28],[0.36,0.55]]){ const o = tone('square',2900,3100,t+st,du,0.2), o2 = tone('sine',2900,3100,t+st,du,0.35); const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 32; lg.gain.value = 140; l.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency); l.start(t+st); l.stop(t+st+du+0.05); burst(t+st,du,0.12,'bandpass',3000,2); } }); },          /* 狗狗散開：裁判哨「逼—逼——」（教師：大聲、有力） */
+    plop(){ go(t=>{ for(let i=0;i<5;i++){ const ti = t+0.3+i*0.06+Math.random()*0.05; tone('sine',900+Math.random()*300,220,ti,0.09,0.14); } }); },   /* 飼料落水：噗噗 */
+    pop(){ go(t=>tone('sine',450,1300,t,0.07,0.13)); },                                                     /* 魚吃到一顆：啵 */
+    splash(){ go(t=>{ tone('sine',320,70,t,0.28,0.45); burst(t,0.7,0.55,'lowpass',2200,0.7,350); burst(t+0.12,0.5,0.25,'bandpass',1500,0.8,600); }); },   /* 小人落水：撲通 */
+    moo(){ go(t=>{ const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(105,t); o.frequency.linearRampToValueAtTime(135,t+0.35); o.frequency.linearRampToValueAtTime(100,t+1.3);
+      f.type = 'lowpass'; f.frequency.setValueAtTime(350,t); f.frequency.linearRampToValueAtTime(900,t+0.4); f.frequency.linearRampToValueAtTime(400,t+1.3); f.Q.value = 4;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.35,t+0.18); g.gain.setValueAtTime(0.35,t+0.9); g.gain.exponentialRampToValueAtTime(0.0001,t+1.4); o.connect(f); f.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+1.45); }); },   /* 水牛：哞～ */
+    flap(n=7,d=0.1){ go(t=>{ for(let i=0;i<n;i++) burst(t+d+i*0.075,0.06,0.22,'bandpass',1100+Math.random()*300,0.9); }); },   /* 振翅：啪啪 */
+    chirp(){ go(t=>{ for(let i=0;i<4;i++){ const ti = t+0.15+i*0.13+Math.random()*0.04; tone('sine',3400,5200,ti,0.06,0.1); tone('sine',5000,3800,ti+0.065,0.05,0.07); } }); },   /* 麻雀：啾啾 */
+    crunch(times){ go(t=>{ for(const dt of times) for(let i=0;i<3;i++) burst(t+dt+i*0.035,0.035,0.3,'bandpass',2600+Math.random()*900,1.2); }); },   /* 吃：喀滋 */
+    wheel(){ go(t=>{ if(t < wheelEnd-1.2) return; wheelEnd = t+5.8; const g = ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(1,t+0.3); g.gain.setValueAtTime(1,t+4.8); g.gain.exponentialRampToValueAtTime(0.0001,t+5.8); g.connect(ac.destination);
+      burst(t,5.8,0.25,'lowpass',900,0.6,null,g); burst(t,5.8,0.12,'bandpass',2200,0.5,null,g);
+      for(let k=0, x=0; x<5.6; k++){ const sp = x<4.8 ? 0.17 : 0.17+(x-4.8)*0.35; burst(t+x,0.03,0.35,'bandpass',650+(k%2)*180,3,null,g); x += sp; } }); },   /* 水車加速：嘩啦水聲＋喀啦木頭聲 */
+    whimper(){ go(t=>{ const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(650,t); o.frequency.exponentialRampToValueAtTime(1150,t+0.1); o.frequency.exponentialRampToValueAtTime(560,t+0.4);
+      const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 22; lg.gain.value = 35; l.connect(lg); lg.connect(o.frequency); env(g,t,0.03,0.25,0.42); o.connect(g); g.connect(ac.destination); o.start(t); l.start(t); o.stop(t+0.45); l.stop(t+0.45); }); },   /* 法鬥：嗚嗯！ */
+    squeak(){ go(t=>{ for(let i=0;i<3;i++){ const ti = t+i*0.09; tone('sine',5200,7400,ti,0.045,0.16); tone('triangle',7400,4800,ti+0.045,0.03,0.08); } }); },              /* 老鼠：吱吱（教師：要尖一點） */
+    clack(){ go(t=>{ for(let i=0;i<3;i++) burst(t+i*0.09,0.025,0.5,'bandpass',3200,5); }); },              /* 毛蟹：喀喀 */
+    bell(){ go(t=>{ [[1,0.22,4],[2.0,0.08,2.5],[2.76,0.07,2],[5.4,0.03,1.2]].forEach(([m,pk,d])=>{ const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = 196*m; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(pk,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+d+0.05); }); burst(t,0.05,0.15,'bandpass',1500,1); }); },   /* 太和宮：噹～ */
+    shutter(){ go(t=>{ for(const st of [0,0.07]){ burst(t+st,0.012,0.6,'highpass',5000,0.7); tone('square',4200,2600,t+st,0.008,0.12); } burst(t+0.02,0.04,0.12,'bandpass',2500,1.5); }); },   /* 相片：喀嚓（教師：清脆一點） */
+    siren(){ go(t=>{ const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(600,t);
+      for(let i=0;i<2;i++){ o.frequency.linearRampToValueAtTime(1250,t+i*1.1+0.55); o.frequency.linearRampToValueAtTime(600,t+i*1.1+1.1); }
+      f.type = 'lowpass'; f.frequency.value = 2400; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.16,t+0.08); g.gain.setValueAtTime(0.16,t+2.0); g.gain.exponentialRampToValueAtTime(0.0001,t+2.25); o.connect(f); f.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+2.3); }); },   /* 狗狗集合：警報聲兩下（教師選 1） */
+    ding(){ go(t=>{ for(const [st,fq] of [[0,1319],[0.32,1047]]){ tone('sine',fq,null,t+st,0.9,0.22); tone('sine',fq*2,null,t+st,0.4,0.05); } }); },   /* 狗到齊：叮咚 */
+  }; })();
 /* ---------- 資料：之後改課程只要改這一段 ---------- */
 const SITE = 'https://sites.google.com/view/sienpin/';
 const page = p => SITE + encodeURI(p);
@@ -1096,7 +1129,7 @@ let buffApi = null;
       const h = rcW.intersectObject(wHit, false)[0]; return !!h && h.distance < solidD(rcW); };
     el.addEventListener('pointerdown', e=>{ wd = {x:e.clientX, y:e.clientY}; }, true);
     el.addEventListener('pointerup', e=>{ const d = wd; wd = null; if(!d || Math.hypot(e.clientX-d.x, e.clientY-d.y)>6 || !onWheel(e)) return;
-      e.stopImmediatePropagation(); wBoost = 6; }, true);   /* 6 = 快轉 5 秒＋減速 1 秒 */
+      e.stopImmediatePropagation(); wBoost = 6; SFX.wheel(); }, true);   /* 6 = 快轉 5 秒＋減速 1 秒 */
     el.addEventListener('pointermove', e=>{ if(onWheel(e)) setTimeout(()=>{ el.style.cursor = 'pointer'; }, 0); }); }   /* 滑鼠移到水車變手指；等別的 pointermove 都跑完再設，才不會被蓋掉（模組腳本跑起來時 load 早已發生，不能等 load） */
   /* 引水槽：水車轉面朝向畫面，水從水車側邊（頂端往旁邊）流出，先橫向一小段、再轉向北斜下到稻田前緣；槽下有木柱撐著，槽裡有水在流 */
   const dashAll = [];
@@ -1210,7 +1243,7 @@ let buffApi = null;
   /* 右池：每 17 秒一輪——低頭喝水約 5 秒，抬頭離開，走到附近一處停下來吃草，再繞另一條路走回池邊 */
   const bwR = makeBuffalo(BS); scene.add(bwR);
   for(const b of [bwL,bwR]){ b.userData.egret = makeEgret(); perchEgret(b); }
-  buffApi = { groups:[bwL,bwR], poke(b){ b.userData.poke = true; flyOff(b); } };
+  buffApi = { groups:[bwL,bwR], poke(b){ b.userData.poke = true; flyOff(b); SFX.moo(); SFX.flap(6,0.25); } };
   /* 抓白鶴（牛背鷺）：拎起來時翅膀拍動；放開後從手上飛走、繞回原來那頭牛的背上（接 egretTick 的「飛回」段） */
   buffApi.egrets = [bwL,bwR].map(b=>({b, e:b.userData.egret}));
   buffApi.hold = q=>{ const e = q.e; if(e.mode==='perch'){ const wp = new THREE.Vector3(); e.g.getWorldPosition(wp); scene.add(e.g); e.g.position.copy(wp); e.g.scale.setScalar(q.b.scale.x*0.9); } e.mode = 'held'; egretFold(e,0); e.g.rotation.x = 0; };
@@ -1920,7 +1953,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
   ds.forEach((d,i)=>{ d.g.userData.dog = d; d.pitch = PITCH[i]; d.barkT = 0; d.bf = [false,false];
     d.bub = new THREE.Sprite(new THREE.SpriteMaterial({map:barkTex, transparent:true, depthTest:false, depthWrite:false})); d.bub.visible = false; d.bub.renderOrder = 10; scene.add(d.bub); });
   const bumpD = (e,s0,dur)=> (e>=s0 && e<s0+dur) ? Math.sin(Math.PI*(e-s0)/dur) : 0;
-  dogApi = { groups: ds.map(d=>d.g), ptr: null, scare(d,px,pz){ if(!d || d.tour || d.state==='init' || G.mode!=='idle') return; d.fleeCd = 0; flee(d,px,pz); }, trigger(d){ if(!d || d.tour || d.shy || d.state==='init' || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,false]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; } };
+  dogApi = { groups: ds.map(d=>d.g), ptr: null, scare(d,px,pz){ if(!d || d.tour || d.state==='init' || G.mode!=='idle') return; d.fleeCd = 0; flee(d,px,pz); SFX.whimper(); }, trigger(d){ if(!d || d.tour || d.shy || d.state==='init' || d.barkT>0) return; initAudio(); d.barkT = 1.7; d.bf = [false,false]; const a0 = Math.floor(rnd()*4); d.bk = [a0, (a0+1+Math.floor(rnd()*3))%4]; } };
   /* Dog-eye tour: pick a random dog, drop it near a spot, walk it to the spot, then let it look at the feature (camera is driven from outside) */
   dogApi.tourAcquire = ()=>{
     if(!ready) return null;
@@ -1982,12 +2015,12 @@ let dogApi = null, mouseNav = null, peopleNav = null;
   const lotDisc = new THREE.Mesh(new THREE.CircleGeometry(LOT.r+0.4,48).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false})); lotDisc.position.set(LOT.x,0.15,LOT.z); scene.add(lotDisc); /* 看不見，只用來接點擊 */
   const slotOf = i=>{ const a = i/ds.length*Math.PI*2 + 0.3; return {x:LOT.x+Math.cos(a)*1.9, z:LOT.z+Math.sin(a)*1.9}; };
   function gatherStart(){
-    G.mode = 'call'; G.t = 0; G.hold = 0; fr = frA; /* 集合期間地塊也能走 */
+    G.mode = 'call'; G.t = 0; G.hold = 0; fr = frA; SFX.siren(); /* 集合期間地塊也能走 */
     ds.forEach((d,i)=>{ if(d.state==='init' || d.tour) return;
       if(d.pair){ d.pair.paired = false; d.pair = null; } d.paired = false; d.barkT = 0; d.flee = 0;
       d.gat = true; d.arr = false; d.gT = 0; d.slot = slotOf(i); d.path = []; d.replan = 0; d.state = 'gather'; d.run = true; d.mood = 0; }); }
   function gatherEnd(){
-    G.mode = 'idle'; fr = frN;
+    G.mode = 'idle'; fr = frN; SFX.whistle();
     ds.forEach(d=>{ if(!d.gat) return; d.gat = false; d.arr = false; d.state = 'wait'; d.wait = 0.2+rnd()*1.6; d.path = []; d.paired = false; d.pair = null;
       /* 還在地塊上的狗：沿最近的路走出地塊（走出去之前地塊也能走） */
       if(onTile(d.x,d.z)){ const c0 = ci(d.x,d.z); if(c0>=0 && frA[c0]){ const b = bfs(c0, frA); let goal = -1; for(let k=0;k<b.n;k++){ if(mainN[b.list[k]]){ goal = b.list[k]; break; } }
@@ -2059,7 +2092,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
       else { lotRays.material.opacity = 0; lotRings.forEach(r=>{ r.material.opacity = 0; });
         if(G.mode==='call'){ lotPaw.material.map = pawCall; lotPaw.material.opacity = 0.55+0.45*k; lotPaw.scale.setScalar(1+0.14*k); }
         else { lotPaw.material.map = pawTex; lotPaw.material.opacity = 0.6+0.4*k; lotPaw.scale.setScalar(1+0.03*k); } }
-      if(G.mode==='call'){ G.t += dt; const live = ds.filter(d=>d.gat); if(live.every(d=>d.arr) || G.t>150){ G.mode = 'hold'; G.hold = 12; } }
+      if(G.mode==='call'){ G.t += dt; const live = ds.filter(d=>d.gat); if(live.every(d=>d.arr) || G.t>150){ G.mode = 'hold'; G.hold = 12; if(live.every(d=>d.arr)) SFX.ding(); } }
       else if(G.mode==='hold'){ G.hold -= dt; if(G.hold<=0) gatherEnd(); } }
     for(const d of ds){ if(d.state==='init') continue;
       mktOpen = !!d.catFan; fr = G.mode==='idle' ? (d.catFan ? frNC : frN) : (d.catFan ? frAC : frA); /* 只有羅威那、薩摩耶能進市集廣場（教師 2026-11-18） */
@@ -3109,7 +3142,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
     const hit = ray.intersectObjects([...damPickables, ...crabPickables], false)[0];
     if(!hit) return;
     const cr = hit.object.userData.crab;
-    if(cr){ cdrag = cr; cr.mode = 'drag'; cr.pos.copy(cr.g.position); controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; return; }
+    if(cr){ SFX.clack(); cdrag = cr; cr.mode = 'drag'; cr.pos.copy(cr.g.position); controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; return; }
     drag = dams.find(d=>{ let o = hit.object; while(o){ if(o===d.g) return true; o = o.parent; } return false; });
     if(drag){ controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'ew-resize'; down = null; }
   }, true);
@@ -3268,7 +3301,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
     if(G.st==='fall'){ p.x += (G.fx-p.x)*Math.min(1,dt*6); p.z += (G.fz-p.z)*Math.min(1,dt*6); G.vy -= 18*dt; p.y += G.vy*dt; const hy = G.water ? -0.25 : H(p.x,p.z);
       if(p.y<=hy){ p.y = hy; G.st = 'go'; const D = dest(G.k||0), gx = D.x+(D.stall ? (Math.random()-0.5)*0.8 : 0), gz = D.z+(D.stall ? (Math.random()-0.5)*1.2 : 0);   /* 走到他說要去的地方 */
         if(!G.water && Math.hypot((G.rx ?? p.x)-D.x, (G.rz ?? p.z)-D.z) < D.r){ shout(THX); bub.material.map = bubTex[THX]; bub.material.needsUpdate = true; bubW = w; bubT = 2.2; }   /* 放對地方：「承蒙你！」 */
-        if(G.water){ splash(p.x,p.z); { const sk = SCOLD[Math.floor(Math.random()*SCOLD.length)]; shout(sk); bub.material.map = bubTex[sk]; bub.material.needsUpdate = true; bubW = w; bubT = 2.6; }   /* 被丟進水裡：大聲罵「你係大戇牯／大戇嫲！」或「還孤盲！」 */ /* 先直直涉水走到最近的河岸，再走去點心店 */
+        if(G.water){ splash(p.x,p.z); SFX.splash(); { const sk = SCOLD[Math.floor(Math.random()*SCOLD.length)]; setTimeout(()=>shout(sk), 450); bub.material.map = bubTex[sk]; bub.material.needsUpdate = true; bubW = w; bubT = 2.6; }   /* 被丟進水裡：大聲罵「你係大戇牯／大戇嫲！」或「還孤盲！」 */ /* 先直直涉水走到最近的河岸，再走去點心店 */
           const nr = nearestRiver(p.x,p.z), tg = riverCurve.getTangentAt(nr.u), nx = -tg.z, nz = tg.x, sd = Math.sign((p.x-nr.p.x)*nx+(p.z-nr.p.z)*nz) || 1, bk = {x:nr.p.x+nx*sd*5.0, z:nr.p.z+nz*sd*5.0};
           const rest = peopleNav ? peopleNav.path(bk.x,bk.z,gx,gz) : null; G.path = rest ? [bk, ...rest] : [bk]; }
         else G.path = peopleNav ? peopleNav.path(p.x,p.z,gx,gz) : null;
@@ -3301,7 +3334,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
     return Math.hypot(e.clientX-(r.left+(v.x+1)/2*r.width), e.clientY-(r.top+(1-v.y)/2*r.height)) < 56; };
   el.addEventListener('pointerdown', e=>{
     aimAt(e);
-    if(nearMouse(e) || rc.intersectObject(chase.mouse, true).length){ holding = true; chase.m.mode = 'held'; chase.m.path = null; controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; e.stopImmediatePropagation(); }
+    if(nearMouse(e) || rc.intersectObject(chase.mouse, true).length){ holding = true; SFX.squeak(); chase.m.mode = 'held'; chase.m.path = null; controls.enabled = false; try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor = 'grabbing'; down = null; e.stopImmediatePropagation(); }
   }, true);
   el.addEventListener('pointermove', e=>{ if(!holding) return; aimAt(e); if(rc.ray.intersectPlane(gp, gh)){ chase.m.x = Math.max(-70,Math.min(70,gh.x)); chase.m.z = Math.max(-60,Math.min(40,gh.z)); } el.style.cursor = 'grabbing'; });
   const letGo = ()=>{ if(!holding) return; holding = false; controls.enabled = true; const m = chase.m;
@@ -3354,7 +3387,7 @@ function feedKindAt(x,z){
     const list = FEED[kind]; while(list.length>=2){ const o = list.shift(); o.dead = true; }
     const m = {kind, x, z, u, off, age:0, eatT:0, pel:[], dead:false}; 
     for(let i=0;i<7;i++){ const a = rnd()*Math.PI*2, rr = Math.sqrt(rnd())*0.7, mesh = new THREE.Mesh(pelG, pelM); mesh.position.set(x+Math.cos(a)*rr, 1.4, z+Math.sin(a)*rr); scene.add(mesh); m.pel.push({m:mesh, dly:i*0.05, ph:rnd()*6}); }
-    meals.push(m); list.push(m); addRipple(x, z, 0.7);
+    meals.push(m); list.push(m); addRipple(x, z, 0.7); SFX.plop();
   });
   pondTick.push((dt,t)=>{
     for(let i=meals.length-1;i>=0;i--){ const m = meals[i]; m.age += dt;
@@ -3363,7 +3396,7 @@ function feedKindAt(x,z){
         let near = false;
         if(m.kind==='pond') near = FEED.koi.some(k=>Math.hypot(k.position.x-m.x, k.position.z-m.z)<1.0);
         else near = critters.some(c=>c.kind==='fish' && Math.hypot(c.g.position.x-m.x, c.g.position.z-m.z)<1.1);
-        if(near){ m.eatT += dt; if(m.eatT>0.5){ m.eatT = 0; const q = m.pel.pop(); addRipple(q.m.position.x, q.m.position.z, 0.35); scene.remove(q.m); } } }
+        if(near){ m.eatT += dt; if(m.eatT>0.5){ m.eatT = 0; const q = m.pel.pop(); addRipple(q.m.position.x, q.m.position.z, 0.35); scene.remove(q.m); SFX.pop(); } } }
       if(m.dead || !m.pel.length || m.age>9){ for(const q of m.pel) scene.remove(q.m); m.pel.length = 0; const l = FEED[m.kind], j = l.indexOf(m); if(j>=0) l.splice(j,1); meals.splice(i,1); }
     }
   });
@@ -3386,7 +3419,7 @@ function feedKindAt(x,z){
   const land = b=>{ b.g.position.copy(b.perch); b.g.rotation.set(0,b.yaw,0); b.body.rotation.set(0,0,0); fold(b,1); b.mode = 'perch'; };
   SC.forEach((sc,si)=>{ const x = sc.position.x, z = sc.position.z, spots = [[x-1.04,2.24,z],[x+1.04,2.24,z],[x+0.8,0.72,z+1.4]];
     sc.userData.birds = spots.map((q,i)=>{ const b = makeSparrow(); b.perch = new THREE.Vector3(q[0],q[1],q[2]); b.yaw = (i===2 ? 0.6 : (i?1.4:-1.4)) + si; b.ph = i*1.7+si; b.sc = sc; b.mode = 'perch'; scene.add(b.g); land(b); birds.push(b); return b; }); });
-  const scare = sc=>{ sc.userData.poke = true; for(const b of sc.userData.birds||[]){ if(b.mode!=='perch') continue;
+  const scare = sc=>{ sc.userData.poke = true; SFX.flap(9,0.05); SFX.chirp(); for(const b of sc.userData.birds||[]){ if(b.mode!=='perch') continue;
     b.mode = 'fly'; b.t = 0; b.p0 = b.g.position.clone(); b.prev = b.p0.clone(); fold(b,0);
     const d = b.p0.clone().sub(sc.position); d.y = 0; if(d.length()<0.1) d.set(1,0,0); d.normalize(); const a = (Math.random()-0.5)*1.6, c = Math.cos(a), sn = Math.sin(a);
     b.dir = new THREE.Vector3(d.x*c-d.z*sn,0,d.x*sn+d.z*c); b.side = Math.random()<0.5?-1:1; b.T2 = 8+Math.random()*3; } };
@@ -3421,8 +3454,8 @@ function feedKindAt(x,z){
   function eatShow(kind){
     busy = true; eatEl.className = 'rst'; void eatEl.offsetWidth; eatEl.className = '';
     const done = (ms)=>setTimeout(()=>{ eatEl.classList.remove('on'); setTimeout(()=>{ eatEl.className = ''; busy = false; }, 350); }, ms);
-    if(kind==='berry'){ eatEl.classList.add('berry','eat','on'); done(2800); }
-    else { eatEl.classList.add('jelly','sprig','on'); setTimeout(()=>{ eatEl.classList.remove('sprig'); eatEl.classList.add('eat'); }, 800); done(3600); }
+    if(kind==='berry'){ eatEl.classList.add('berry','eat','on'); SFX.crunch([0.75,1.35,1.95]); done(2800); }
+    else { eatEl.classList.add('jelly','sprig','on'); SFX.crunch([1.55,2.15,2.75]); setTimeout(()=>{ eatEl.classList.remove('sprig'); eatEl.classList.add('eat'); }, 800); done(3600); }
   }
   const hide = (parts,idx,per)=>{ for(const pt of parts){ for(let k=0;k<(per?pt.per:1);k++) pt.im.setMatrixAt((per?idx*pt.per:idx)+k, ZERO); pt.im.instanceMatrix.needsUpdate = true; } };
   const occRc = new THREE.Raycaster();
@@ -3570,7 +3603,7 @@ const GALS = {
 let GAL = GALS.dongan.p, galI = 0;
 function galShow(i){ galI = (i+GAL.length)%GAL.length; $('#galImg').src = GAL[galI]; $('#galImg').alt = `${$('#galT').textContent}相片 第 ${galI+1} 張，共 ${GAL.length} 張`;
   [...$('#galDots').children].forEach((b,k)=>b.setAttribute('aria-current', k===galI ? 'true' : 'false')); }
-function openGallery(key, i=0){ const d = $('#gal'), G = GALS[key]; GAL = G.p; $('#galT').textContent = G.t;
+function openGallery(key, i=0){ SFX.shutter(); const d = $('#gal'), G = GALS[key]; GAL = G.p; $('#galT').textContent = G.t;
   if(!d.dataset.ready){ d.dataset.ready = 1;
     $('#galL').onclick = ()=>galShow(galI-1); $('#galR').onclick = ()=>galShow(galI+1); $('#galX').onclick = closeGallery;
     d.addEventListener('click', e=>{ if(e.target===d) closeGallery(); });
@@ -3733,7 +3766,7 @@ function spotLeave(){
   const c = $('#tourCap'); c.classList.remove('mini'); if(c.dataset.spot){ c.hidden = true; c.innerHTML = ''; delete c.dataset.spot; }
 }
 function spotGo(i, k0){
-  const sp = SPOTS[i], keep = spotView ? spotView.saved : null;
+  const sp = SPOTS[i], keep = spotView ? spotView.saved : null; if(sp && sp.n==='太和宮') SFX.bell();
   spotBusy = true; setMode('panorama'); spotBusy = false;
   if(selected && labelEls[selected]) labelEls[selected].classList.remove('on');
   selected = null; flagLabels.forEach(o=>o.visible = false); refreshLinks(); setTab('units');
