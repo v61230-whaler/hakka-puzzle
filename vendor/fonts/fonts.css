@@ -291,6 +291,14 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.92.woff2) format('woff2');
+  unicode-range: U+2566-2570, U+2572, U+2574, U+2579, U+2580-258a, U+258c-2595, U+2597, U+25a1, U+25a3-25a4, U+25a6-25ac, U+25b0, U+25b4, U+25b7-25b9, U+25bb, U+25bd, U+25bf-25c2, U+25c7-25ca, U+25cc-25cd, U+25d0-25d9, U+25dc-25e6, U+25ea-25eb, U+25ef, U+25fb-25fe, U+2600-2604, U+2607, U+2609-260b, U+260d-2615, U+2618, U+261a-2623, U+262a, U+262d-2630, U+2638-263e, U+2641-2642, U+2648;
+}
+@font-face {
+  font-family: 'Huninn';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
   src: url(OpNNnoINg9bQ4xkpiyHWjio3QRfZvzS8UEg0NFXKHylk91X6gNirNxXobDG7JWfz0QE.93.woff2) format('woff2');
   unicode-range: U+2475-2481, U+2488-2491, U+24b6-24c5, U+24c7-24ca, U+24cc, U+24ce, U+24d0-24df, U+24e1-24ea, U+24f5, U+24ff, U+2501, U+2503-250d, U+250f-2511, U+2513-2515, U+2517-2518, U+251b-251d, U+2520, U+2523-2524, U+2528, U+252b-252c, U+252f, U+2533-2534, U+2537, U+253b-253c, U+2541, U+2543-2545, U+254b, U+2550-2565;
 }
