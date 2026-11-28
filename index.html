@@ -3808,7 +3808,8 @@ const eagleBird = (()=>{ const g = new THREE.Group(), M = c=>new THREE.MeshStand
     return pv; });
   g.visible = false; g.scale.setScalar(0.6); scene.add(g); return {g, wings}; })();
 function eaglePath(){ /* 教師 2026-11-27：高空看即可、飛慢一點、穩定，不逐點說明 → 在島的上空繞一個大橢圓 */
-  const pts = []; for(let i=0;i<16;i++){ const a = i/16*Math.PI*2; pts.push(new THREE.Vector3(17+Math.cos(a)*56, 44, -2+Math.sin(a)*38)); }   /* 2026-11-27 搬家後全島範圍變大 */
+  /* 教師 2026-11-28：全程 13 秒，每個地方都看過、不要一直盯著地塊 → 順時針（從上往下看）飛過全部地點：地塊 → 北邊的田 → 東北樹林 → 埤塘 → 太和宮 → 東安橋 → 豬欄 → 台三線、牛欄河 → 市場 → 紅茶公司 → 水車 → 仙草田 → 回到地塊 */
+  const H = 32, pts = [[1.5,2.5],[10,-22],[45,-24],[68.5,8],[37,17],[56.5,46],[77,66],[40,60],[0,56],[-29,30],[-27,10],[-33,-7],[-28,-22]].map(([x,z])=>new THREE.Vector3(x,H,z));
   return {curve:new THREE.CatmullRomCurve3(pts, true, 'centripetal', 0.5), list:[]}; }
 function eagleStart(){
   if(reduce) return;
@@ -3832,11 +3833,12 @@ function eagleStop(){
 }
 const eTmp = new THREE.Vector3(), eTmp2 = new THREE.Vector3(), eUp = new THREE.Vector3(0,1,0);
 function updateEagle(dt){
-  if(!eagle) return; const E = eagle; E.t += dt;
+  if(!eagle) return; const E = eagle; { const now = performance.now()/1000; dt = Math.min(0.25, now-(E.last ?? now)); E.last = now; }   /* 用真實時間算，畫面卡頓也剛好 13 秒 */
+  E.t += dt;
   const W = eagleBird.wings, flap = (a,sp)=>{ const k = Math.sin(E.t*sp)*a; W[0].rotation.z = k; W[1].rotation.z = -k; };
-  if(E.phase==='intro'){ flap(0.55,9); if(!E.cried && E.t>0.8){ E.cried = true; SFX.eagle(); } if(E.t>=2.8){ E.phase = 'fly'; E.t = 0; tween = null; camera.fov = 60; camera.updateProjectionMatrix(); dogSay(''); } return; }
+  if(E.phase==='intro'){ flap(0.55,9); if(!E.cried && E.t>0.8){ E.cried = true; SFX.eagle(); } if(E.t>=2.0){ E.phase = 'fly'; E.t = 0; tween = null; camera.fov = 60; camera.updateProjectionMatrix(); dogSay(''); } return; }
   if(E.phase==='end'){ if(E.t>=0.5){ eagleStop(); setMode('panorama'); setTab('units'); onSelect3D(null); } return; }
-  E.u += dt/40;   /* 一圈 40 秒 */
+  E.u += dt/10.5;   /* 教師 2026-11-28：全程 13 秒＝起飛 2 秒＋飛一圈 10.5 秒＋收尾 0.5 秒 */
   if(E.u>=1){ E.phase = 'end'; E.t = 0; $dogFade.style.opacity = 1; return; }
   const C = E.P.curve, p = C.getPointAt(E.u), f = C.getTangentAt(E.u), f2 = C.getTangentAt((E.u+0.02)%1);
   const turn = f.x*f2.z - f.z*f2.x;   /* 轉彎方向與大小 → 身體側傾 */
@@ -3844,9 +3846,9 @@ function updateEagle(dt){
   E.flapT -= dt; if(E.flapT<-1.2) E.flapT = 9+Math.random()*4;   /* 大多在滑翔，偶爾拍幾下 */
   if(E.flapT<0) flap(0.4,6); else { W[0].rotation.z += (0.12-W[0].rotation.z)*Math.min(1,dt*4); W[1].rotation.z = -W[0].rotation.z; }
   const fh = eTmp2.set(f.x,0,f.z).normalize();
-  const want = eTmp.copy(p).addScaledVector(fh,-10).addScaledVector(eUp,4.5), k = 1-Math.exp(-1.5*dt);
+  const want = eTmp.copy(p).addScaledVector(fh,-9).addScaledVector(eUp,5), k = 1-Math.exp(-3*dt);
   camera.position.lerp(want, k);
-  controls.target.lerp(eTmp.set(17+(p.x-17)*0.45+fh.x*6, 2, -2+(p.z+2)*0.45+fh.z*6), k);   /* 看向島中央偏前方，畫面穩定 */
+  controls.target.lerp(eTmp.set(p.x+fh.x*16, 0, p.z+fh.z*16), k);   /* 2026-11-28：看鷂婆前下方的地面，畫面跟著飛過每個地方，不再盯著島中央 */
   /* 飛過景點：底下字幕說現在在哪裡的上空 */
   for(const q of E.P.list){ if(!E.said.has(q.n) && Math.hypot(q.x-p.x, q.z-p.z)<4.5){ E.said.add(q.n); dogSay(`飛過「${q.n}」上空`); E.sayT = 3.2; } }
   if(E.sayT>0){ E.sayT -= dt; if(E.sayT<=0) dogSay(''); }
