@@ -229,7 +229,7 @@ footer.src{margin-top:24px;padding-top:12px;border-top:1px solid var(--line)}
       <button id="btnReset" type="button" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 13.5V7.2L8 2.8l5 4.4v6.3"/></svg>回到全景</button>
       <button id="btnTour" type="button" aria-pressed="false" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M10.6 5.4L9 9 5.4 10.6 7 7z"/></svg>探險隊</button>
       <button id="btnDog" type="button" aria-pressed="false" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><circle class="f" cx="3.6" cy="6.4" r="1.5"/><circle class="f" cx="6.8" cy="3.8" r="1.5"/><circle class="f" cx="10.4" cy="3.8" r="1.5"/><circle class="f" cx="13.2" cy="6.4" r="1.5"/><path class="f" d="M4.6 12.2c0-2.3 1.7-3.8 3.4-3.8s3.4 1.5 3.4 3.8c0 1.7-1.5 1.9-3.4 1.9s-3.4-.2-3.4-1.9z"/></svg>狗狗視角</button>
-      <button id="btnEagle" type="button" aria-pressed="false" hidden>鷂婆視角</button>
+      <button id="btnEagle" type="button" aria-pressed="false" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><circle class="f" cx="8" cy="4.3" r="1.5"/><path class="f" d="M0.3 7.4L3 5.6L5.6 6.5L8 5.6L10.4 6.5L13 5.6L15.7 7.4L13.8 7.7L14.5 8.9L12.2 8.6L12.4 9.8L10.1 9.2L9.2 11.2L10.6 13.6L8 12.6L5.4 13.6L6.8 11.2L5.9 9.2L3.6 9.8L3.8 8.6L1.5 8.9L2.2 7.7Z"/></svg>鷂婆視角</button>
       <div class="dial" id="dial" role="group" aria-label="帶看：選一種再按中間開始">
         <button class="dar" id="dialL" type="button" aria-label="上一種">◀</button>
         <button class="dgo" id="dialGo" type="button" aria-pressed="false"><span id="dialLab"></span></button>
@@ -686,9 +686,12 @@ function ribbon(curve, width, y, material, n=240){
   const m = new THREE.Mesh(g, material); m.receiveShadow = true; scene.add(m); return m;
 }
 const bankMat = new THREE.MeshStandardMaterial({color:0xFFF0CC, roughness:0.95, flatShading:true});
-ribbon(riverCurve, 9.4, 0.02, bankMat);
-ribbon(riverCurve, 7.3, 0.05, riverMat);
-const riverPoint = (t, off=0)=>{ const p = riverCurve.getPointAt(t), tg = riverCurve.getTangentAt(t); return p.clone().add(new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(off)); };
+/* 教師 2026-11-28：河面加寬 30%。河岸與水面都乘 RWK；沿河擺的東西（毛蟹、青蛙、魚、石頭、水壩、河邊的樹）都經過 riverPoint，離河中線的距離一起乘 RWK */
+const RWK = 1.3;
+ribbon(riverCurve, 9.4*RWK, 0.02, bankMat);
+ribbon(riverCurve, 7.3*RWK, 0.05, riverMat);
+const riverPointRaw = (t, off=0)=>{ const p = riverCurve.getPointAt(t), tg = riverCurve.getTangentAt(t); return p.clone().add(new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(off)); };
+const riverPoint = (t, off=0)=>riverPointRaw(t, off*RWK);
 const critters = [], crabPickables = [];
 const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.position.set(x,y,z); me.scale.set(sx,sy,sz); me.castShadow = false; return me; };
 const whiteM = new THREE.MeshStandardMaterial({color:0xFFFFFF, flatShading:true}), blackM = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
@@ -965,14 +968,14 @@ function updateCritters(dt, tm){
         c.g.rotation.x = 0; c.g.rotation.z = 0;
         if(c.vy!==0 || c.pos.y>0.13){
           c.vy -= 30*dt; c.pos.y += c.vy*dt;
-          if(c.pos.y<=0.12){ c.pos.y = 0.12; c.vy = 0; if(nearestRiver(c.pos.x,c.pos.z).dist<3.75) addRipple(c.pos.x,c.pos.z,1.7); }
+          if(c.pos.y<=0.12){ c.pos.y = 0.12; c.vy = 0; if(nearestRiver(c.pos.x,c.pos.z).dist<3.75*RWK) addRipple(c.pos.x,c.pos.z,1.7); }
           c.g.position.copy(c.pos);
         } else {
           const dx = c.target.x-c.pos.x, dz = c.target.z-c.pos.z, d = Math.hypot(dx,dz);
           if(d<0.25){ const nr = nearestRiver(c.pos.x,c.pos.z); c.t = Math.min(0.69, Math.max(0.31, nr.u - Math.sin(tm*(c.wf||0.4)+c.ph)*(c.wa||0.025))); c.off = c.side*Math.abs(c.off0); c.mode = 'bank'; } /* 上岸後接著原來的擺動，不瞬間跳位；再慢慢走回自己原本的那一段岸 */
           else {
             const sp = (c.run||2.6)*dt; c.pos.x += dx/d*sp; c.pos.z += dz/d*sp;
-            const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65;
+            const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65*RWK;
             c.pos.y = 0.12 + (inRiver ? Math.sin(tm*9)*0.05 : Math.abs(Math.sin(tm*12))*0.06);
             if(inRiver){ c.rip += dt; if(c.rip>0.35){ c.rip = 0; addRipple(c.pos.x,c.pos.z,1.0); } }
             c.g.position.copy(c.pos); c.g.rotation.y = Math.atan2(dx,dz)+Math.PI/2;
@@ -997,7 +1000,7 @@ function updateCritters(dt, tm){
         if(d<0.2){ c.mode = 'sit'; }
         else {
           const sp = 1.3*dt; c.pos.x += dx/d*sp; c.pos.z += dz/d*sp;
-          const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65;
+          const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65*RWK;
           c.g.position.set(c.pos.x, inRiver ? -0.1+Math.sin(tm*5)*0.03 : 0.04+Math.abs(Math.sin(tm*6))*0.1, c.pos.z);
           c.g.rotation.y = Math.atan2(dx,dz); c.g.rotation.x = inRiver ? 0.15 : 0;
           if(inRiver){ c.rip += dt; if(c.rip>0.7){ c.rip = 0; addRipple(c.pos.x,c.pos.z,0.9); } }
@@ -1032,7 +1035,7 @@ function groundTree(x, z, sc, R=rnd){
 const BUFF_R = [[68,19.15],[60.5,19.5],[57.5,10],[55.5,-1],[51.5,-9],[46.5,-13.6],[40.5,-15.8],[36,-17.8]];
 const buffNear = (x,z)=>{ for(let i=1;i<BUFF_R.length;i++){ const [ax,az] = BUFF_R[i-1], [bx,bz] = BUFF_R[i], vx = bx-ax, vz = bz-az, f = Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/(vx*vx+vz*vz))); if(Math.hypot(x-(ax+vx*f), z-(az+vz*f))<2.6) return true; } return false; };
 const RIVP = riverCurve.getPoints(400);
-const riverNear = (x,z)=>{ let best = 1e9; for(const q of RIVP){ if(Math.abs(q.x-x)<3){ best = Math.min(best, Math.abs(q.z-z)); } } return best<5.5; };
+const riverNear = (x,z)=>{ let best = 1e9; for(const q of RIVP){ if(Math.abs(q.x-x)<3){ best = Math.min(best, Math.abs(q.z-z)); } } return best<5.5*RWK; };
 function grove(cx, cz, n, radius, R=rnd){
   const placed = [];
   for(let i=0;i<n*8 && placed.length<n;i++){
@@ -1911,9 +1914,9 @@ let dogApi = null, mouseNav = null, peopleNav = null;
   let mktOpen = false, frAC = null, frNC = null; /* 市集廣場開放與否；frAC/frNC 是羅威那、薩摩耶專用的地圖 */
   const baseFree = (x,z)=>{
     if(x<-50||x>76||z<-46.5||z>59.5) return false;
-    if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
+    if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4*RWK && z<rz+5.4*RWK) return false; }
     if(ell(x,z,-33,-5,7.4,6.4) || ell(x,z,68.5,10,9.8,8.2) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
-    if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4) return false;
+    if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4*RWK) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
     if(!mktOpen && x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<19.6+MKT_DZ) return false; /* 客家市集廣場：只有羅威那、薩摩耶（catFan）能進去，其他狗不行（教師 2026-11-18） */
@@ -1944,7 +1947,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
     return h; };
   /* 田鼠回田裡用的路：地塊、河、池塘、引水渠、樹與山丘擋路，稻田可以穿過 */
   const isFreeM = (x,z)=>{
-    if(x<-50||x>50||z<-46.5||z>riverZ(x)-4.9) return false;
+    if(x<-50||x>50||z<-46.5||z>riverZ(x)-4.9*RWK) return false;
     if((x-TILE_OFF.x)**2+(z-TILE_OFF.z)**2 < 320) return false;
     if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
     if(ell(x,z,-33,-5,6.9,5.9) || ell(x,z,68.5,10,9.3,7.7)) return false;
@@ -1999,7 +2002,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
       if(best<0) return null;
       const pts = pathTo(b, best, frM); if(s0!==c0) pts.unshift({x:cx(s0), z:cz(s0)}); return pts; } };
     for(let i=0;i<fr.length;i++){ if(!fr[i]) continue; const x = cx(i), z = cz(i), rz = riverZ(x);
-      if(z > rz-6.4) riverC.push(i);
+      if(z > rz-6.4*RWK) riverC.push(i);
       if((z<-12.6&&z>-14.3&&Math.abs(x)<43) || (Math.abs(x)>42.9&&Math.abs(x)<45&&z<-14.2&&z>-30.4)) paddyC.push(i);
       for(const q of hillSpots){ const e = Math.sqrt(((x-q.x)/q.r)**2+((z-q.z)/q.zr)**2); if(e<1.0+3.4/q.r){ footC.push(i); break; } } }
   }
@@ -2299,6 +2302,7 @@ function makeDam(t, side){
 }
 function placeDam(d){
   const p = riverPoint(d.t, d.side*(3.64-1.82*DAM_K)), tg = riverCurve.getTangentAt(d.t);
+  d.g.scale.x = DAM_K*RWK;   /* 河加寬，水壩橫向一起拉長 */
   d.g.position.set(p.x, 0.04, p.z); d.g.rotation.y = Math.atan2(tg.x, tg.z);
 }
 function updateDams(tm){
@@ -2392,8 +2396,8 @@ function dodgeBank(t, off){
 
 /* 台三線：東安橋對岸（畫面下方）一條彎曲的道路示意，路面中央有藍色盾形「3」路標；只入鏡一部分，轉動視角可看到更多 */
 (function(){
-  const N = 90, off = t=>9.8 + 1.9*Math.sin(t*7.5+0.6) + 0.5*Math.sin(t*21+1.7); /* 路中心離河中線 7.4–12.2，近緣不壓到河岸 */
-  const pts = []; for(let i=0;i<=N;i++){ const t = i/N; pts.push(riverPoint(t, off(t))); }
+  const N = 90, RD = 9.4*(RWK-1)/2+0.7, off = t=>9.8 + 1.9*Math.sin(t*7.5+0.6) + 0.5*Math.sin(t*21+1.7); /* 路中心離河中線 7.4–12.2，近緣不壓到河岸 */
+  const pts = []; for(let i=0;i<=N;i++){ const t = i/N; pts.push(riverPointRaw(t, off(t)+RD)); }
   const ribbon = (w, y, hex)=>{ const pos = [], idx = [];
     for(let i=0;i<=N;i++){ const a = pts[Math.max(0,i-1)], b = pts[Math.min(N,i+1)], dx = b.x-a.x, dz = b.z-a.z, l = Math.hypot(dx,dz)||1, nx = -dz/l, nz = dx/l;
       pos.push(pts[i].x+nx*w/2, y, pts[i].z+nz*w/2, pts[i].x-nx*w/2, y, pts[i].z-nz*w/2); if(i<N){ const k = i*2; idx.push(k,k+1,k+2, k+1,k+3,k+2); } }
@@ -2407,7 +2411,7 @@ function dodgeBank(t, off){
   shield(0,'#FFFFFF'); shield(9,'#4A78C4');
   x.fillStyle = '#FFFFFF'; x.font = '900 130px "Helvetica Neue", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('3',128,118);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  for(const t of [0.2, 0.46, 0.74]){ const p = riverPoint(t, off(t)); const m = new THREE.Mesh(new THREE.PlaneGeometry(3.0,3.0).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false})); m.position.set(p.x, 0.09, p.z); scene.add(m); }
+  for(const t of [0.2, 0.46, 0.74]){ const p = riverPointRaw(t, off(t)+RD); const m = new THREE.Mesh(new THREE.PlaneGeometry(3.0,3.0).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false})); m.position.set(p.x, 0.09, p.z); scene.add(m); }
   /* 新竹客運公車（教師 2026-11-19）：外觀依網路上新竹客運公路客運的照片——白色車身、下緣綠色裙邊、側面橘綠兩道波浪色帶，
      車頭紅字「新竹客運」、上方橘色 LED 路牌。沿台三線來回開，各走自己的車道；跑完一趟停一下再掉頭 */
   { const L = 3.6, Wd = 1.25, H = 1.45, CL = 0.18, bus = new THREE.Group(); scene.add(bus);
@@ -3042,7 +3046,7 @@ const bridgePaths = [], traffic = {};
     dummy.position.copy(mid); dummy.scale.set(1.1,1,L); dummy.lookAt(mid.clone().add(dir)); dummy.updateMatrix(); slabs.push(dummy.matrix.clone());
     for(const sg of [-1,1]){ const q = mid.clone().addScaledVector(side, sg*0.5).setY(y+0.07);
       dummy.position.copy(q); dummy.scale.set(1,1,L); dummy.lookAt(q.clone().add(dir)); dummy.updateMatrix(); strips.push(dummy.matrix.clone()); }
-    const wa = pa.clone().addScaledVector(dir, rA*0.8).setY(y+0.05), wb = pb.clone().addScaledVector(dir, total - rB*0.8).setY(y+0.05);
+    const wa = pa.clone().addScaledVector(dir, rA*0.8).setY(y+0.05), wb = pa.clone().addScaledVector(dir, total - rB*0.8).setY(y+0.05);   /* 2026-11-28 修正：原本從 pb 再往外加，終點跑到地塊外、人懸空 */
     const path = new THREE.LineCurve3(wa, wb);
     bridgePaths.push({a:A.id, b:B.id, wa, wb, path, len: path.getLength(), kind});
   };
@@ -3059,7 +3063,7 @@ const bridgePaths = [], traffic = {};
     const segL = pts.map((q,j)=>q.distanceTo(pts[(j+1)%pts.length])), tot = segL.reduce((a,b)=>a+b,0); let cum = 0;
     const mids = segL.map(l=>{ const m = (cum+l/2)/tot; cum += l; return m; });
     traffic.outer.chord = mids.filter((_,j)=>j%2===1); traffic.outer.road = mids.filter((_,j)=>j%2===0);
-    const hubPts = []; for(let k=0;k<20;k++){ const a = k/20*Math.PI*2; hubPts.push(new THREE.Vector3(HUB.pos[0]+Math.cos(a)*5.6, y+0.09, HUB.pos[1]+Math.sin(a)*5.6)); }
+    const hubPts = []; for(let k=0;k<20;k++){ const a = k/20*Math.PI*2; hubPts.push(new THREE.Vector3(HUB.pos[0]+Math.cos(a)*4.1, y+0.09, HUB.pos[1]+Math.sin(a)*4.1)); /* 2026-11-28：5.6 比主地塊還大（內切半徑約 4.8），改 4.1 讓人走在地塊上 */ }
     const hp = new THREE.CatmullRomCurve3(hubPts, true); traffic.hub = {path:hp, len: hp.getLength()}; }
   const mk = (geo, hex, list)=>{ const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({color:hex, flatShading:true, roughness:0.9}), list.length);
     list.forEach((m,i)=>im.setMatrixAt(i,m)); im.receiveShadow = true; scene.add(im); };
@@ -3133,7 +3137,7 @@ function makeSkater(color){
   const cols = [C.pink, C.sky, C.yellow, 0x7ED6A0, C.persimmon, 0xB79CFF, C.white, 0xFF7B6B];
   /* 12 輛平均散開：七個單元地塊各 1 輛（共 7）、主島 3 輛、地塊之間的短路再放 2 輛；所有車同速，間隔會一直維持 */
   const spd = 2.0;
-  const addCar = (loop, t, i)=>{ const car = (i===1||i===3) ? makeSkater(cols[i%cols.length]) : makeCar(cols[i%cols.length]); carGroup.add(car); cars.push({car, bp:loop, loop:true, t, dir:1, lane:0.45, speed:spd/loop.len}); };
+  const addCar = (loop, t, i)=>{ const car = (i===1||i===3) ? makeSkater(cols[i%cols.length]) : makeCar(cols[i%cols.length]); carGroup.add(car); cars.push({car, bp:loop, loop:true, t, dir:1, lane:0.25, speed:spd/loop.len}); };
   let n = 0;
   /* 數量減半（教師 2026-11-07）：12 輛 → 6 輛（外圈 4、主島 2） */
   traffic.outer.chord.forEach((t,i)=>{ if(i%2===0) addCar(traffic.outer, t, n++); });
@@ -3161,7 +3165,7 @@ const walkers = [];
     add(g, new THREE.SphereGeometry(0.125,10,6,0,Math.PI*2,0,Math.PI*0.55), mat(hairs[k%hairs.length]), 0, 0.77, -0.005);
     const legs = [-0.06,0.06].map(x=>{ const l = new THREE.Group(); l.position.set(x,0.26,0); g.add(l); add(l, new THREE.CylinderGeometry(0.04,0.04,0.24,6), mat(0x4B5D8A), 0,-0.12,0); return l; });
     g.scale.setScalar(1.65); scene.add(g);
-    walkers.push({g, legs, bp:loop, loop:true, t:(j/n + offset)%1, dir:(k%2?1:-1), lane:0.8, speed:(0.7+Math.random()*0.3)/loop.len, ph:Math.random()*6}); } };
+    walkers.push({g, legs, bp:loop, loop:true, t:(j/n + offset)%1, dir:(k%2?1:-1), lane:0.3, speed:(0.7+Math.random()*0.3)/loop.len, ph:Math.random()*6}); } };
   mkWalkers(traffic.outer, 5, 0.05); mkWalkers(traffic.hub, 2, 0.03); /* 16 位 → 8 位（教師 2026-11-07） */
 })();
 function placeWalker(w, tm){
@@ -3309,7 +3313,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
       /* 放開螃蟹：找出離牠最近的河岸，讓牠自己跑（或游）上岸 */
       const nr = nearestRiver(cdrag.pos.x, cdrag.pos.z), tg = riverCurve.getTangentAt(nr.u), n = new THREE.Vector3(-tg.z,0,tg.x);
       const side = Math.sign(new THREE.Vector3(cdrag.pos.x-nr.p.x,0,cdrag.pos.z-nr.p.z).dot(n)) || cdrag.side;
-      cdrag.side = side; cdrag.target.set(nr.p.x+n.x*side*4.15, 0.12, nr.p.z+n.z*side*4.15);
+      cdrag.side = side; cdrag.target.set(nr.p.x+n.x*side*4.15*RWK, 0.12, nr.p.z+n.z*side*4.15*RWK);
       cdrag.pos.y = 1.2; cdrag.vy = 0; cdrag.mode = 'return'; cdrag = null; controls.enabled = true;
     }
     if(drag){ drag = null; controls.enabled = true; }
@@ -3405,7 +3409,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
     else if(h.k==='egret') buffApi.release(h.q);
     else if(h.k==='vendor'){ h.v.st = 'run'; h.v.vy = 0; }   /* 正在交易、吃麵：一放開就跑回原位 */
     else { const w = h.w, p = w.g.position, nr = nearestRiver(p.x, p.z); w.grab.rx = p.x; w.grab.rz = p.z;   /* 放手的位置（判斷有沒有放對地方用） */
-      if(nr.dist<3.65){ w.grab.st = 'fall'; w.grab.vy = 0; w.grab.fx = p.x; w.grab.fz = p.z; w.grab.water = true; }   /* 丟進牛欄河：撲通一聲濺起水花，再自己走上岸 */
+      if(nr.dist<3.65*RWK){ w.grab.st = 'fall'; w.grab.vy = 0; w.grab.fx = p.x; w.grab.fz = p.z; w.grab.water = true; }   /* 丟進牛欄河：撲通一聲濺起水花，再自己走上岸 */
       else { const q = peopleNav ? peopleNav.snap(p.x, p.z) : {x:p.x, z:p.z}; w.grab.st = 'fall'; w.grab.vy = 0; w.grab.fx = q.x; w.grab.fz = q.z; w.grab.water = false; }
       bubT = Math.max(bubT, 1.2); } };
   el.addEventListener('pointerup', letGo); el.addEventListener('pointercancel', letGo);
@@ -3472,7 +3476,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
       if(p.y<=hy){ p.y = hy; G.st = 'go'; const D = dest(G.k||0), gx = D.x+(D.stall ? (Math.random()-0.5)*0.8 : 0), gz = D.z+(D.stall ? (Math.random()-0.5)*1.2 : 0);   /* 走到他說要去的地方 */
         if(!G.water && Math.hypot((G.rx ?? p.x)-D.x, (G.rz ?? p.z)-D.z) < D.r){ shout(THX); bub.material.map = bubTex[THX]; bub.material.needsUpdate = true; bubW = w; bubT = 2.2; }   /* 放對地方：「承蒙你！」 */
         if(G.water){ splash(p.x,p.z); SFX.splash(); { const sk = SCOLD[Math.floor(Math.random()*SCOLD.length)]; setTimeout(()=>shout(sk), 450); bub.material.map = bubTex[sk]; bub.material.needsUpdate = true; bubW = w; bubT = 2.6; }   /* 被丟進水裡：大聲罵「你係大戇牯／大戇嫲！」或「還孤盲！」 */ /* 先直直涉水走到最近的河岸，再走去點心店 */
-          const nr = nearestRiver(p.x,p.z), tg = riverCurve.getTangentAt(nr.u), nx = -tg.z, nz = tg.x, sd = Math.sign((p.x-nr.p.x)*nx+(p.z-nr.p.z)*nz) || 1, bk = {x:nr.p.x+nx*sd*5.0, z:nr.p.z+nz*sd*5.0};
+          const nr = nearestRiver(p.x,p.z), tg = riverCurve.getTangentAt(nr.u), nx = -tg.z, nz = tg.x, sd = Math.sign((p.x-nr.p.x)*nx+(p.z-nr.p.z)*nz) || 1, bk = {x:nr.p.x+nx*sd*5.0*RWK, z:nr.p.z+nz*sd*5.0*RWK};
           const rest = peopleNav ? peopleNav.path(bk.x,bk.z,gx,gz) : null; G.path = rest ? [bk, ...rest] : [bk]; }
         else G.path = peopleNav ? peopleNav.path(p.x,p.z,gx,gz) : null;
         if(!G.path){ G.st = 'back'; } } return; }
@@ -3533,7 +3537,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
 function feedKindAt(x,z){
   if(((x-68.5)/8.2)**2+((z-10)/6.6)**2 < 1) return 'pond';
   const bf = bridgeFrame; if(bf){ const dx = x-bf.x, dz = z-bf.z, a = dx*bf.tx+dz*bf.tz, pp = dx*bf.tz-dz*bf.tx; if(Math.abs(a)<1.7 && Math.abs(pp)<8) return null; }
-  const nr = nearestRiver(x,z); return (nr.dist<3.3 && nr.u>0.03 && nr.u<0.97) ? 'river' : null;
+  const nr = nearestRiver(x,z); return (nr.dist<3.3*RWK && nr.u>0.03 && nr.u<0.97) ? 'river' : null;
 }
 /* Fish feeding: click water -> pellets fall, fish swim over, eat one by one, pellets vanish */
 {
@@ -3553,7 +3557,7 @@ function feedKindAt(x,z){
     let kind = null, u = 0, off = 0;
     const fk = feedKindAt(x,z);
     if(fk==='pond') kind = 'pond';
-    else if(fk==='river'){ const nr = nearestRiver(x,z); { kind = 'river'; u = nr.u; const p0 = riverPoint(u,0), q = riverPoint(u,1); off = (x-p0.x)*(q.x-p0.x)+(z-p0.z)*(q.z-p0.z); off = Math.max(-2.2,Math.min(2.2,off)); } }
+    else if(fk==='river'){ const nr = nearestRiver(x,z); { kind = 'river'; u = nr.u; const p0 = riverPoint(u,0), q = riverPoint(u,1/RWK); off = (x-p0.x)*(q.x-p0.x)+(z-p0.z)*(q.z-p0.z); off = Math.max(-2.2,Math.min(2.2,off)); } }
     if(!kind) return;
     const list = FEED[kind]; while(list.length>=2){ const o = list.shift(); o.dead = true; }
     const m = {kind, x, z, u, off, age:0, eatT:0, pel:[], dead:false}; 
@@ -3809,7 +3813,7 @@ const $dogCam = $('#dogCam'), $dogFade = $('#dogFade');
 const DOG_NAMES = ['羅威那','黃金獵犬','邊牧','法鬥','拉布拉多','伯恩山犬','薩摩耶'];
 const V3 = (x,z)=>new THREE.Vector3(x,0,z);
 const DOG_SPOTS = [
-  {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
+  {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPointRaw(0.32,10.2+9.4*(RWK-1)/2+0.7), lk:()=>riverPointRaw(0.5,10.2+9.4*(RWK-1)/2+0.7), ly:0.3, photo:'', u:''},
   {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'assets/dongan-2.jpg', u:''},
   {n:'東安橋', say:'「東安橋」係五孔石砌拱橋，橫過牛欄河頂。', st:()=>riverPoint(BRIDGE_T,15), lk:()=>riverPoint(BRIDGE_T,0), ly:2.0, photo:'assets/dongan-1.jpg', u:''},
   {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', st:()=>V3(57,15), lk:()=>V3(68.5,10), ly:0.5, photo:'', u:''},
