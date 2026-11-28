@@ -742,6 +742,8 @@ function makeCrab(col=0xFF7B6B, sc=0.96){
     c.add(S(new THREE.SphereGeometry(0.26,8,6),sx*0.85,0.42,0.45,1.1,0.8,1,red)); c.add(S(new THREE.BoxGeometry(0.28,0.1,0.1),sx*0.55,0.36,0.3,1,1,1,red));
     for(let i=0;i<3;i++) c.add(S(new THREE.CylinderGeometry(0.04,0.04,0.5,5).rotateZ(Math.PI/2),sx*0.75,0.12,-0.3+i*0.22,1,1,1,red));
   }
+  /* 看不見的點擊範圍（教師 2026-11-28：小隻螃蟹抓不到）：世界半徑約 1.1，小螃蟹跑得快也按得到 */
+  { const hit = new THREE.Mesh(new THREE.SphereGeometry(1.1/(sc*RK),10,8), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false})); hit.position.y = 0.3; hit.userData.hitOnly = true; c.add(hit); }
   c.scale.setScalar(sc*RK); return c;
 }
 function makeDragonfly(col){
@@ -1027,7 +1029,7 @@ function groundTree(x, z, sc, R=rnd){
   g.position.set(x,0.02,z); g.scale.setScalar(sc); g.rotation.y = R()*6; scene.add(g); solids.push(g); return g;
 }
 /* 2026-11-27 搬家：右池水牛走的路（樹要讓開）、新的河道（樹不能長在水裡） */
-const BUFF_R = [[68,15.75],[64,15],[59,8],[55.5,-1],[51.5,-9],[46.5,-13.6],[40.5,-15.8],[36,-17.8]];
+const BUFF_R = [[68,19.15],[60.5,19.5],[57.5,10],[55.5,-1],[51.5,-9],[46.5,-13.6],[40.5,-15.8],[36,-17.8]];
 const buffNear = (x,z)=>{ for(let i=1;i<BUFF_R.length;i++){ const [ax,az] = BUFF_R[i-1], [bx,bz] = BUFF_R[i], vx = bx-ax, vz = bz-az, f = Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/(vx*vx+vz*vz))); if(Math.hypot(x-(ax+vx*f), z-(az+vz*f))<2.6) return true; } return false; };
 const RIVP = riverCurve.getPoints(400);
 const riverNear = (x,z)=>{ let best = 1e9; for(const q of RIVP){ if(Math.abs(q.x-x)<3){ best = Math.min(best, Math.abs(q.z-z)); } } return best<5.5; };
@@ -1037,7 +1039,7 @@ function grove(cx, cz, n, radius, R=rnd){
     const a = R()*Math.PI*2, d = Math.sqrt(R())*radius, x = cx+Math.cos(a)*d, z = cz+Math.sin(a)*d;
     if(placed.some(q=>Math.hypot(q[0]-x,q[1]-z) < 2.2)) continue;
     placed.push([x,z]); const tr = groundTree(x,z,1.3+R()*0.9,R);
-    if((x>70.5&&x<83.5&&z>64&&z<76) || (((x-68.5)/6.6)**2+((z-10)/5.8)**2<1) || buffNear(x,z) || Math.hypot(x-TILE_OFF.x,z-TILE_OFF.z)<16 || (x>TAIHO.x-7&&x<TAIHO.x+7&&z>TAIHO.z-5.3&&z<TAIHO.z+10.2) || riverNear(x,z) || (x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<12.5+MKT_DZ) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17) || (x>TEA_POS.x-6.4&&x<TEA_POS.x+6.4&&z>TEA_POS.z-5.2&&z<TEA_POS.z+6.4)){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
+    if((x>70.5&&x<83.5&&z>64&&z<76) || (((x-68.5)/10.8)**2+((z-10)/9.2)**2<1) || buffNear(x,z) || Math.hypot(x-TILE_OFF.x,z-TILE_OFF.z)<16 || (x>TAIHO.x-7&&x<TAIHO.x+7&&z>TAIHO.z-5.3&&z<TAIHO.z+10.2) || riverNear(x,z) || (x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<20+MKT_DZ) || (((x+33)/7.4)**2+((z+5)/6.4)**2<1) || (x>-38&&x<-34&&z>-17&&z<-8) || (x>-35.5&&x<-30.5&&z>-1&&z<17) || (x>TEA_POS.x-6.4&&x<TEA_POS.x+6.4&&z>TEA_POS.z-5.2&&z<TEA_POS.z+6.4)){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 豬圈、右池塘與水牛東側通道、左側客家市集的空地：樹照常產生（亂數不變）再拿掉 */
   }
 }
 /* 地塊後方：先是兩排稻田（中間有水圳），再往後才是樹林，最後是遠山；兩側也有幾叢樹 */
@@ -1195,7 +1197,7 @@ let buffApi = null;
   stream.scale.y = end.y-0.15; stream.position.set(end.x,(end.y+0.15)/2,end.z-0.15); scene.add(stream);
   pondTick.push((dt,t)=>{ dashAll.forEach(o=>{ o.d.position.z = ((o.i*o.L/o.n + t*1.6) % o.L); }); stream.material.opacity = 0.65+0.1*Math.sin(t*9); });
   /* 右邊池塘 + 兩尾錦鯉 */
-  const RX = 68.5, RZ = 10, RRX = 4.2, RRZ = 3.4;   /* 教師 2026-11-27：埤塘往右移（原 30.5, 0.5） */ /* 右池原在 (24,-3)；教師 2026-11-10 要求往右下移（讓出豬圈的位置）；南邊「狗狗集合」空地不動 */
+  const RX = 68.5, RZ = 10, RRX = 8.4, RRZ = 6.8;   /* 教師 2026-11-28：埤塘放大 100%（原 4.2 × 3.4） */   /* 教師 2026-11-27：埤塘往右移（原 30.5, 0.5） */ /* 右池原在 (24,-3)；教師 2026-11-10 要求往右下移（讓出豬圈的位置）；南邊「狗狗集合」空地不動 */
   pond(RX, RZ, RRX, RRZ);
   for(let i=0;i<2;i++){
     const k = makeKoi(i);
@@ -1296,7 +1298,7 @@ let buffApi = null;
   pondTick.push((dt,t)=>{ egretTick(bwL,dt,t); egretTick(bwR,dt,t); });
   const DRK = new THREE.Vector3(RX-0.5,0,RZ+RRZ+2.35), V = (x,z)=>new THREE.Vector3(RX+x,0,RZ+z);
   /* 右池水牛：喝完水走進稻田中央耕田——沿上排田中線往西、掉頭沿下排田中線往東、再掉頭走回來，走完一圈（途中 4 次低頭），出田回池邊喝一次水，再出發 */
-  const WP = [DRK, [64,15],[59,8],[55.5,-1],[51.5,-9],[46.5,-13.6],[40.5,-15.8],[36,-17.8],[33,-19.6],[24,-19.6],[15,-19.6],[13.4,-19.9],[12.7,-21.2],[12.7,-23.6],[13.4,-24.9],[15,-25.2],[24,-25.2],[33,-25.2],[36,-24.8],[37.3,-23],[37.6,-20],[39.5,-16.6],[45.8,-14.4],[51,-10.2],[55.2,-2],[58.6,7],[63.6,14.4],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
+  const WP = [DRK, [60.5,19.5],[57.5,10],[55.5,-1],[51.5,-9],[46.5,-13.6],[40.5,-15.8],[36,-17.8],[33,-19.6],[24,-19.6],[15,-19.6],[13.4,-19.9],[12.7,-21.2],[12.7,-23.6],[13.4,-24.9],[15,-25.2],[24,-25.2],[33,-25.2],[36,-24.8],[37.3,-23],[37.6,-20],[39.5,-16.6],[45.8,-14.4],[51,-10.2],[55.2,-2],[56.8,8],[59.5,18.6],DRK].map(a=>a.isVector3 ? a : new THREE.Vector3(a[0],0,a[1]));
   const loopC = new THREE.CatmullRomCurve3(WP, false, 'centripetal'), LL = loopC.getLength(), GRAZE = [0.3,0.45,0.6,0.75].map(f=>f*LL);
   const ease = x=>x*x*(3-2*x), bs = {yaw:Math.PI, wph:0, last:0, sp:0}, bm = {mode:'drink', tm:0, s:0, gi:0};
   const drinkRing = new THREE.Mesh(new THREE.RingGeometry(0.93,1,32).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0, depthWrite:false})); drinkRing.position.set(DRK.x,0.15,RZ+RRZ-0.2); scene.add(drinkRing);
@@ -1495,13 +1497,13 @@ let pigApi = null;
 const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到該攤位的平視角）；pickables 在後面才宣告，所以先收在這裡 */
 (function market(){
   const mktG = new THREE.Group(); mktG.position.z = MKT_DZ; scene.add(mktG);   /* 2026-11-28：整個市場放在這個群組裡，一起往南移 MKT_DZ */
-  const SX = -29.1, ZS = [1.9,5.6,9.3], W = 3.2, D = 2.8, FY = 0.07; /* 教師 2026-11-13：三攤改縱向排成一列，背靠引水渠（x≈-33），面向東（島）；東邊的鋪面留空，有一個標好的空攤位 */
+  const SX = -29.1, ZS = [1.9,5.6,9.3,13.0,16.7], W = 3.2, D = 2.8, FY = 0.07; /* 教師 2026-11-13：三攤改縱向排成一列，背靠引水渠（x≈-33），面向東（島）；東邊的鋪面留空，有一個標好的空攤位 */
   const wood = mat(0xB98B5A), woodL = mat(0xEED9B0), skinM = mat(0xF5CBA7), hairM = mat(0x2B2B30), eyeM = mat(0x222222);
   const box = (w,h,d,m,x,y,z,par)=>{ const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m); o.position.set(x,y,z); (par||mktG).add(o); return o; };
   const cylM = (rt,rb,h,m,x,y,z,par,seg=8)=>{ const o = new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m); o.position.set(x,y,z); (par||mktG).add(o); return o; };
   const ball = (r,col,x,y,z,sx,sy,sz,par,det=1)=>{ const o = new THREE.Mesh(new THREE.IcosahedronGeometry(r,det), mat(col)); o.position.set(x,y,z); o.scale.set(sx||1,sy||1,sz||1); (par||mktG).add(o); return o; };
   /* 廣場：淺米色石板，外圈略深 */
-  box(13.0,0.05,12.0,mat(0xD8C7A2),-24.3,0.025,6.0); box(12.5,0.06,11.4,mat(0xEFE3C8),-24.3,0.04,6.0);
+  box(13.0,0.05,19.4,mat(0xD8C7A2),-24.3,0.025,9.7); box(12.5,0.06,18.8,mat(0xEFE3C8),-24.3,0.04,9.7);   /* 2026-11-28 往南加長，接鹹菜、仙草乾兩攤 */
   /* 畫在平面上的字牌（沿用其他地方的做法：字型載入後重畫） */
   const rr = (x,a,b,w,h,r)=>{ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); };
   const FONT = px=>`bold ${px}px Huninn, "Noto Sans TC", sans-serif`;
@@ -1623,6 +1625,40 @@ const marketPick = []; /* 市集三個攤位的網格（可點選，點了切到
     const v = person({shirt:0x8FD16A,apron:0xFFFFFF,hat:'straw',arm:true,ph:2.4}); v.userData.buy = 'c'; v.position.set(0,0,-0.5); g.add(v);
     { const c = hakkaCard(); c.position.set(1.1,0.62,1.235); g.add(c); } /* 櫃台上擺滿菜箱，標章改貼在櫃台正面 */
     tagStall(g,3); }
+  /* ④⑤ 教師 2026-11-28：接在青菜攤前面（往南）再加兩攤——鹹菜攤、仙草乾攤。
+     辭典（海陸）：鹹菜 ham coiˇ（酸菜；以芥菜加鹽醃漬而成）；仙草 sienˋ coˊ（例句：桃竹苗个兼山地區種有仙草，像關西个就當有名；仙草凍由仙草的莖葉熬汁做成）；
+     「仙草乾」不是辭典詞目，「乾」照「鹹菜乾 ham coiˇ gonˋ」讀 gonˋ（請教師確認） */
+  { const g = stall(ZS[3],{name:'鹹菜',pin:'ham coiˇ',awn:0xD4A62A,counter:0xC89B6A,signBg:'#D4A62A',signFg:'#FFFFFF'});
+    const jarM = mat(0x7A4A2A), jarL = mat(0x5E3820), leaf = mat(0xC9A43A), leafD = mat(0xA8862A);
+    const jar = (x,y,z,sc,full)=>{ const q = new THREE.Group(); q.position.set(x,y,z); q.scale.setScalar(sc); g.add(q);
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.3,12,10), jarM); b.scale.set(1,1.15,1); b.position.y = 0.32; q.add(b);
+      cylM(0.17,0.2,0.1,jarL,0,0.66,0,q,12); cylM(0.15,0.15,0.02,mat(0x3A2414),0,0.715,0,q,12);
+      if(full) for(let k=0;k<3;k++){ const l = new THREE.Mesh(new THREE.SphereGeometry(0.09,7,5), k%2?leaf:leafD); l.scale.set(1.6,0.5,0.9); l.position.set(-0.05+k*0.05,0.74,(k-1)*0.05); l.rotation.y = k; q.add(l); }
+      return q; };
+    /* 櫃台上：一個大盆，盆裡一捆捆黃褐色的鹹菜；旁邊兩個小甕 */
+    cylM(0.55,0.42,0.16,mat(0xB0B8C0),-0.35,1.05,0.72,g,16); cylM(0.5,0.5,0.02,mat(0x8E979F),-0.35,1.12,0.72,g,16);
+    for(let k=0;k<5;k++){ const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.07,0.42,3,6).rotateZ(Math.PI/2), k%2?leaf:leafD); l.scale.set(1,0.75,1.5); l.position.set(-0.6+k*0.13,1.17+(k%2)*0.03,0.6+((k*37)%3)*0.1); l.rotation.y = (k-2)*0.35; g.add(l); }
+    jar(0.55,0.97,0.75,0.55,true); jar(1.05,0.97,0.7,0.45,false);
+    /* 櫃台前地上：兩個大甕 */
+    jar(-0.7,0,1.75,1.0,true); jar(0.25,0,1.8,0.85,false);
+    { const c = sign(0.62,0.26,'鹹菜','ham coiˇ','#FFF6E0','#6B4A12'); c.position.set(-0.35,1.32,1.12); c.rotation.x = -0.35; g.add(c); }
+    const v = person({shirt:0xFFD54F,apron:0xFFFFFF,hat:'straw',arm:true,ph:3.1}); v.userData.buy = 'c'; v.position.set(0,0,-0.5); g.add(v);
+    { const c = hakkaCard(); c.position.set(1.1,0.62,1.235); g.add(c); }
+    tagStall(g,4); }
+  { const g = stall(ZS[4],{name:'仙草乾',pin:'sienˋ coˊ gonˋ',awn:0x6D4C41,counter:0xD9A774,signBg:'#5D4037',signFg:'#FFFFFF'});
+    const dry = mat(0x4A3426), dry2 = mat(0x5C4130), tie = mat(0xE9CC84);
+    /* 一捆一捆晒乾个仙草：深褐色的莖葉，中間用草繩綁住 */
+    const bundle = (par,x,y,z,ry,sc)=>{ const q = new THREE.Group(); q.position.set(x,y,z); q.rotation.y = ry; q.scale.setScalar(sc); par.add(q);
+      for(let k=0;k<7;k++){ const a = k*0.9, d = k ? 0.07 : 0; const st = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.05,0.62,5).rotateZ(Math.PI/2), k%2?dry:dry2); st.position.set(0, 0.07+Math.sin(a)*d, Math.cos(a)*d); st.rotation.y = (k-3)*0.04; q.add(st); }
+      for(const sx of [-1,1]){ const e = new THREE.Mesh(new THREE.SphereGeometry(0.12,7,5), k2m(sx)); e.scale.set(0.9,0.75,1.1); e.position.set(sx*0.34,0.08,0); q.add(e); }
+      const t = new THREE.Mesh(new THREE.TorusGeometry(0.105,0.022,5,12).rotateY(Math.PI/2), tie); t.position.set(0,0.07,0); q.add(t); return q; };
+    const k2m = sx=>sx<0?dry:dry2;
+    for(let r=0;r<2;r++) for(let k=0;k<4;k++) bundle(g,-1.05+k*0.55+r*0.2,0.97+0.02+r*0.16,0.62+r*0.12,0.12*(k%2?1:-1),0.85);
+    /* 櫃台前地上：一個竹籃裝滿仙草乾 */
+    cylM(0.5,0.4,0.42,mat(0xC8A060),0,0.21,1.75,g,12); for(let k=0;k<3;k++) bundle(g,-0.2+k*0.2,0.38,1.75,(k-1)*0.5,0.7);
+    { const c = sign(0.75,0.26,'仙草乾','sienˋ coˊ gonˋ','#FFF6E0','#4E342E'); c.position.set(0,0.62,2.27); g.add(c); }
+    const v = person({shirt:0x90CAF9,apron:0x6D4C41,hat:'cap',arm:true,ph:0.9}); v.userData.buy = 'm'; v.position.set(0,0,-0.5); g.add(v);
+    hakkaStand(g,1.25,1.12); tagStall(g,5); }
   /* ④ 留空的攤位：只有鋪面與四根矮樁，之後再加客家美食 */
   { const g = new THREE.Group(); g.position.set(-20.6,FY,5.6); g.rotation.y = Math.PI/2; mktG.add(g); box(W,0.02,D,mat(0xE2D5B6),0,0.01,0,g);
     for(const sx of [-1,1]) for(const sz of [-1,1]) cylM(0.05,0.06,0.5,wood,sx*(W/2-0.1),0.25,sz*(D/2-0.1),g,6); }
@@ -1876,12 +1912,12 @@ let dogApi = null, mouseNav = null, peopleNav = null;
   const baseFree = (x,z)=>{
     if(x<-50||x>76||z<-46.5||z>59.5) return false;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4 && z<rz+5.4) return false; }
-    if(ell(x,z,-33,-5,7.4,6.4) || ell(x,z,68.5,10,5.6,4.8) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
+    if(ell(x,z,-33,-5,7.4,6.4) || ell(x,z,68.5,10,9.8,8.2) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
     if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
-    if(!mktOpen && x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<12+MKT_DZ) return false; /* 客家市集廣場：只有羅威那、薩摩耶（catFan）能進去，其他狗不行（教師 2026-11-18） */
-    if(x>-30.8&&x<-26.9&&z>0.2+MKT_DZ&&z<11.1+MKT_DZ) return false; /* 市集的三個攤位 */
+    if(!mktOpen && x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<19.6+MKT_DZ) return false; /* 客家市集廣場：只有羅威那、薩摩耶（catFan）能進去，其他狗不行（教師 2026-11-18） */
+    if(x>-30.8&&x<-26.9&&z>0.2+MKT_DZ&&z<18.6+MKT_DZ) return false; /* 市集的五個攤位 */
     if(Math.hypot(x+24.9,z-3.75-MKT_DZ)<1.45 || Math.hypot(x+24.9,z-7.45-MKT_DZ)<1.45 || Math.hypot(x+26.3,z-11.4-MKT_DZ)<0.6) return false;
     if(x>TAIHO.x-5.8&&x<TAIHO.x+5.8&&z>TAIHO.z-4.1&&z<TAIHO.z+4.5) return false; /* 太和宮本體（2026-11-28 搬到地塊正下方） */
     if(x>TEA_POS.x-4.8&&x<TEA_POS.x+4.8&&z>TEA_POS.z-3.5&&z<TEA_POS.z+3.5) return false; /* 台灣紅茶公司 */
@@ -1911,11 +1947,11 @@ let dogApi = null, mouseNav = null, peopleNav = null;
     if(x<-50||x>50||z<-46.5||z>riverZ(x)-4.9) return false;
     if((x-TILE_OFF.x)**2+(z-TILE_OFF.z)**2 < 320) return false;
     if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
-    if(ell(x,z,-33,-5,6.9,5.9) || ell(x,z,68.5,10,5.1,4.3)) return false;
+    if(ell(x,z,-33,-5,6.9,5.9) || ell(x,z,68.5,10,9.3,7.7)) return false;
     if(x>-35&&x<-31&&z>-1) return false;
     if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false;
     if(x>-38&&x<-34.5&&z>-17&&z<-8.5) return false;
-    if(x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<12+MKT_DZ) return false; /* 客家市集 */
+    if(x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<19.6+MKT_DZ) return false; /* 客家市集 */
     if(x>TAIHO.x-5.8&&x<TAIHO.x+5.8&&z>TAIHO.z-4.1&&z<TAIHO.z+4.5) return false; /* 太和宮本體（2026-11-28 搬到地塊正下方） */
     if(x>TEA_POS.x-4.8&&x<TEA_POS.x+4.8&&z>TEA_POS.z-3.5&&z<TEA_POS.z+3.5) return false; /* 台灣紅茶公司 */
     if(Math.hypot(x-TAIHO.x,z-TAIHO.z-6.2)<1.1) return false; /* 廟前香爐 */
@@ -2239,7 +2275,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
     mktOpen = false; fr = G.mode==='idle' ? frN : frA; /* 迴圈外（導覽、集合）一律當市集不能進 */
   });
 })();
-[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); const tr = groundTree(p.x,p.z,1.4+rnd()*0.7); if((p.x>-31&&p.x<-15&&p.z>2+MKT_DZ&&p.z<16+MKT_DZ) || Math.hypot(p.x-TILE_OFF.x,p.z-TILE_OFF.z)<25 || Math.abs(p.x-BRIDGE_X)<7){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 市集前方的河岸樹拿掉（亂數不變） */ });
+[[0.30,5.9],[0.34,-6.1],[0.39,6.3],[0.52,6.1],[0.62,5.9],[0.67,-6.1]].forEach(([t,off])=>{ const p = riverPoint(t,off); const tr = groundTree(p.x,p.z,1.4+rnd()*0.7); if((p.x>-31&&p.x<-15&&p.z>2+MKT_DZ&&p.z<23+MKT_DZ) || Math.hypot(p.x-TILE_OFF.x,p.z-TILE_OFF.z)<25 || Math.abs(p.x-BRIDGE_X)<7){ scene.remove(tr); treeSpots.pop(); solids.pop(); } /* 市集前方的河岸樹拿掉（亂數不變） */ });
 
 
 /* 攔水壩：擋住約一半河面，水從另一半流過並冒出白色水花；可以用滑鼠或手指左右拖動，改變位置 */
@@ -3059,12 +3095,45 @@ function makeCar(color, buddy=false){
   c.scale.setScalar(1.725);
   return c;
 }
+/* 電動滑板車（教師 2026-11-28：四位騎士只留兩位騎腳踏車，另外兩位改騎電動滑板車）：站在低踏板上、兩手握把手，車頭有立桿；
+   userData 的 legs、wheels 與腳踏車同樣格式，placeCar 依 skate 只讓身體微微起伏、不踩不蹬 */
+function makeSkater(color){
+  const c = new THREE.Group(), deckM = mat(0x2E2E36), stemM = mat(0x9AA3AD), whl = mat(0x1E1E24), jeans = mat(0x4A6FA5), skin = mat(0xFFDDBB), shirt = mat(color), acc = mat(color);
+  const B = (w,h,d,m,x,y,z)=>add(c, new THREE.BoxGeometry(w,h,d), m, x,y,z);
+  B(0.16,0.045,0.6,deckM,0,0.11,0); B(0.17,0.02,0.6,acc,0,0.085,0);                 /* 踏板 */
+  const st = B(0.04,0.6,0.04,stemM,0,0.4,0.3); st.rotation.x = -0.12;           /* 立桿（微微往後斜） */
+  B(0.42,0.035,0.035,deckM,0,0.7,0.27);                                           /* 把手 */
+  for(const sx of [-1,1]) B(0.07,0.05,0.05,mat(0x111111),sx*0.2,0.7,0.27);
+  B(0.06,0.04,0.04,mat(0xFFF3B0),0,0.56,0.34);                                     /* 車燈 */
+  const fender = B(0.08,0.02,0.2,deckM,0,0.2,-0.33); fender.rotation.x = 0.25;
+  const wheels = [];
+  for(const z of [-0.33,0.33]){ const w = new THREE.Group(); w.position.set(0,0.09,z); c.add(w); add(w, new THREE.CylinderGeometry(0.085,0.085,0.06,12).rotateZ(Math.PI/2), whl); add(w, new THREE.BoxGeometry(0.065,0.1,0.02), stemM); wheels.push(w); }
+  const body = new THREE.Group(); c.add(body);
+  /* 兩點之間放一段圓柱狀的肢體（手、腳），比方塊自然 */
+  const limb = (par,a,b,r,m)=>{ const d = new THREE.Vector3().subVectors(b,a), L = d.length(); const o = new THREE.Mesh(new THREE.CapsuleGeometry(r,Math.max(0.01,L-2*r),4,8), m);
+    o.position.copy(a).add(b).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.normalize()); par.add(o); return o; };
+  const V = (x,y,z)=>new THREE.Vector3(x,y,z), legs = [];
+  /* 雙腳：一前一後站在踏板上，膝蓋微彎；髖部用圓的，不用方塊 */
+  for(const [sx,z] of [[0.05,0.06],[-0.05,-0.08]]){ const l = new THREE.Group(); l.position.set(sx,0.5,z); body.add(l);
+    limb(l, V(0,0.02,0), V(0,-0.36,0.015), 0.048, jeans);
+    add(l, new THREE.BoxGeometry(0.075,0.045,0.14), mat(0xFFFFFF), 0,-0.375,0.03); legs.push(l); }
+  { const hip = new THREE.Mesh(new THREE.SphereGeometry(0.1,12,8), jeans); hip.scale.set(1,0.7,0.8); hip.position.set(0,0.52,0); body.add(hip); }
+  limb(body, V(0,0.5,0), V(0,0.83,0.02), 0.09, shirt);
+  limb(body, V(0,0.82,0.03), V(0,0.88,0.04), 0.035, skin);   /* 脖子 */                       /* 身體 */
+  add(body, new THREE.SphereGeometry(0.085,12,10), skin, 0,0.94,0.05);
+  add(body, new THREE.SphereGeometry(0.09,12,6,0,Math.PI*2,0,Math.PI*0.55), mat([0x3A2A22,0x1E1B1B,0x8A5A3A][Math.floor(rnd()*3)]), 0,0.955,0.045);
+  for(const sx of [-1,1]){ const sh = V(sx*0.11,0.78,0.03), el = V(sx*0.15,0.66,0.12), hd = V(sx*0.18,0.7,0.27);   /* 肩 → 手肘 → 握把手 */
+    limb(body, sh, el, 0.032, shirt); limb(body, el, hd, 0.028, skin); }
+  c.userData = {legs, wheels, body, skate:true};
+  c.scale.setScalar(1.725);
+  return c;
+}
 {
   /* 12 輛電動車：8 輛繞外圈、4 輛繞主島，同方向排開，各走靠右的車道 */
   const cols = [C.pink, C.sky, C.yellow, 0x7ED6A0, C.persimmon, 0xB79CFF, C.white, 0xFF7B6B];
   /* 12 輛平均散開：七個單元地塊各 1 輛（共 7）、主島 3 輛、地塊之間的短路再放 2 輛；所有車同速，間隔會一直維持 */
   const spd = 2.0;
-  const addCar = (loop, t, i)=>{ const car = makeCar(cols[i%cols.length]); carGroup.add(car); cars.push({car, bp:loop, loop:true, t, dir:1, lane:0.45, speed:spd/loop.len}); };
+  const addCar = (loop, t, i)=>{ const car = (i===1||i===3) ? makeSkater(cols[i%cols.length]) : makeCar(cols[i%cols.length]); carGroup.add(car); cars.push({car, bp:loop, loop:true, t, dir:1, lane:0.45, speed:spd/loop.len}); };
   let n = 0;
   /* 數量減半（教師 2026-11-07）：12 輛 → 6 輛（外圈 4、主島 2） */
   traffic.outer.chord.forEach((t,i)=>{ if(i%2===0) addCar(traffic.outer, t, n++); });
@@ -3075,7 +3144,9 @@ function placeCar(c){
   const p = c.bp.path.getPointAt(t), tan = c.bp.path.getTangentAt(t).multiplyScalar(c.dir);
   if(c.lane){ p.x += -tan.z*c.lane; p.z += tan.x*c.lane; }
   c.car.position.copy(p); c.car.rotation.y = Math.atan2(tan.x, tan.z);
-  if(c.loop && c.bp.len){ const dist = t*c.bp.len, u = c.car.userData; u.wheels.forEach(w=>{ w.rotation.x = dist/0.16; }); u.legs[0].rotation.x = Math.sin(dist*4)*0.55; u.legs[1].rotation.x = -Math.sin(dist*4)*0.55; }
+  if(c.loop && c.bp.len){ const dist = t*c.bp.len, u = c.car.userData; u.wheels.forEach(w=>{ w.rotation.x = dist/(u.skate?0.085:0.16); });
+    if(u.skate){ u.body.position.y = 0.012*Math.sin(dist*3); }   /* 電動滑板車：不用踩，只隨路面微微起伏 */
+    else { u.legs[0].rotation.x = Math.sin(dist*4)*0.55; u.legs[1].rotation.x = -Math.sin(dist*4)*0.55; } }
 }
 
 /* 走路的人：16 位，10 位沿外圈走、6 位繞著主島走，有人往前、有人往回 */
@@ -3460,7 +3531,7 @@ renderer.domElement.addEventListener('pointermove', e=>{
 }
 /* 可投食的水面：右池（中心 30.5,0.5；教師 2026-11-10 搬家後這裡曾忘了跟著改）與牛欄河（橋上、橋頭不算）。滑鼠移過去變手指也用它 */
 function feedKindAt(x,z){
-  if(((x-68.5)/4.0)**2+((z-10)/3.2)**2 < 1) return 'pond';
+  if(((x-68.5)/8.2)**2+((z-10)/6.6)**2 < 1) return 'pond';
   const bf = bridgeFrame; if(bf){ const dx = x-bf.x, dz = z-bf.z, a = dx*bf.tx+dz*bf.tz, pp = dx*bf.tz-dz*bf.tx; if(Math.abs(a)<1.7 && Math.abs(pp)<8) return null; }
   const nr = nearestRiver(x,z); return (nr.dist<3.3 && nr.u>0.03 && nr.u<0.97) ? 'river' : null;
 }
@@ -3741,7 +3812,7 @@ const DOG_SPOTS = [
   {n:'台三線', say:'「台三線」在牛欄河的南邊，從前是防禦的邊界，也是樟腦與茶葉的產業走廊', st:()=>riverPoint(0.32,10.2), lk:()=>riverPoint(0.5,10.2), ly:0.3, photo:'', u:''},
   {n:'牛欄河', say:'這條是「牛欄河」', st:()=>riverPoint(0.58,6.4), lk:()=>riverPoint(0.5,-1.5), ly:0.1, photo:'assets/dongan-2.jpg', u:''},
   {n:'東安橋', say:'「東安橋」係五孔石砌拱橋，橫過牛欄河頂。', st:()=>riverPoint(BRIDGE_T,15), lk:()=>riverPoint(BRIDGE_T,0), ly:2.0, photo:'assets/dongan-1.jpg', u:''},
-  {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', st:()=>V3(60,10), lk:()=>V3(68.5,10), ly:0.5, photo:'', u:''},
+  {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', st:()=>V3(57,15), lk:()=>V3(68.5,10), ly:0.5, photo:'', u:''},
   {n:'田', say:'「田」在北邊，這裡友善耕作，歡迎石虎', st:()=>V3(22.5,-13.4), lk:()=>V3(10,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
   {n:'半山區', say:'「半山區」在後面，一座座山丘', st:()=>V3(19,-32.5), lk:()=>V3(10,-54), ly:6.0, photo:'', u:''},
@@ -3929,7 +4000,7 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   const at = (p,y)=>V(p.x,y,p.z);
   return [
   {n:'台三線', say:'「遠方來个朋友」走的就是台三線：從前是防禦邊界（土牛溝、隘勇線），也是樟腦與茶葉的產業走廊。客家庄沿著丘陵與平原交界開墾，自然的地理走廊，就成了今日的台三線。', mk:at(rp(0.42,10.2),1.8), cam:at(rp(0.27,12.5),2.2), tg:at(rp(0.45,10.2),0.4)},
-  {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', mk:V(68.5,1.8,10), cam:V(60.5,3.2,17.5), tg:V(68.5,0.7,10)},
+  {n:'陂塘', say:'蓄在陂塘肚个紅金鯉，看起來又大又靚', mk:V(68.5,1.8,10), cam:V(56,6.5,24), tg:V(68.5,0.7,10)},
   {n:'水車', say:'「水車」摎陂塘个水送去田坵蔭田。陂塘囤水，除了蔭田，還做得畜魚仔', mk:V(-33,3.3,-9.1), cam:V(-25,3.2,0.5), tg:V(-33,1.4,-9)},
   {n:'河壩脣', say:'「牛欄河」个河壩脣有毛蟹、𧊅仔摎魚仔', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」係五孔石砌拱橋，橫過牛欄河頂。', mk:at(r2,1.8), cam:at(rp(BRIDGE_T-0.09,12),2.6), tg:at(rp(BRIDGE_T,0),1.3)},
@@ -3939,10 +4010,12 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'草莓', say:'草莓色目靚，鼻起來香香甜甜，當餳人食。', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
   {n:'田脣', say:'「田」在北邊，這裡友善耕作，歡迎石虎', mk:V(21,1.6,-17.5), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
   /* 客家市集（教師 2026-11-13）：三個攤位合成一個景點，進去後用左右鍵（或畫面上的 ‹ ›）切換攤位；日後新增攤位只要在 stalls 加一列（品名要查教育部辭典），再把攤位蓋在市集裡 */
-  {n:'市場', say:'市場：點一個攤位看看', html:'<b>市場</b>：點一個攤位看看', mk:V(-29.1,5.2,5.6+MKT_DZ), cam:V(-14.5,15.5,19.5+MKT_DZ), tg:V(-25.5,0.5,5.5+MKT_DZ), stalls:[
+  {n:'市場', say:'市場：點一個攤位看看', html:'<b>市場</b>：點一個攤位看看', mk:V(-29.1,5.2,5.6+MKT_DZ), cam:V(-12.5,17.5,25.5+MKT_DZ), tg:V(-25.5,0.5,9.3+MKT_DZ), stalls:[
     {n:'點心店', say:'粄條係客庄个美食，美濃、新埔、關西都有。', html:'<b>粄條</b> <span class="mkp">banˊ tiau</span>：客庄个美食，美濃、新埔、關西都有。', cam:V(-19.8,3.8,1.9+MKT_DZ), tg:V(-29.3,1.3,1.9+MKT_DZ)},
     {n:'粄', say:'粢粑、紅粄、艾粄、發粄、菜包、水粄，係客家人个粄；這攤乜有賣仙草。', html:'<b>粄</b> <span class="mkp">banˊ</span>：<span class="mkit"><b>粢粑</b> <span class="mkp">ci baˋ</span></span><span class="mkit"><b>紅粄</b> <span class="mkp">fung banˊ</span></span><span class="mkit"><b>艾粄</b> <span class="mkp">ngieˇ banˊ</span></span><span class="mkit"><b>發粄</b> <span class="mkp">fad banˊ</span></span><span class="mkit"><b>菜包</b> <span class="mkp">coiˇ bauˋ</span></span><span class="mkit"><b>水粄</b> <span class="mkp">shuiˊ banˊ</span></span><span class="mkit"><b>仙草</b> <span class="mkp">sienˋ coˊ</span></span>', cam:V(-19.8,3.8,5.6+MKT_DZ), tg:V(-29.3,1.3,5.6+MKT_DZ)},
     {n:'青菜', say:'蕹菜、高麗菜、角菜、苦蕒、湯匙白、大菜、菜瓜。', html:'<span class="mkit"><b>蕹菜</b> <span class="mkp">vungˇ coiˇ</span>（空心菜）</span><span class="mkit"><b>高麗菜</b> <span class="mkp">goˋ li coiˇ</span></span><span class="mkit"><b>角菜</b> <span class="mkp">gog coiˇ</span>（菠菜）</span><span class="mkit"><b>苦蕒</b> <span class="mkp">fuˊ mag</span>（萵苣類）</span><span class="mkit"><b>湯匙白</b> <span class="mkp">tongˋ shi pagˋ</span>（青江菜）</span><span class="mkit"><b>大菜</b> <span class="mkp">tai+ coiˇ</span>（芥菜）</span><span class="mkit"><b>菜瓜</b> <span class="mkp">coiˇ guaˋ</span>（絲瓜）</span>', cam:V(-19.8,3.8,9.3+MKT_DZ), tg:V(-29.3,1.3,9.3+MKT_DZ)},
+    {n:'鹹菜', say:'鹹菜係用大菜（芥菜）加鹽醃个菜。', html:'<b>鹹菜</b> <span class="mkp">ham coiˇ</span>（酸菜）：用大菜（芥菜）加鹽醃个菜。', cam:V(-19.8,3.8,13.0+MKT_DZ), tg:V(-29.3,1.3,13.0+MKT_DZ)},
+    {n:'仙草乾', say:'仙草个莖葉熬汁，做得做仙草凍；關西个仙草當有名。', html:'<b>仙草乾</b> <span class="mkp">sienˋ coˊ gonˋ</span>：仙草个莖葉熬汁，做得做仙草凍；關西个仙草當有名。', cam:V(-19.8,3.8,16.7+MKT_DZ), tg:V(-29.3,1.3,16.7+MKT_DZ)},
   ]},
 ]; })();
 SPOTS.forEach((sp,i)=>{ const g = new THREE.Group(); g.position.set(sp.mk.x, 0, sp.mk.z); scene.add(g); sp.el = makeLabel(`<b>${sp.n}</b>`, 'tag spot', sp.mk.y, g, ()=>spotGo(i)); sp.el.title = '點一下，近看這裡'; });
