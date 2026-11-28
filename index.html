@@ -75,6 +75,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 .dial.on{box-shadow:0 0 0 2px #fff,0 0 0 5px var(--c)}
 .tools .dial button{background:transparent;border:0;box-shadow:none;border-radius:999px;padding:8px 6px}
 .tools .dial .dgo{min-width:92px;justify-content:center;padding:8px 6px}
+#dialLab{display:inline-flex;align-items:center;gap:7px;line-height:1} /* 教師 2026-11-28：圖示與字置中對齊、有間隔 */
+#dialLab svg{display:block}
 .tools .dial .dar{font-size:11px;padding:8px 9px;opacity:.85}
 .tools .dial .dar:hover{opacity:1;background:rgba(255,255,255,.18)}
 .dial .dgo span{display:inline-block;transition:transform .18s,opacity .18s}
@@ -1343,7 +1345,8 @@ let pigApi = null;
 (function pigsty(){
   const {cx, cz, K} = PIG, hw = PIG.hw/K, hd = PIG.hd/K, gate = PIG.gate/K, zS = cz+hd, zN = cz-hd; /* 建模用（放大前）座標 */
   const HW = PIG.hw, HD = PIG.hd, GT = PIG.gate, ZS = cz+HD, ZN = cz-HD; /* 邏輯用（世界）座標 */
-  const g = new THREE.Group(); g.position.set(cx-K*cx, 0, cz-K*cz); g.scale.setScalar(K); scene.add(g); /* 以 (cx,cz) 為中心放大 */
+  const g = new THREE.Group(); g.position.set(cx+K*cx, 0, cz+K*cz); g.rotation.y = Math.PI; g.scale.setScalar(K); scene.add(g); /* 以 (cx,cz) 為中心放大，再轉 180 度讓開口朝北邊的河道（教師 2026-11-28）*/
+  const MX = x=>2*cx-x, MZ = z=>2*cz-z; /* 豬的邏輯仍用「開口朝南」的座標算，畫出來與接收點擊時繞中心轉 180 度 */
   const brickTex = (()=>{ const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d');
     x.fillStyle = '#EFE3D0'; x.fillRect(0,0,128,64);
     for(let r=0;r<4;r++){ for(let k=-1;k<3;k++){ const ox = (r%2?32:0)+k*64; x.fillStyle = ['#D9826B','#CF7660','#E08D74'][(r+k+3)%3]; x.fillRect(ox+2, r*16+2, 60, 12); } }
@@ -1392,7 +1395,7 @@ let pigApi = null;
   }
   const spots = { eat:[cx-HW+1.3, ZN+1.75], mud:[cx+HW-1.8, cz-0.36] };
   const rin = ()=>[cx-HW+0.9+Math.random()*(HW*2-1.8), ZN+0.9+Math.random()*(HD*2-1.8)];
-  const outPt = ()=>[cx-1.8+Math.random()*3.6, ZS+1.0+Math.random()*1.0];
+  const outPt = ()=>[cx-1.8+Math.random()*3.6, ZS+0.9+Math.random()*0.7]; /* 開口朝北後，門外靠近台三線，活動範圍縮短 */
   const pigs = [[1.5,true],[0.5,false],[0.5,false]].map(([sc,big],i)=>{
     const m = makePig(sc*K), e = {g:m, big, sc, x:cx-1+i*1.3, z:cz+(i-1)*0.6, yaw:Math.PI*0.5*(i?1:-1), sp:0, ph:i*2, st:'idle', wait:1+i, path:[], lie:0, rad:(0.55*sc+0.2)*K, out:false,
       sd:-1, wasOut:false, fl:0, fx:0, fz:1, dogCd:0, lastFlee:-99, hop:0, hopD:1, hopH:0, str:0};
@@ -1450,7 +1453,7 @@ let pigApi = null;
       if(h){ let o = h.object; while(o && !pigs.some(p=>p.g===o)) o = o.parent; hit = pigs.find(p=>p.g===o) || null; }
       if(!rcP.ray.intersectPlane(gpl, gv)) return;
       { const sd = solidD(rcP); if(sd < (h ? h.distance : rcP.ray.origin.distanceTo(gv)-0.05)) return; }
-      poke(gv.x, gv.z, hit); });
+      poke(MX(gv.x), MZ(gv.z), hit); });
   }
   const GW = GT/2-0.3;
   pondTick.push((dt,t)=>{
@@ -1458,7 +1461,7 @@ let pigApi = null;
     for(const e of pigs){
       const u = e.g.userData; let moving = false; e.dogCd -= dt;
       /* 狗走近圍欄外的小豬，小豬會被嚇得跑開 */
-      if(!e.big && e.z>ZS && e.dogCd<=0 && dogApi){ for(const dg of dogApi.groups){ if(!dg.visible) continue; const dx = e.x-dg.position.x, dz = e.z-dg.position.z, d = Math.hypot(dx,dz); if(d<2.4){ flee(e,dx,dz,d,0.9); e.dogCd = 1.8; break; } } }
+      if(!e.big && e.z>ZS && e.dogCd<=0 && dogApi){ for(const dg of dogApi.groups){ if(!dg.visible) continue; const dx = e.x-MX(dg.position.x), dz = e.z-MZ(dg.position.z), d = Math.hypot(dx,dz); if(d<2.4){ flee(e,dx,dz,d,0.9); e.dogCd = 1.8; break; } } }
       if(e.st==='idle' || e.st==='eat' || e.st==='lie'){
         e.sp = chApproach(e.sp, 0, 6, dt); e.wait -= dt;
         if(e.wait<=0){ e.lie = 0; pick(e); e.wait = 0; }
@@ -1476,14 +1479,14 @@ let pigApi = null;
       /* 圍欄：只有從入口能進出；圈內、圈外各有活動範圍 */
       if(Math.abs(e.x-cx) < GW) e.sd = e.z>ZS ? 1 : -1;
       else { if(e.sd>0) e.z = Math.max(e.z, ZS+0.3); else e.z = Math.min(e.z, ZS-0.3); }
-      if(e.z>ZS){ e.x = Math.min(cx+5.2, Math.max(cx-5.2, e.x)); e.z = Math.min(ZS+2.4, e.z); }
+      if(e.z>ZS){ e.x = Math.min(cx+5.2, Math.max(cx-5.2, e.x)); e.z = Math.min(ZS+1.9, e.z); }
       else { e.x = Math.min(cx+HW-0.5, Math.max(cx-HW+0.5, e.x)); e.z = Math.max(ZN+0.5, e.z); }
       if(e.z>ZS+0.4) e.wasOut = true;
       if(e.wasOut && e.z<ZS-0.5){ e.wasOut = false; e.out = false; if(!e.big && nowS()-e.lastFlee<4){ herdFlag = true; herdT = 0; } if(e.st==='flee'){ e.fl = 0; e.st = 'idle'; e.wait = 2+Math.random()*2; } }
       e.ph += e.sp*dt*5.5;
       if(e.hop>0) e.hop -= dt; if(e.str>0) e.str -= dt;
       const hy = e.hop>0 ? Math.abs(Math.sin((1-e.hop/e.hopD)*Math.PI*(e.hopD>0.8?3:1)))*e.hopH : 0;
-      e.g.position.set(e.x, hy, e.z); e.g.rotation.y = e.yaw;
+      e.g.position.set(MX(e.x), hy, MZ(e.z)); e.g.rotation.y = e.yaw+Math.PI;
       const lieT = e.st==='lie' ? 1 : 0; e.lie += (lieT-e.lie)*Math.min(1,dt*3);
       const sb = e.str>0 ? Math.sin(Math.PI*(1-e.str/1.4)) : 0;
       u.b.position.y = -0.2*e.lie + (moving ? Math.abs(Math.sin(e.ph))*0.03 : 0); u.b.scale.z = 1+0.08*sb;
@@ -1491,7 +1494,7 @@ let pigApi = null;
       const eating = e.st==='eat'; u.hd.rotation.x = (eating ? 0.55+Math.sin(t*5+e.ph)*0.1 : Math.sin(t*0.8+e.ph)*0.04 + (moving?0.05:0)) - 0.5*sb; u.hd.rotation.y = !moving && !eating ? Math.sin(t*0.5+e.ph*2)*0.25 : 0;
       u.tail.rotation.z = Math.sin(t*4+e.ph)*0.35;
       if(e.big){ const hx = e.x+Math.sin(e.yaw)*0.95*K*e.sc, hz = e.z+Math.cos(e.yaw)*0.95*K*e.sc;
-        zzz.forEach((sp,i)=>{ if(e.lie>0.7){ const ph = (t*0.45+i/3)%1; sp.visible = true; sp.material.opacity = Math.sin(Math.PI*ph); const s = 0.35+0.4*ph; sp.scale.set(s,s,1); sp.position.set(hx+ph*0.4, 0.75*K*e.sc+0.2+ph*1.1, hz); } else sp.visible = false; }); }
+        zzz.forEach((sp,i)=>{ if(e.lie>0.7){ const ph = (t*0.45+i/3)%1; sp.visible = true; sp.material.opacity = Math.sin(Math.PI*ph); const s = 0.35+0.4*ph; sp.scale.set(s,s,1); sp.position.set(MX(hx)+ph*0.4, 0.75*K*e.sc+0.2+ph*1.1, MZ(hz)); } else sp.visible = false; }); }
     }
     /* 趕豬回圈成功：兩隻小豬都在圈裡 */
     if(herdFlag){ herdT += dt; if(!pigs.some(p=>!p.big && p.z>ZS+0.2)){ herdFlag = false; celebrate(); } else if(herdT>25) herdFlag = false; }
@@ -1921,7 +1924,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
     if(!onBridge(x,z)){ const rz = riverZ(x); if(z>rz-5.4*RWK && z<rz+5.4*RWK) return false; }
     if(ell(x,z,-33,-5,7.4,6.4) || ell(x,z,68.5,10,9.8,8.2) || ell(x,z,23.5,3.4,2.2,3.0)) return false;
     if(x>-35.5&&x<-30.5&&z>-1&&z<riverZ(x)-5.4*RWK) return false;
-    if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false; /* 豬圈 */
+    if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.5&&z<PIG.cz+PIG.hd+0.8) return false; /* 豬圈 */
     if(x>-42.9&&x<42.9&&z>-30.4&&z<-14.8) return false;
     if(!mktOpen && x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<19.6+MKT_DZ) return false; /* 客家市集廣場：只有羅威那、薩摩耶（catFan）能進去，其他狗不行（教師 2026-11-18） */
     if(x>-30.8&&x<-26.9&&z>0.2+MKT_DZ&&z<18.6+MKT_DZ) return false; /* 市集的五個攤位 */
@@ -1956,7 +1959,7 @@ let dogApi = null, mouseNav = null, peopleNav = null;
     if(Math.hypot(x-15.4,z+8.9) < 4.5) return false;
     if(ell(x,z,-33,-5,6.9,5.9) || ell(x,z,68.5,10,9.3,7.7)) return false;
     if(x>-35&&x<-31&&z>-1) return false;
-    if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.8&&z<PIG.cz+PIG.hd+0.5) return false;
+    if(x>PIG.cx-PIG.hw-0.8&&x<PIG.cx+PIG.hw+0.8&&z>PIG.cz-PIG.hd-0.5&&z<PIG.cz+PIG.hd+0.8) return false;
     if(x>-38&&x<-34.5&&z>-17&&z<-8.5) return false;
     if(x>-30.8&&x<-16.8&&z>0+MKT_DZ&&z<19.6+MKT_DZ) return false; /* 客家市集 */
     if(x>TAIHO.x-5.8&&x<TAIHO.x+5.8&&z>TAIHO.z-4.1&&z<TAIHO.z+4.5) return false; /* 太和宮本體（2026-11-28 搬到地塊正下方） */
@@ -3919,7 +3922,7 @@ const DOG_SPOTS = [
   {n:'田', say:'「田」在北邊，這裡友善耕作，歡迎石虎', st:()=>V3(22.5,-13.4), lk:()=>V3(10,-22), ly:0.4, photo:'', u:''},
   {n:'樹林', say:'「樹林」在後方', st:()=>V3(-8,-32.2), lk:()=>V3(-26,-38), ly:2.5, photo:'', u:''},
   {n:'半山區', say:'「半山區」在後面，一座座山丘', st:()=>V3(19,-32.5), lk:()=>V3(10,-54), ly:6.0, photo:'', u:''},
-  {n:'豬欄', say:'新埔義民祭在農曆七月二十日，由十五大庄輪流主辦，關西也是其中一庄；祭典有神豬比賽。', st:()=>V3(77,78), lk:()=>V3(77,69.5), ly:1.0, photo:'', u:''},
+  {n:'豬欄', say:'新埔義民祭在農曆七月二十日，由十五大庄輪流主辦，關西也是其中一庄；祭典有神豬比賽。', st:()=>V3(77,61), lk:()=>V3(77,69.5), ly:1.0, photo:'', u:''},
 ];
 const escH = t=>String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function dogSay(txt, sp){
@@ -4108,7 +4111,7 @@ const SPOTS = (()=>{ const rp = (t,o)=>riverPoint(t,o), V = (x,y,z)=>new THREE.V
   {n:'河壩脣', say:'「牛欄河」个河壩脣有毛蟹、𧊅仔摎魚仔', mk:at(r1,1.8), cam:at(rp(0.7,10),2.0), tg:at(rp(0.55,0),0.4)},
   {n:'橋頭', say:'「東安橋」係五孔石砌拱橋，橫過牛欄河頂。', mk:at(r2,1.8), cam:at(rp(BRIDGE_T-0.09,12),2.6), tg:at(rp(BRIDGE_T,0),1.3)},
   {n:'太和宮', say:'「關西太和宮」又安到三界廟，主祀三官大帝（天官、地官、水官），係縣定古蹟。', mk:V(TAIHO.x,10.2,TAIHO.z), cam:V(TAIHO.x,5.2,TAIHO.z+19.2), tg:V(TAIHO.x,3.6,TAIHO.z+1.2)}, /* 教師 2026-11-17；內容依內政部「臺灣宗教文化資產」〈關西太和宮〉 */
-  {n:'豬欄', say:'新埔義民祭在農曆七月二十日，由十五大庄輪流主辦，關西也是其中一庄；祭典有神豬比賽。', mk:V(77,2.6,73.5), cam:V(77,3.0,80.5), tg:V(77,1.0,69.5)},
+  {n:'豬欄', say:'新埔義民祭在農曆七月二十日，由十五大庄輪流主辦，關西也是其中一庄；祭典有神豬比賽。', mk:V(77,2.6,65.5), cam:V(77,3.0,58.5), tg:V(77,1.0,69.5)},
   {n:'仙草', say:'桃竹苗个淺山地區種有仙草，像關西就當有名。', mk:V(-30,2.2,-22.4), cam:V(-30.5,1.25,-14.6), tg:V(-30,0.75,-21.5)},
   {n:'草莓', say:'草莓色目靚，鼻起來香香甜甜，當餳人食。', mk:V(0,2.2,-22.4), cam:V(-0.5,1.6,-14.6), tg:V(0,0.5,-21.5)},
   {n:'田脣', say:'「田」在北邊，這裡友善耕作，歡迎石虎', mk:V(21,1.6,-17.5), cam:V(45,3.0,-15.5), tg:V(26,0.8,-22)},
