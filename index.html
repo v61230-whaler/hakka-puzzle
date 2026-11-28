@@ -693,6 +693,7 @@ ribbon(riverCurve, 7.3*RWK, 0.05, riverMat);
 const riverPointRaw = (t, off=0)=>{ const p = riverCurve.getPointAt(t), tg = riverCurve.getTangentAt(t); return p.clone().add(new THREE.Vector3(-tg.z,0,tg.x).multiplyScalar(off)); };
 const riverPoint = (t, off=0)=>riverPointRaw(t, off*RWK);
 const critters = [], crabPickables = [];
+const RT0 = 0.06, RT1 = 0.94, RSPREAD = t=>0.07+(t-0.3)/0.4*0.86;   /* 河邊生物活動的河段（整條河） */
 const S = (g,x,y,z,sx=1,sy=1,sz=1,m)=>{ const me = new THREE.Mesh(g, m); me.position.set(x,y,z); me.scale.set(sx,sy,sz); me.castShadow = false; return me; };
 const whiteM = new THREE.MeshStandardMaterial({color:0xFFFFFF, flatShading:true}), blackM = new THREE.MeshStandardMaterial({color:0x2B3A55, flatShading:true});
 /* Fish feeding (teacher 2026-11-08): click on river or right pond water drops pellets; nearby fish swim over and eat. */
@@ -767,8 +768,8 @@ function makeDragonfly(col){
 function dflyGoal(c){
   const r = Math.random();
   if(r<0.3 && rockTops.length){ const k = rockTops[Math.floor(Math.random()*rockTops.length)]; c.goal = {x:k.x, y:k.y+0.06, z:k.z, kind:'sit'}; return; }
-  if(r<0.55){ for(let i=0;i<8;i++){ const t = 0.32+Math.random()*0.36; if(nearDam(t)>0.1) continue; const p = riverPoint(t,(Math.random()-0.5)*4); c.goal = {x:p.x, y:0.2, z:p.z, kind:'sit', water:true}; return; } }
-  const p = riverPoint(0.3+Math.random()*0.4, (Math.random()-0.5)*8); c.goal = {x:p.x, y:1.0+Math.random()*1.4, z:p.z, kind:'air'};
+  if(r<0.55){ for(let i=0;i<8;i++){ const t = 0.08+Math.random()*0.84; if(nearDam(t)>0.1) continue; const p = riverPoint(t,(Math.random()-0.5)*4); c.goal = {x:p.x, y:0.2, z:p.z, kind:'sit', water:true}; return; } }
+  const p = riverPoint(0.08+Math.random()*0.84, (Math.random()-0.5)*8); c.goal = {x:p.x, y:1.0+Math.random()*1.4, z:p.z, kind:'air'};
 }
 function updateDfly(c, dt, tm){
   dt = Math.min(dt, 0.1); const g = c.goal;
@@ -813,24 +814,27 @@ function makeRock(r, hex){ const m = new THREE.Mesh(new THREE.DodecahedronGeomet
   m.scale.set(1+rnd()*0.3,0.7+rnd()*0.2,1+rnd()*0.3); m.rotation.y = rnd()*6; m.castShadow = false; return m; }
 {
   const rocks = [[0.31,-3.2,1.3,0xB9B6C8],[0.33,2.9,1.1,0xA9B6CC],[0.37,-3.4,1.6,0xC8C2D6],[0.4,3.1,1.0,0xB0BCCB],[0.44,-3.3,1.4,0xBFBBD0],[0.47,3.2,1.2,0xAAB7C9],[0.5,-3.1,1.5,0xC3BED4],[0.54,3.1,1.0,0xB4B9CB],[0.57,-3.4,1.3,0xB9B6C8],[0.61,3.2,1.5,0xA9B6CC],[0.65,-3.2,1.2,0xC8C2D6],[0.68,3.0,1.0,0xAAB7C9],[0.42,-1.0,0.8,0xBFBBD0],[0.59,1.1,0.9,0xB9B6C8]];
-  for(const [t,off,r,hex] of rocks){ const p = riverPoint(t, Math.abs(off)>2 ? off+Math.sign(off)*0.85 : off), m = makeRock(r*0.5,hex); m.position.set(p.x, 0.1+r*0.125, p.z); scene.add(m);
+  /* 教師 2026-11-28：河邊生物散佈整條河——原本集中在 t 0.3–0.7，石頭依比例攤到 0.07–0.93 */
+  for(const [t0,off,r,hex] of rocks){ const t = RSPREAD(t0), p = riverPoint(t, Math.abs(off)>2 ? off+Math.sign(off)*0.85 : off), m = makeRock(r*0.5,hex); m.position.set(p.x, 0.1+r*0.125, p.z); scene.add(m);
     m.updateMatrixWorld(true); rockTops.push({x:p.x, y:new THREE.Box3().setFromObject(m).max.y-0.03, z:p.z}); }
   const cols = [0xFF9F43,0xFF7FA8,0xFFD24D,0x74C0FF,0x7FE0C8,0xFF6B6B];
-  [0.36,0.43,0.55,0.63,0.49,0.58,0.52].forEach((t,i)=>{ const f = makeFish(cols[i%4]); scene.add(f); critters.push({kind:'fish', g:f, t, dir:i%2?1:-1, speed:0.006+i*0.0015, off:(i%2?1.05:-1.05), ph:i*1.7}); });
-  [0.4,0.58].forEach((t,i)=>{ const g = makeCrab(); scene.add(g);
+  /* 魚：原本 7 條，教師 2026-11-28 再加 7 條，平均散在整條河 */
+  for(let i=0;i<14;i++){ const t = 0.08+i*0.84/13, f = makeFish(cols[i%6]); scene.add(f); critters.push({kind:'fish', g:f, t, dir:i%2?1:-1, speed:0.006+(i%7)*0.0015, off:(i%2?1.05:-1.05), ph:i*1.7}); }
+  [0.38,0.72].forEach((t,i)=>{ const g = makeCrab(); scene.add(g);
     const c = {kind:'crab', g, t, off:i?4.15:-4.15, ph:i*2.1, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:i?1:-1, rip:0};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); });
   /* 第三隻：小一點、紫色、動作更快 */
   { const g = makeCrab(0xB388FF, 0.64); scene.add(g);
-    const c = {kind:'crab', g, t:0.5, off:-4.25, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
+    const c = {kind:'crab', g, t:0.55, off:-4.25, ph:4.2, mode:'bank', pos:new THREE.Vector3(), target:new THREE.Vector3(), vy:0, side:-1, rip:0, wf:1.3, wa:0.05, hf:9, run:4.6};
     critters.push(c); g.traverse(o=>{ if(o.isMesh){ o.userData.crab = c; crabPickables.push(o); } }); }
   /* 河邊的青蛙：坐在岸上朝著河，一下一下跳 */
-  [[0.36,5.6],[0.42,-5.7],[0.49,5.6],[0.55,5.7],[0.64,-5.7]].forEach(([t,off],i)=>{ const f = makeFrog(); scene.add(f); const fc = {kind:'frog', g:f, t, off, ph:i*2.3, mode:'sit', home:riverPoint(t,off), pos:new THREE.Vector3(), end:new THREE.Vector3(), t0:0, rip:0}; critters.push(fc); });
+  [[0.12,5.6],[0.42,-5.7],[0.55,5.6],[0.7,5.7],[0.88,-5.7]].forEach(([t,off],i)=>{ const f = makeFrog(); scene.add(f); const fc = {kind:'frog', g:f, t, off, ph:i*2.3, mode:'sit', home:riverPoint(t,off), pos:new THREE.Vector3(), end:new THREE.Vector3(), t0:0, rip:0}; critters.push(fc); });
   /* Dragonflies: fly over the river basin, sometimes rest on rocks or on the water */
-  [[0.4,0x2F9BD6],[0.5,0xE8503A],[0.6,0x3DBE7A]].forEach(([t,col],i)=>{ const g = makeDragonfly(col); scene.add(g);
+  [[0.2,0x2F9BD6],[0.5,0xE8503A],[0.8,0x3DBE7A]].forEach(([t,col],i)=>{ const g = makeDragonfly(col); scene.add(g);
     const p = riverPoint(t, (i-1)*2.5);
     const c = {kind:'dfly', g, mode:'fly', x:p.x, y:1.6, z:p.z, yaw:i*2, ph:i*2.3, goal:{x:p.x,y:1.6,z:p.z,kind:'air'}, wait:0, sp:0, wings:g.userData.wings}; critters.push(c); });
-  [0.38,0.5,0.62].forEach((t,i)=>{ const s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.45, ph:i*1.3}); });
+  /* 蝦：原本 3 隻，教師 2026-11-28 再加 7 隻，散在整條河 */
+  for(let i=0;i<10;i++){ const t = 0.1+i*0.8/9, s2 = makeShrimp(); scene.add(s2); critters.push({kind:'shrimp', g:s2, t, off:(i%2?1:-1)*1.45, ph:i*1.3}); }
 }
 /* 稻田裡的追逐：虎媽媽帶兩隻小石虎追一隻田鼠，沿著兩排稻田中間的水圳來回跑；田鼠忽左忽右，三隻石虎排成一列跟在後面（不會抓到） */
 function makeWildCat(sc){
@@ -956,7 +960,7 @@ function updateCritters(dt, tm){
   for(const c of critters){
     if(c.kind==='fish'){ const fm = riverFeedFor(c.t);
       if(fm){ const du = fm.u-c.t, ad = Math.abs(du)*riverLen; if(ad>0.5){ c.t += Math.sign(du)*Math.min(Math.abs(du), 4.2/riverLen*dt); c.dir = Math.sign(du); } }
-      else { c.t += dt*c.speed*(1-0.5*nearDam(c.t))*c.dir; if(c.t>0.69){ c.t=0.69; c.dir=-1; } if(c.t<0.31){ c.t=0.31; c.dir=1; } }
+      else { c.t += dt*c.speed*(1-0.5*nearDam(c.t))*c.dir; if(c.t>RT1){ c.t=RT1; c.dir=-1; } if(c.t<RT0){ c.t=RT0; c.dir=1; } }
       const base = dodgeOff(c.t, c.off+Math.sin(tm*1.2+c.ph)*0.8), want = fm ? fm.off+Math.sin(tm*5+c.ph)*0.45 : base;
       c.fo = c.fo===undefined ? base : c.fo + (want-c.fo)*Math.min(1,(fm?3:1.5)*dt);
       const p = riverPoint(c.t, c.fo), tg = riverCurve.getTangentAt(c.t).multiplyScalar(c.dir);
@@ -972,7 +976,7 @@ function updateCritters(dt, tm){
           c.g.position.copy(c.pos);
         } else {
           const dx = c.target.x-c.pos.x, dz = c.target.z-c.pos.z, d = Math.hypot(dx,dz);
-          if(d<0.25){ const nr = nearestRiver(c.pos.x,c.pos.z); c.t = Math.min(0.69, Math.max(0.31, nr.u - Math.sin(tm*(c.wf||0.4)+c.ph)*(c.wa||0.025))); c.off = c.side*Math.abs(c.off0); c.mode = 'bank'; } /* 上岸後接著原來的擺動，不瞬間跳位；再慢慢走回自己原本的那一段岸 */
+          if(d<0.25){ const nr = nearestRiver(c.pos.x,c.pos.z); c.t = Math.min(RT1, Math.max(RT0, nr.u - Math.sin(tm*(c.wf||0.4)+c.ph)*(c.wa||0.025))); c.off = c.side*Math.abs(c.off0); c.mode = 'bank'; } /* 上岸後接著原來的擺動，不瞬間跳位；再慢慢走回自己原本的那一段岸 */
           else {
             const sp = (c.run||2.6)*dt; c.pos.x += dx/d*sp; c.pos.z += dz/d*sp;
             const inRiver = nearestRiver(c.pos.x,c.pos.z).dist<3.65*RWK;
@@ -2471,6 +2475,101 @@ function dodgeBank(t, off){
       if(turn>=0 || hold>0) return;   /* 正在迴轉就不重來 */
       honk(); if(wait<=0) hold = 0.9; }, true);   /* 停在終點等掉頭時只按喇叭 */
     el.addEventListener('pointermove', e=>{ if(onBus(e)) setTimeout(()=>{ el.style.cursor = 'pointer'; }, 0); });   /* 同水車：不能等 load */
+
+    /* ── 台三線上的重機與電動車（教師 2026-11-28）：三台重機（哈雷款美式巡航車、仿賽跑車、街車）、兩台特斯拉（Model Y、Model 3）。
+       各走行進方向右側的車道，開到路的盡頭就換到對面車道往回開；前面有車（含公車）就放慢跟著，不會穿過去 ── */
+    const V3_ = (x,y,z)=>new THREE.Vector3(x,y,z);
+    const limbM = (par,a,b,r,m)=>{ const d = new THREE.Vector3().subVectors(b,a), L0 = d.length(); const o = new THREE.Mesh(new THREE.CapsuleGeometry(r,Math.max(0.01,L0-2*r),4,8), m);
+      o.position.copy(a).add(b).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.normalize()); par.add(o); return o; };
+    const bx = (par,w,h,d,m,x,y,z)=>{ const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m); o.position.set(x,y,z); par.add(o); return o; };
+    const tireM = mat(0x1E1E22), chromeM = mat(0xC9CED6), darkM = mat(0x2A2D33), skinM2 = mat(0xFFDDBB);
+    const wheel = (par,x,r,w,z=0)=>{ const g = new THREE.Group(); g.position.set(x,r,z); par.add(g);
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(r,r,w,16).rotateX(Math.PI/2), tireM));
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(r*0.55,r*0.55,w+0.01,10).rotateX(Math.PI/2), chromeM)); return g; };
+    /* 騎士：安全帽、外套、牛仔褲；P 是各關節位置（車身座標，+x 向前） */
+    const rider = (par,P,jacket,helmet)=>{ const jm = mat(jacket), pm = mat(0x3B4A6B), hm = mat(helmet);
+      for(const sz of [-1,1]){ const Z = v=>V3_(v[0],v[1],sz*v[2]);
+        limbM(par, Z(P.hip), Z(P.knee), 0.075, pm); limbM(par, Z(P.knee), Z(P.foot), 0.065, pm);
+        bx(par,0.2,0.08,0.1,darkM,P.foot[0]+0.05,P.foot[1]-0.02,sz*P.foot[2]);
+        limbM(par, Z(P.sh), Z(P.el), 0.06, jm); limbM(par, Z(P.el), Z(P.hand), 0.055, jm); }
+      limbM(par, V3_(P.hip[0],P.hip[1],0), V3_(P.sh[0],P.sh[1],0), 0.17, jm);
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.16,14,10), hm); h.position.set(...P.head); par.add(h);
+      const vz = new THREE.Mesh(new THREE.SphereGeometry(0.162,14,10,-0.9,1.8,1.2,0.75), mat(0x1A1F2A)); vz.position.set(...P.head); vz.rotation.y = Math.PI/2; par.add(vz); };
+    const makeMoto = type=>{ const g = new THREE.Group(), b = new THREE.Group(); g.add(b);
+      let wf, wr;
+      if(type==='cruiser'){   /* 美式巡航車（哈雷款）：車身低長、黑色油箱配鍍鉻、把手高、腳往前伸 */
+        const blk = mat(0x15161A), acc = mat(0xE06A1B);
+        wf = wheel(b,0.72,0.27,0.13); wr = wheel(b,-0.62,0.28,0.17);
+        limbM(b, V3_(0.74,0.27,0), V3_(0.5,0.98,0), 0.04, chromeM);                      /* 前叉（斜） */
+        bx(b,0.5,0.2,0.28,blk,0.18,0.66,0); bx(b,0.32,0.04,0.29,acc,0.2,0.74,0);         /* 油箱與橘色飾條 */
+        bx(b,0.55,0.1,0.34,mat(0x3A2A22),-0.25,0.56,0);                                  /* 低座墊 */
+        bx(b,0.6,0.14,0.36,blk,-0.62,0.5,0);                                             /* 後擋泥板 */
+        for(const sz of [-1,1]){ const c = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,0.16,10).rotateX(0.4*sz), chromeM); c.position.set(0.05,0.42,sz*0.11); b.add(c); }  /* V 型引擎 */
+        limbM(b, V3_(-0.1,0.28,0.18), V3_(-0.95,0.32,0.2), 0.045, chromeM);              /* 排氣管 */
+        limbM(b, V3_(0.5,0.98,-0.36), V3_(0.5,0.98,0.36), 0.025, chromeM);               /* 寬把手 */
+        rider(b,{hip:[-0.25,0.66,0.13], knee:[0.12,0.78,0.2], foot:[0.42,0.42,0.22], sh:[-0.3,1.18,0.17], el:[0.1,1.08,0.3], hand:[0.48,1.0,0.34], head:[-0.28,1.4,0]}, 0x2B2B2B, 0x111111); }
+      else if(type==='sport'){   /* 仿賽跑車：整流罩包住車頭、座墊後翹，騎士壓低身體 */
+        const rd = mat(0xD8262E), wh = mat(0xF4F4F4);
+        wf = wheel(b,0.62,0.26,0.12); wr = wheel(b,-0.56,0.26,0.17);
+        limbM(b, V3_(0.64,0.26,0), V3_(0.5,0.78,0), 0.035, darkM);
+        { const fr = new THREE.Mesh(new THREE.SphereGeometry(0.3,14,10), rd); fr.scale.set(1.5,0.85,0.75); fr.position.set(0.38,0.66,0); b.add(fr); }   /* 整流罩 */
+        { const sc = new THREE.Mesh(new THREE.SphereGeometry(0.16,12,8), mat(0x26303C)); sc.scale.set(1.2,0.6,0.9); sc.position.set(0.52,0.86,0); b.add(sc); }  /* 風鏡 */
+        bx(b,0.42,0.22,0.3,wh,0.0,0.68,0); bx(b,0.4,0.12,0.24,rd,-0.4,0.8,0).rotation.z = 0.25;   /* 油箱、後翹座墊 */
+        bx(b,0.5,0.24,0.26,darkM,0.02,0.42,0);                                           /* 引擎 */
+        limbM(b, V3_(-0.2,0.38,0.12), V3_(-0.55,0.62,0.14), 0.05, chromeM);
+        rider(b,{hip:[-0.28,0.84,0.13], knee:[0.02,0.74,0.22], foot:[-0.12,0.46,0.2], sh:[0.12,1.1,0.17], el:[0.3,0.92,0.25], hand:[0.45,0.84,0.2], head:[0.26,1.22,0]}, 0xD8262E, 0xF4F4F4); }
+      else {   /* 街車：沒有整流罩、看得到引擎、圓大燈，騎士坐直 */
+        const yl = mat(0xF2B705);
+        wf = wheel(b,0.62,0.26,0.12); wr = wheel(b,-0.56,0.26,0.16);
+        limbM(b, V3_(0.64,0.26,0), V3_(0.48,0.9,0), 0.035, mat(0xD4A017));
+        { const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,0.08,14).rotateZ(Math.PI/2), darkM); hl.position.set(0.56,0.82,0); b.add(hl);
+          const ln = new THREE.Mesh(new THREE.CircleGeometry(0.085,14).rotateY(Math.PI/2), new THREE.MeshBasicMaterial({color:0xFFF3B0})); ln.position.set(0.605,0.82,0); b.add(ln); }
+        bx(b,0.46,0.22,0.32,yl,0.12,0.74,0); bx(b,0.5,0.09,0.26,darkM,-0.3,0.74,0); bx(b,0.3,0.06,0.2,yl,-0.62,0.76,0);
+        bx(b,0.42,0.26,0.24,mat(0x6B6F77),0.05,0.44,0);                                  /* 外露引擎 */
+        limbM(b, V3_(0.48,0.98,-0.32), V3_(0.48,0.98,0.32), 0.022, darkM);
+        rider(b,{hip:[-0.22,0.8,0.13], knee:[0.12,0.72,0.2], foot:[0.0,0.44,0.2], sh:[-0.14,1.28,0.17], el:[0.15,1.08,0.28], hand:[0.45,0.98,0.31], head:[-0.12,1.48,0]}, 0x2E7D32, 0xF2B705); }
+      g.userData = {wheels:[wf,wr], body:b, r:0.27, len:1.6};
+      return g; };
+    /* 電動轎車：側面輪廓用擠出成形；車身到腰線，上面是深色玻璃車廂（含全景玻璃車頂）；前臉沒有水箱護罩，車尾一道橫貫紅色尾燈 */
+    const makeEV = (kind,col)=>{ const g = new THREE.Group(), b = new THREE.Group(); g.add(b);
+      const Y = kind==='Y', W = 1.12, belt = Y ? 0.68 : 0.6, roof = Y ? 1.08 : 0.94;
+      const prof = (pts,depth,m)=>{ const sh = new THREE.Shape(); sh.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) sh.lineTo(pts[i][0],pts[i][1]); sh.closePath();
+        const geo = new THREE.ExtrudeGeometry(sh,{depth, bevelEnabled:true, bevelThickness:0.04, bevelSize:0.04, bevelSegments:2}); geo.translate(0,0,-depth/2); const o = new THREE.Mesh(geo, m); b.add(o); return o; };
+      const bodyM = mat(col);
+      prof([[-1.3,0.2],[1.3,0.2],[1.36,0.36],[1.3,belt-0.06],[0.62,belt],[-1.2,belt+0.02],[-1.34,belt-0.08],[-1.36,0.36]], W-0.08, bodyM);
+      const glass = mat(0x1D2733);
+      if(Y) prof([[0.58,belt],[0.1,roof],[-0.7,roof-0.02],[-1.12,belt+0.1],[-1.18,belt]], W-0.22, glass);
+      else  prof([[0.6,belt],[0.12,roof],[-0.45,roof],[-1.0,belt+0.12],[-1.18,belt]], W-0.22, glass);
+      for(const sz of [-1,1]){ bx(b,0.03,0.08,0.06,mat(0x111111),0.46,belt+0.05,sz*(W/2+0.02)); }   /* 後照鏡 */
+      bx(b,0.04,0.04,W*0.86,new THREE.MeshBasicMaterial({color:0xFF2E2E}),-1.37,belt-0.12,0);       /* 橫貫尾燈 */
+      for(const sz of [-1,1]) bx(b,0.04,0.035,0.28,new THREE.MeshBasicMaterial({color:0xF4F8FF}),1.36,0.5,sz*0.36);   /* 細長頭燈 */
+      const ws = [wheel(g,0.82,0.27,0.18,-(W/2-0.06)), wheel(g,0.82,0.27,0.18,W/2-0.06), wheel(g,-0.86,0.27,0.18,-(W/2-0.06)), wheel(g,-0.86,0.27,0.18,W/2-0.06)];
+      ws.forEach(w=>{ w.children[1].material = mat(0x50555E); });   /* 深灰鋁圈 */
+      g.userData = {wheels:ws, body:b, r:0.27, len:2.8};
+      return g; };
+    const traf = [
+      {g:makeMoto('cruiser'), f:0.15, dir:1,  vmax:4.0, lane:1.2},
+      {g:makeMoto('sport'),   f:0.55, dir:1,  vmax:4.8, lane:1.2},
+      {g:makeMoto('naked'),   f:0.4,  dir:-1, vmax:4.3, lane:1.2},
+      {g:makeEV('Y',0xF4F4F2),f:0.75, dir:-1, vmax:3.7, lane:1.1},   /* Model Y：珍珠白 */
+      {g:makeEV('3',0xB3121B),f:0.88, dir:1,  vmax:3.9, lane:1.1},   /* Model 3：紅色 */
+    ];
+    for(const v of traf){ v.v = v.vmax; v.g.traverse(o=>{ if(o.isMesh) o.raycast = ()=>{}; }); scene.add(v.g); }
+    pondTick.push((dt)=>{ dt = Math.min(dt,0.1);
+      const busV = (hold>0 || turn>=0 || wait>0) ? 0 : SPD, all = [...traf, {f, dir, v:busV, len:3.6}];
+      for(const v of traf){
+        /* 同方向、在前面 4 個單位內有車：放慢到和它一樣快 */
+        let want = v.vmax;
+        for(const o of all){ if(o===v || o.dir!==v.dir) continue; const gap = (o.f - v.f)*v.dir*len - ((o.len||v.g.userData.len)/2 + v.g.userData.len/2);
+          if(gap>-0.5 && gap<4){ want = Math.min(want, gap<1 ? 0 : o.v); } }
+        v.v += (want - v.v)*Math.min(1, dt*3);
+        v.f += v.dir*v.v*dt/len;
+        if(v.f>0.98){ v.f = 0.98; v.dir = -1; } else if(v.f<0.02){ v.f = 0.02; v.dir = 1; }   /* 路的盡頭（畫面外）：換到對面車道往回開 */
+        const p = curve.getPointAt(v.f), tg = curve.getTangentAt(v.f).multiplyScalar(v.dir);
+        v.g.position.set(p.x - tg.z*v.lane, 0.06, p.z + tg.x*v.lane); v.g.rotation.y = Math.atan2(-tg.z, tg.x);
+        const u = v.g.userData; for(const w of u.wheels) w.rotation.z -= v.v*dt/u.r;
+        u.body.position.y = Math.sin(v.f*len*4)*0.008; }
+    });
   }
 })();
 
